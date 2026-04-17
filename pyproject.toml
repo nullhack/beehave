@@ -1,0 +1,163 @@
+[project]
+name = "pytest-beehave"
+version = "0.1.20260416"
+description = "A pytest plugin that runs acceptance criteria stub generation as part of the pytest lifecycle, with auto-ID assignment and generic step docstrings"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { file = "LICENSE" }
+authors = [
+    { name = "eol", email = "nullhack@users.noreply.github.com" }
+]
+maintainers = [
+    { name = "eol", email = "nullhack@users.noreply.github.com" }
+]
+dependencies = [
+    "fire>=0.7.1",
+    "gherkin-official>=39.0.0",
+]
+
+[project.urls]
+Repository = "https://github.com/nullhack/pytest-beehave"
+Documentation = "https://github.com/nullhack/pytest-beehave/tree/main/docs/api/"
+
+[project.optional-dependencies]
+dev = [
+    "pdoc>=14.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=6.1.1",
+    "pytest-html>=4.1.1",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.11.5",
+    "taskipy>=1.14.1",
+    "hypothesis>=6.148.4",
+    "pyright>=1.1.407",
+    "ghp-import>=2.1.0",
+]
+
+[project.entry-points."pytest11"]
+beehave = "pytest_beehave.plugin"
+
+[tool.setuptools]
+packages = ["pytest_beehave"]
+
+[tool.ruff.lint]
+ignore = []
+select = [
+  "A",
+  "ANN",
+  "ASYNC",
+  "B",
+  "C4",
+  "C9",
+  "D",
+  "DTZ",
+  "E",
+  "ERA",
+  "F",
+  "FURB",
+  "G",
+  "I",
+  "ICN",
+  "LOG",
+  "N",
+  "NPY",
+  "PD",
+  "PT",
+  "PTH",
+  "R",
+  "RUF",
+  "S",
+  "SIM",
+  "T20",
+  "TD",
+  "W",
+]
+preview = true
+mccabe.max-complexity = 10
+pydocstyle.convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN", "D205", "D212", "D415", "D100", "D103", "E501"]
+".opencode/skills/**/scripts/*.py" = ["T20"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "unit: isolated tests for a single function or class",
+    "integration: tests covering multiple components together",
+    "deprecated: marks tests for deprecated AC; automatically skipped (deselect with '-m \"not deprecated\"')",
+]
+addopts = """
+--maxfail=10 \
+--color=yes \
+--tb=short \
+-q \
+--html=docs/tests/report.html \
+"""
+testpaths = ["tests"]
+python_files = ["*_test.py"]
+python_functions = ["test_*"]
+render_collapsed = "all"
+
+[tool.coverage.run]
+source = ["pytest_beehave"]
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.taskipy.tasks]
+run = "python -m pytest_beehave"
+test-report = """\
+pytest \
+  -p no:beehave \
+  --doctest-modules \
+  --cov-config=pyproject.toml \
+  --cov-report html:docs/coverage \
+  --cov-report term:skip-covered \
+  --cov=pytest_beehave \
+  --cov-fail-under=100 \
+  --hypothesis-show-statistics \
+"""
+test = """\
+pytest -p no:beehave -m "not slow" -q && \
+task test-report\
+"""
+test-fast = "pytest -p no:beehave -m \"not slow\" -q"
+test-slow = "pytest -m slow"
+ruff-check = "ruff check . --fix"
+ruff-format = "ruff format ."
+ruff-format-check = "ruff format . --check"
+lint = "task ruff-check && task ruff-format"
+doc-serve = "pdoc ./pytest_beehave --host localhost --port 8080"
+doc-build = """\
+pdoc ./pytest_beehave -o docs/api --search && \
+pytest \
+  --cov-config=pyproject.toml \
+  --cov-report html:docs/coverage \
+  --cov=pytest_beehave \
+  --html=docs/tests/report.html \
+  --self-contained-html \
+  -q \
+"""
+doc-publish = "task doc-build && ghp-import -n -p -f docs"
+static-check = "pyright"
+gen-id = "python -c \"import uuid; [print(uuid.uuid4().hex[:8]) for _ in range(20)]\""
+gen-tests = "python .opencode/skills/tdd/scripts/gen_test_stubs.py"
+gen-todo = "python .opencode/skills/session-workflow/scripts/gen_todo.py"
+
+[dependency-groups]
+dev = [
+    "gherkin-official>=39.0.0",
+    "safety>=3.7.0",
+]
