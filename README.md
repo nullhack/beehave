@@ -1,171 +1,216 @@
-# pytest-beehave
+<div align="center">
+  <img src="docs/images/banner.svg" alt="Beehave" width="860"/>
 
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=for-the-badge)](https://nullhack.github.io/pytest-beehave/coverage/)
+  <br><br>
 
-[![CI](https://img.shields.io/github/actions/workflow/status/nullhack/pytest-beehave/ci.yml?style=for-the-badge&label=CI)](https://github.com/nullhack/pytest-beehave/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.13-blue?style=for-the-badge)](https://www.python.org/downloads/)
+  <p><strong>Your acceptance criteria and your test stubs — always in sync. Every time you run pytest.</strong></p>
 
-> A pytest plugin that runs acceptance criteria stub generation as part of the pytest lifecycle, with auto-ID assignment and generic step docstrings
+  [![Contributors][contributors-shield]][contributors-url]
+  [![Forks][forks-shield]][forks-url]
+  [![Stargazers][stars-shield]][stars-url]
+  [![Issues][issues-shield]][issues-url]
+  [![MIT License][license-shield]][license-url]
+  [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=for-the-badge)](https://nullhack.github.io/pytest-beehave/coverage/)
+  [![CI](https://img.shields.io/github/actions/workflow/status/nullhack/pytest-beehave/ci.yml?style=for-the-badge&label=CI)](https://github.com/nullhack/pytest-beehave/actions/workflows/ci.yml)
+  [![Python](https://img.shields.io/badge/python-3.13-blue?style=for-the-badge)](https://www.python.org/downloads/)
+</div>
 
-## Quick Start
+---
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/nullhack/pytest-beehave
-cd pytest-beehave
+## The drift problem
 
-# 2. Install UV package manager (if not installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+A healthy hive is one where every bee knows its role. A healthy codebase is one where every test knows its criterion.
 
-# 3. Set up the development environment
-uv sync --all-extras
+In practice: you write a Gherkin `Example:`. You write a test stub. Three weeks later you rename the feature. The stub is stale. The docstring is wrong. The `@id` is missing from CI. And you find out at the worst possible moment.
 
-# 4. Validate everything works
-uv run task test && uv run task lint && uv run task static-check && timeout 10s uv run task run
-```
+Living documentation is supposed to keep specs and code in sync. In practice, that sync is always manual — and always falls behind.
 
-## What This Template Provides
+**Beehave is the colony's memory.** A pytest plugin that tends your test stubs the way a hive tends its cells: precisely, automatically, and before any other work begins. Every time you invoke `pytest`, the colony is in order.
 
-### Development Workflow
+---
 
-A **6-step Kanban workflow** with WIP=1 (one feature at a time), enforced by the filesystem:
+## What the colony does
 
-```
-docs/features/backlog/       ← features waiting to be worked on
-docs/features/in-progress/   ← exactly one feature being built
-docs/features/completed/     ← accepted and shipped features
-```
+| Capability | How Beehave tends the hive |
+|---|---|
+| **Stub generation** | New `@id`-tagged `Example:` → a typed, skipped test stub is built before collection runs |
+| **Docstring sync** | Steps change in your `.feature`? Docstrings are resealed to match. Test bodies are never touched. |
+| **Auto ID assignment** | Missing `@id` on an `Example:`? Beehave generates one and writes it back in-place — like a worker bee capping an open cell |
+| **CI enforcement** | Read-only filesystem (CI)? Beehave fails loudly and names every untagged Example — no silent drift escapes the hive |
+| **Orphan detection** | `@id` disappears from the feature file? The test is marked `skip(reason="orphan")` — preserved, not deleted, not silently executed |
+| **Non-conforming redirect** | Test in the wrong file or class? Beehave builds the canonical stub in the correct cell and marks the original as relocated |
+| **Deprecation sync** | `@deprecated` tag on an `Example:`, `Rule:`, or `Feature:`? The pytest marker propagates — inheritance flows down the comb |
+| **Bootstrap** | No `docs/features/` yet? Beehave creates the canonical subfolder structure and migrates any loose `.feature` files into the right cells |
+| **Zero config** | Works out of the box. Optionally configure `features_path` in `pyproject.toml` |
 
-**3 roles, 6 steps:**
+---
 
-| Step | Role | What happens |
-|------|------|-------------|
-| 1. SCOPE | Product Owner | Discovery + Gherkin stories + `@id` criteria |
-| 2. ARCH | Developer | Design module structure, get PO approval |
-| 3. TEST FIRST | Developer | Sync stubs, write failing tests mapped to `@id` |
-| 4. IMPLEMENT | Developer | Red→Green→Refactor, commit per green test |
-| 5. VERIFY | Reviewer | Run all commands, code review, `@id` traceability |
-| 6. ACCEPT | Product Owner | Demo, validate, move folder to completed/ |
-
-### AI Agents
+## Installation
 
 ```bash
-@product-owner   # Defines features, picks from backlog, accepts deliveries
-@developer       # Architecture, tests, code, git, releases
-@reviewer        # Runs commands, reviews code — read+bash only
-@setup-project   # One-time template initialization
+pip install pytest-beehave
 ```
 
-### Skills
+The plugin registers itself via pytest's entry-point system — no `conftest.py` changes needed. The hive is self-organizing.
+
+---
+
+## Quick start
+
+**1. Write a feature file:**
+
+```gherkin
+# docs/features/in-progress/checkout.feature
+Feature: Checkout
+
+  Rule: Tax calculation
+    As a buyer
+    I want the correct tax applied to my order
+    So that I pay the right amount
+
+    Example: VAT is applied at the correct rate
+      Given a cart with items totalling £100
+      When the buyer is in the UK
+      Then the order total is £120
+```
+
+**2. Run pytest:**
 
 ```bash
-/skill session-workflow    # Read TODO.md, continue, hand off cleanly
-/skill scope               # Write user stories + acceptance criteria
-/skill tdd                 # TDD: file naming, docstring format, markers
-/skill implementation      # Red-Green-Refactor, architecture, ADRs
-/skill code-quality        # redirects to verify (quick reference)
-/skill verify              # Step 5 verification checklist
-/skill pr-management       # Branch naming, PR template, squash merge
-/skill git-release         # Hybrid calver versioning, themed naming
-/skill create-skill        # Add new skills to the system
+pytest
 ```
 
-## Development Commands
-
-```bash
-uv run task run              # Run the application (humans)
-timeout 10s uv run task run  # Run with timeout (agents — exit 124 = hung = FAIL)
-uv run task test             # Full test suite with coverage report
-uv run task test-fast        # Tests without coverage (faster iteration)
-uv run task test-slow        # Only slow tests
-uv run task lint             # ruff check + format
-uv run task static-check     # pyright type checking
-uv run task gen-id           # Generate an 8-char hex ID for @id tags
-uv run task gen-tests        # Sync test stubs from .feature files
-uv run task doc-build        # Generate API docs + coverage + test reports
-uv run task doc-publish      # Publish unified docs site to GitHub Pages
-uv run task doc-serve        # Live API doc server at localhost:8080
-```
-
-## Code Quality Standards
-
-| Standard | Target |
-|----------|--------|
-| Coverage | 100% |
-| Type checking | pyright, 0 errors |
-| Linting | ruff, 0 issues, Google docstrings |
-| Function length | ≤ 20 lines |
-| Class length | ≤ 50 lines |
-| Max nesting | 2 levels |
-| Principles | YAGNI > KISS > DRY > SOLID > Object Calisthenics |
-
-## Test Conventions
+**3. Beehave has already built the cell:**
 
 ```python
-@pytest.mark.unit
-def test_bounce_physics_a3f2b1c4() -> None:
-    """
-    Given: A ball moving upward reaches y=0
-    When: The physics engine processes the next frame
-    Then: The ball velocity y-component becomes positive
-    """
-    # Given
-    ...
-    # When
-    ...
-    # Then
-    ...
+# tests/features/checkout/tax_calculation_test.py
+
+class TestTaxCalculation:
+    @pytest.mark.skip(reason="not yet implemented")
+    def test_checkout_a3f2b1c4(self) -> None:
+        """
+        Given: a cart with items totalling £100
+        When: the buyer is in the UK
+        Then: the order total is £120
+        """
+        raise NotImplementedError
 ```
 
-**Markers**: `@pytest.mark.unit` · `@pytest.mark.integration` · `@pytest.mark.slow` · `@pytest.mark.deprecated`
+The `@id` tag was also written back into your `.feature` file automatically — the cell is capped.
 
-## Technology Stack
+**4. Fill the cell with real implementation and ship.**
 
-| Category | Tools |
-|----------|-------|
-| Package management | uv |
-| Task automation | taskipy |
-| Linting + formatting | Ruff |
-| Type checking | PyRight |
-| Testing | pytest + Hypothesis |
-| Coverage | pytest-cov (100% required) |
-| Documentation | pdoc + ghp-import |
-| AI development | OpenCode agents + skills |
+---
 
-## Documentation Site
+## The waggle dance — how it works
 
-Published at [nullhack.github.io/pytest-beehave](https://nullhack.github.io/pytest-beehave):
-- **API Reference** — pdoc-generated from source docstrings
-- **Coverage Report** — line-by-line coverage breakdown
-- **Test Results** — full pytest run results
+Beehave hooks into `pytest_configure`, the earliest possible hook. By the time pytest begins collecting tests, every stub already exists on disk. The same `pytest` invocation that encounters a new criterion also generates its stub.
 
-## Release Versioning
+```
+pytest invoked
+  └─ pytest_configure fires  ← Beehave enters here, before any test is seen
+       ├─ Bootstrap: ensure docs/features/{backlog,in-progress,completed}/ exist
+       ├─ Assign IDs: write @id tags to untagged Examples (or fail loudly in CI)
+       ├─ Sync stubs:
+       │    ├─ Create missing stubs for new Examples
+       │    ├─ Update outdated docstrings to match current steps
+       │    ├─ Rename functions whose feature slug changed
+       │    ├─ Mark orphaned tests (no matching @id anywhere)
+       │    ├─ Redirect non-conforming tests to canonical locations
+       │    └─ Propagate @deprecated markers from Feature/Rule/Example
+       └─ Hands control back to pytest
+  └─ Collection begins — every stub is already present
+  └─ Tests run
+```
 
-Format: `v{major}.{minor}.{YYYYMMDD}`
+The colony always knows where to find the honey.
 
-Each release gets a unique **bee-ecosystem** name (scientific names of bee species, hive, honey, etc.).
+---
+
+## Configuration
+
+```toml
+# pyproject.toml
+[tool.beehave]
+features_path = "docs/features"   # default — omit if this is your layout
+```
+
+If `features_path` is set but the directory does not exist, Beehave exits immediately with a clear error naming the missing path. A hive without a location is not a hive.
+
+---
+
+## The comb structure
+
+Beehave expects (and will create) this feature directory layout:
+
+```
+docs/features/
+  backlog/        ← criteria waiting to be built
+  in-progress/    ← criteria actively being implemented
+  completed/      ← shipped criteria (orphan detection only; no stub updates)
+```
+
+Test files follow the hexagonal grid — uniform, predictable, traceable:
+
+```
+tests/
+  features/
+    <feature-name>/
+      <rule-slug>_test.py     ← one file per Rule: block
+      examples_test.py        ← when the feature has no Rule: blocks
+```
+
+Every test function name encodes its criterion:
+
+```
+test_<feature_slug>_<8char_hex>
+```
+
+No fragile name matching. No guessing. Every stub traces back to its exact `Example:` by ID — like a cell number in the comb.
+
+---
+
+## Marker semantics
+
+Beehave tends four markers. Your markers — `slow`, `unit`, `integration` — are never touched.
+
+| Marker | Applied by | Meaning |
+|---|---|---|
+| `skip(reason="not yet implemented")` | Beehave | Cell built, not yet filled |
+| `skip(reason="orphan: ...")` | Beehave | Cell's criterion no longer exists |
+| `skip(reason="non-conforming: moved to ...")` | Beehave | Cell is in the wrong part of the comb |
+| `deprecated` | Beehave | Criterion retired — marker inherited from `@deprecated` Gherkin tag |
+| `slow` | You | Opt-in for Hypothesis and long-running tests |
+
+---
+
+## Compatibility
+
+| Requirement | Version |
+|---|---|
+| Python | ≥ 3.13 |
+| pytest | ≥ 6.0 |
+
+---
 
 ## Contributing
 
 ```bash
 git clone https://github.com/nullhack/pytest-beehave
+cd pytest-beehave
 uv sync --all-extras
-uv run task test && uv run task lint
+uv run task test && uv run task lint && uv run task static-check
 ```
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/nullhack/pytest-beehave/issues).
+
+---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
 
----
-
-**Author:** eol ([@nullhack](https://github.com/nullhack))
-**Documentation:** [nullhack.github.io/pytest-beehave](https://nullhack.github.io/pytest-beehave)
+**Author:** eol ([@nullhack](https://github.com/nullhack)) · [Documentation](https://nullhack.github.io/pytest-beehave)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [contributors-shield]: https://img.shields.io/github/contributors/nullhack/pytest-beehave.svg?style=for-the-badge

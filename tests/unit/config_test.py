@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from pytest_beehave.config import (
     DEFAULT_FEATURES_PATH,
     is_explicitly_configured,
@@ -11,7 +9,6 @@ from pytest_beehave.config import (
 )
 
 
-@pytest.mark.unit
 def test_resolve_features_path_returns_default_when_no_pyproject(
     tmp_path: Path,
 ) -> None:
@@ -28,7 +25,6 @@ def test_resolve_features_path_returns_default_when_no_pyproject(
     assert result == tmp_path / DEFAULT_FEATURES_PATH
 
 
-@pytest.mark.unit
 def test_is_explicitly_configured_returns_false_when_no_pyproject(
     tmp_path: Path,
 ) -> None:

@@ -1,8 +1,10 @@
 """ID assignment for pytest-beehave .feature files."""
 
+import itertools
 import os
 import re
 import secrets
+from collections.abc import Iterator
 from pathlib import Path
 
 FEATURE_STAGES: tuple[str, ...] = ("backlog", "in-progress", "completed")
@@ -22,6 +24,16 @@ def _collect_existing_ids(content: str) -> set[str]:
     return set(re.findall(r"@id:([a-f0-9]{8})", content))
 
 
+def _candidate_stream() -> Iterator[str]:
+    """Yield an infinite stream of random 8-char hex candidates.
+
+    Yields:
+        Random 8-char hex strings.
+    """
+    while True:
+        yield secrets.token_hex(4)
+
+
 def _generate_unique_id(existing_ids: set[str]) -> str:
     """Generate a unique 8-char hex ID not already in existing_ids.
 
@@ -31,10 +43,28 @@ def _generate_unique_id(existing_ids: set[str]) -> str:
     Returns:
         A new unique 8-char hex string.
     """
-    while True:
-        candidate = secrets.token_hex(4)
-        if candidate not in existing_ids:
-            return candidate
+    return next(c for c in _candidate_stream() if c not in existing_ids)
+
+
+def _prepend_id_tag(line: str, result: list[str], existing_ids: set[str]) -> None:
+    """Prepend an @id tag line before an Example line if not already tagged.
+
+    Mutates result and existing_ids in-place.
+
+    Args:
+        line: The current line being processed.
+        result: Accumulated output lines so far.
+        existing_ids: Set of IDs already used (mutated when a new ID is added).
+    """
+    match = _EXAMPLE_LINE_RE.match(line)
+    if match is None:
+        return
+    if _id_tag_precedes(result):
+        return
+    new_id = _generate_unique_id(existing_ids)
+    existing_ids.add(new_id)
+    indent = match.group(1)
+    result.append(f"{indent}@id:{new_id}\n")
 
 
 def _insert_id_before_example(content: str, existing_ids: set[str]) -> str:
@@ -50,12 +80,7 @@ def _insert_id_before_example(content: str, existing_ids: set[str]) -> str:
     lines = content.splitlines(keepends=True)
     result: list[str] = []
     for line in lines:
-        match = _EXAMPLE_LINE_RE.match(line)
-        if match and not _id_tag_precedes(result):
-            new_id = _generate_unique_id(existing_ids)
-            existing_ids.add(new_id)
-            indent = match.group(1)
-            result.append(f"{indent}@id:{new_id}\n")
+        _prepend_id_tag(line, result, existing_ids)
         result.append(line)
     return "".join(result)
 
@@ -69,11 +94,8 @@ def _id_tag_precedes(lines: list[str]) -> bool:
     Returns:
         True if the previous non-empty line contains an @id tag.
     """
-    for line in reversed(lines):
-        stripped = line.strip()
-        if stripped:
-            return bool(_ID_TAG_RE.search(stripped))
-    return False
+    last_non_empty = next((ln.strip() for ln in reversed(lines) if ln.strip()), "")
+    return bool(_ID_TAG_RE.search(last_non_empty))
 
 
 def _process_writable_file(feature_path: Path) -> None:
@@ -89,6 +111,27 @@ def _process_writable_file(feature_path: Path) -> None:
         feature_path.write_text(updated, encoding="utf-8")
 
 
+def _missing_id_error(
+    feature_path: Path, line: str, preceding: list[str]
+) -> str | None:
+    """Return an error string if this Example line has no preceding @id tag.
+
+    Args:
+        feature_path: Path to the feature file (used in error message).
+        line: The current line from the feature file.
+        preceding: All lines before this one.
+
+    Returns:
+        Error string if an @id tag is missing, or None.
+    """
+    if not _EXAMPLE_LINE_RE.match(line):
+        return None
+    if _id_tag_precedes(preceding):
+        return None
+    title = line.strip().removeprefix("Example:").strip()
+    return f"{feature_path}: Example '{title}' has no @id"
+
+
 def _check_readonly_file(feature_path: Path) -> list[str]:
     """Collect error messages for untagged Examples in a read-only file.
 
@@ -98,16 +141,12 @@ def _check_readonly_file(feature_path: Path) -> list[str]:
     Returns:
         List of error strings, one per untagged Example.
     """
-    errors: list[str] = []
-    content = feature_path.read_text(encoding="utf-8")
-    lines = content.splitlines()
-    for index, line in enumerate(lines):
-        if not _EXAMPLE_LINE_RE.match(line):
-            continue
-        if not _id_tag_precedes(lines[:index]):
-            title = line.strip().removeprefix("Example:").strip()
-            errors.append(f"{feature_path}: Example '{title}' has no @id")
-    return errors
+    lines = feature_path.read_text(encoding="utf-8").splitlines()
+    errors = [
+        _missing_id_error(feature_path, line, lines[:index])
+        for index, line in enumerate(lines)
+    ]
+    return [e for e in errors if e is not None]
 
 
 def _process_feature_file(feature_path: Path) -> list[str]:
@@ -125,6 +164,26 @@ def _process_feature_file(feature_path: Path) -> list[str]:
     return _check_readonly_file(feature_path)
 
 
+def _process_stage(features_dir: Path, stage: str) -> list[str]:
+    """Process all .feature files in a single stage directory.
+
+    Args:
+        features_dir: Root features directory.
+        stage: Stage subdirectory name (e.g. "in-progress").
+
+    Returns:
+        List of error strings from read-only files with missing @id tags.
+    """
+    stage_dir = features_dir / stage
+    if not stage_dir.exists():
+        return []
+    return list(
+        itertools.chain.from_iterable(
+            _process_feature_file(p) for p in sorted(stage_dir.rglob("*.feature"))
+        )
+    )
+
+
 def assign_ids(features_dir: Path) -> list[str]:
     """Assign @id tags to untagged Examples in all .feature files.
 
@@ -139,11 +198,8 @@ def assign_ids(features_dir: Path) -> list[str]:
         List of error strings for read-only files with missing @id tags.
         Empty list means all Examples are tagged or files are writable.
     """
-    errors: list[str] = []
-    for stage in FEATURE_STAGES:
-        stage_dir = features_dir / stage
-        if not stage_dir.exists():
-            continue
-        for feature_path in sorted(stage_dir.rglob("*.feature")):
-            errors.extend(_process_feature_file(feature_path))
-    return errors
+    return list(
+        itertools.chain.from_iterable(
+            _process_stage(features_dir, stage) for stage in FEATURE_STAGES
+        )
+    )

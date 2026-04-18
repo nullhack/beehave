@@ -8,7 +8,6 @@ import pytest
 from pytest_beehave.plugin import features_path_key, pytest_configure
 
 
-@pytest.mark.unit
 def test_pytest_configure_stores_resolved_path_when_path_exists(
     tmp_path: Path,
 ) -> None:

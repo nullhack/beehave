@@ -1,6 +1,6 @@
 [project]
 name = "pytest-beehave"
-version = "0.1.20260416"
+version = "2.0.20260418"
 description = "A pytest plugin that runs acceptance criteria stub generation as part of the pytest lifecycle, with auto-ID assignment and generic step docstrings"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -10,6 +10,9 @@ authors = [
 ]
 maintainers = [
     { name = "eol", email = "nullhack@users.noreply.github.com" }
+]
+classifiers = [
+    "Framework :: Pytest",
 ]
 dependencies = [
     "fire>=0.7.1",
@@ -91,9 +94,7 @@ markers = [
 addopts = """
 --maxfail=10 \
 --color=yes \
---tb=short \
--q \
---html=docs/tests/report.html \
+-p no:beehave \
 """
 testpaths = ["tests"]
 python_files = ["*_test.py"]
@@ -118,7 +119,7 @@ exclude_lines = [
 
 [tool.taskipy.tasks]
 run = "python -m pytest_beehave"
-test-report = """\
+test-build = """\
 pytest \
   -p no:beehave \
   --doctest-modules \
@@ -128,28 +129,18 @@ pytest \
   --cov=pytest_beehave \
   --cov-fail-under=100 \
   --hypothesis-show-statistics \
+  --html=docs/tests/report.html \
+  --self-contained-html \
 """
-test = """\
-pytest -p no:beehave -m "not slow" -q && \
-task test-report\
-"""
-test-fast = "pytest -p no:beehave -m \"not slow\" -q"
+test = "pytest --tb=short"
+test-fast = "pytest -m \"not slow\" -q --no-header --tb=no"
 test-slow = "pytest -m slow"
 ruff-check = "ruff check . --fix"
 ruff-format = "ruff format ."
 ruff-format-check = "ruff format . --check"
 lint = "task ruff-check && task ruff-format"
 doc-serve = "pdoc ./pytest_beehave --host localhost --port 8080"
-doc-build = """\
-pdoc ./pytest_beehave -o docs/api --search && \
-pytest \
-  --cov-config=pyproject.toml \
-  --cov-report html:docs/coverage \
-  --cov=pytest_beehave \
-  --html=docs/tests/report.html \
-  --self-contained-html \
-  -q \
-"""
+doc-build = "pdoc ./pytest_beehave -o docs/api --search && task test-build"
 doc-publish = "task doc-build && ghp-import -n -p -f docs"
 static-check = "pyright"
 gen-id = "python -c \"import uuid; [print(uuid.uuid4().hex[:8]) for _ in range(20)]\""
