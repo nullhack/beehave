@@ -117,3 +117,21 @@ Status: COMPLETE
 |----|----------|--------|--------|
 | Q10 | Are nested non-canonical subdirectories in the root features folder left alone? | Yes — only the three canonical subfolders are managed; any other subdirectory is ignored | ANSWERED |
 | Q11 | Is the bootstrap idempotent — safe to run multiple times? | Yes — creating an already-existing subfolder is a no-op; migration only moves files not already in a subfolder | ANSWERED |
+
+---
+
+## 2026-04-19 — Session 3
+Status: IN-PROGRESS
+
+### Feature: example-scaffold
+
+| ID | Question | Answer | Status |
+|----|----------|--------|--------|
+| Q1 | What interface is used to invoke the scaffold? | `pytest --beehave-sample` (or bee-related wordplay on "example/sample") — a pytest CLI flag | ANSWERED |
+| Q2 | What content should be generated? | `docs/features/` (or the configured path) with pre-defined Gherkin showcasing ALL plugin capabilities; Feature names, scenarios, and step text should use bee/hive metaphors | ANSWERED |
+| Q3 | Should randomization use external libraries (e.g. Hypothesis)? | No external dependencies — use Python stdlib only (e.g. `random`, `uuid`) to vary generated content so it is not boring | ANSWERED |
+| Q4 | What does success look like? | Run the flag → `docs/features/` is generated → run `pytest` → stubs are properly generated with no errors | ANSWERED |
+| Q5 | Where does the generated folder land? | Respects the configured features path (`features_path` in `[tool.beehave]`); defaults to `docs/features/` | ANSWERED |
+| Q6 | What happens if the target features directory already contains content? | Fail loudly with a descriptive error; provide a `--beehave-sample-force` flag to overwrite (PO-resolved by convention — consistent with project hard-error philosophy) | RESOLVED-BY-PO |
+
+Status: COMPLETE

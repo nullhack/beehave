@@ -191,3 +191,23 @@ Feature stages and marker state do not affect rendering — steps are shown rega
 | Verb | suppress steps | omit output when channel is disabled or test is out of scope | Yes |
 
 Template §3: CONFIRMED — stakeholder approved 2026-04-18
+
+---
+
+## Session: 2026-04-19 — Feature: example-scaffold
+
+### Feature List
+- `example-scaffold` — generate a bee-themed `docs/features/` directory tree showcasing all plugin capabilities via `pytest --beehave-sample`; stdlib-only randomisation; respects configured features path; fails loudly on existing content unless `--beehave-sample-force` is passed
+
+### Domain Model
+| Type | Name | Description | In Scope |
+|------|------|-------------|----------|
+| Noun | scaffold | generated `docs/features/` directory tree with example `.feature` files | Yes |
+| Noun | `--beehave-sample` flag | pytest CLI flag that triggers scaffold generation | Yes |
+| Noun | `--beehave-sample-force` flag | pytest CLI flag that allows overwriting existing scaffold content | Yes |
+| Noun | bee/hive-themed content | Feature names, Rule titles, Example titles, and step text using bee/hive metaphors | Yes |
+| Noun | capability showcase | set of generated `.feature` files that together exercise every plugin capability | Yes |
+| Noun | stdlib randomisation | use of `random` / `secrets` from Python stdlib to vary generated content | Yes |
+| Verb | scaffold | write the example features directory tree to the configured path | Yes |
+| Verb | overwrite-protect | fail loudly when target directory already contains `.feature` files | Yes |
+| Verb | force-overwrite | replace existing scaffold content when `--beehave-sample-force` is passed | Yes |
