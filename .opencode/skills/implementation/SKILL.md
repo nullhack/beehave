@@ -18,7 +18,7 @@ During implementation, correctness priorities are (in order):
 1. **Design correctness** — YAGNI > KISS > DRY > SOLID > Object Calisthenics > appropriate design patterns
 2. **One @id green** — the specific test under work passes, plus `test-fast` still passes
 3. **Commit** — when a meaningful increment is green
-4. **Quality tooling** — `lint`, `static-check`, full `test` with coverage run at end-of-feature handoff
+4. **Quality tooling** — `lint`, `static-check`, `test-coverage` run only at end-of-feature handoff (after all @id are green)
 
 Design correctness is far more important than lint/pyright/coverage compliance. Never run lint, static-check, or coverage during the TDD loop — those are handoff-only checks.
 
@@ -219,11 +219,12 @@ Commit when a meaningful increment is green
 ```bash
 uv run task lint
 uv run task static-check
-uv run task test          # coverage must be 100%
+uv run task test-coverage   # coverage must be 100%
 timeout 10s uv run task run
 ```
 
 If coverage < 100%: add test in `tests/unit/` for uncovered branch (do NOT add @id tests for coverage).
+Only add coverage tests for branches introduced or changed by the current feature. Pre-existing uncovered lines are a separate concern — note them in TODO.md and hand off; do not block on them.
 
 All must pass before Self-Declaration.
 

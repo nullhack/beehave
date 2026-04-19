@@ -136,6 +136,7 @@ pytest \
   --self-contained-html \
 """
 test = "pytest --tb=short"
+test-coverage = "pytest -p no:beehave --doctest-modules --cov=pytest_beehave --cov-config=pyproject.toml --cov-report=term:skip-covered --cov-fail-under=100"
 test-fast = "pytest -m \"not slow\" -q --no-header --tb=no"
 test-slow = "pytest -m slow"
 ruff-check = "ruff check . --fix"
