@@ -1,5 +1,7 @@
 """Tests for hatch invocation story."""
 
+import io
+import sys
 from pathlib import Path
 
 import pytest
@@ -39,17 +41,36 @@ def test_example_hatch_2b3c4d5e(features_root: Path) -> None:
     assert list((features_root / "completed").glob("*.feature"))
 
 
-def test_example_hatch_3c4d5e6f(features_root: Path) -> None:
+@pytest.mark.slow
+def test_example_hatch_3c4d5e6f(tmp_path: Path) -> None:
     """
     Given: no features directory exists at the configured path
     When: pytest is invoked with --beehave-hatch
     Then: the terminal output lists each .feature file that was created
     """
-    written = run_hatch(features_root, force=False)
+    captured = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = captured
+    try:
+        result = pytest.main(
+            [
+                "--beehave-hatch",
+                f"--rootdir={tmp_path}",
+                "--no-cov",
+            ],
+            plugins=[],
+        )
+    finally:
+        sys.stdout = old_stdout
 
-    assert len(written) > 0
-    all_files = list(features_root.rglob("*.feature"))
-    assert len(written) == len(all_files)
+    assert result == 0
+    output = captured.getvalue()
+    features_root = tmp_path / "docs" / "features"
+    written = list(features_root.rglob("*.feature"))
+    assert written
+    for feature_file in written:
+        relative = str(feature_file.relative_to(features_root))
+        assert relative in output
 
 
 def test_example_hatch_4d5e6f7a(tmp_path: Path) -> None:

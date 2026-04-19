@@ -155,7 +155,10 @@ def pytest_configure(config: pytest.Config) -> None:
     path = resolve_features_path(rootdir)
     if config.getoption("--beehave-hatch", default=False):
         force = bool(config.getoption("--beehave-hatch-force", default=False))
-        written = run_hatch(path, force)
+        try:
+            written = run_hatch(path, force)
+        except SystemExit as exc:
+            pytest.exit(str(exc), returncode=1)
         writer = _PytestTerminalWriter(config)
         for entry in written:
             writer.line(f"[beehave] HATCH {entry}")

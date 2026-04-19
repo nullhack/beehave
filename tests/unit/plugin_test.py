@@ -25,6 +25,7 @@ def test_pytest_configure_stores_resolved_path_when_path_exists(
     mock_config.rootpath = tmp_path
     mock_config.stash = {}
     mock_config.pluginmanager = MagicMock()
+    mock_config.getoption.return_value = False
     # When
     pytest_configure(mock_config)
     # Then
