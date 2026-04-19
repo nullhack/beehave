@@ -2,6 +2,19 @@
 
 All notable changes to pytest-beehave will be documented in this file.
 
+## [v3.1.20260419] — Generative Augochlora — 2026-04-19
+
+### Added
+- feat(example-hatch): add `--beehave-hatch` flag to generate bee-themed example `.feature` files and demonstrate the plugin in one command
+
+### Fixed
+- fix(example-hatch): wrap `run_hatch()` call in `pytest_configure` with `try/except SystemExit` to produce clean error exit instead of `INTERNALERROR` crash
+
+### Changed
+- docs: add "See it in 2 minutes" demo section to README showing `--beehave-hatch` output and generated stubs
+- chore: add `test-coverage` task to `pyproject.toml` for explicit coverage-only runs
+- chore(skills): number SE Self-Declaration items 1–25 and add completeness check to reviewer skill
+
 ## [v3.0.20260419] — Foundational Apis — 2026-04-19
 
 ### Added
