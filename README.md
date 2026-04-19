@@ -132,7 +132,7 @@ tests/features/
 Every test function name encodes its criterion:
 
 ```
-test_<feature_slug>_<8char_hex>
+test_<feature_slug>_<@id>
 ```
 
 ---
