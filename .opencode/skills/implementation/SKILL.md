@@ -1,7 +1,7 @@
 ---
 name: implementation
 description: Steps 2-3 — Architecture + TDD Loop, one @id at a time
-version: "3.0"
+version: "4.0"
 author: software-engineer
 audience: software-engineer
 workflow: feature-lifecycle
@@ -11,7 +11,7 @@ workflow: feature-lifecycle
 
 Steps 2 (Architecture) and 3 (TDD Loop) combined into a single skill. The software-engineer owns both.
 
-## Developer Quality Gate Priority Order
+## Software-Engineer Quality Gate Priority Order
 
 During implementation, correctness priorities are (in order):
 
@@ -28,10 +28,14 @@ Design correctness is far more important than lint/pyright/coverage compliance. 
 
 ### Prerequisites (stop if any fail — escalate to PO)
 
-1. `docs/features/in-progress/` contains only `.gitkeep` (no `.feature` files). If another `.feature` file exists, **STOP** — another feature is already in progress.
-2. The feature file's discovery section has `Status: BASELINED`. If not, escalate to PO — Step 1 is incomplete.
+1. `docs/features/in-progress/` contains exactly one `.feature` file. If it is empty (only `.gitkeep`): **STOP** — no feature is in progress. Output the escalation message and wait for PO to move a BASELINED feature from `backlog/` to `in-progress/`.
+2. The feature file's feature description has `Status: BASELINED`. If not, escalate to PO — Step 1 is incomplete.
 3. The feature file contains `Rule:` blocks with `Example:` blocks and `@id` tags. If not, escalate to PO — criteria have not been written.
 4. Package name confirmed: read `pyproject.toml` → locate `[tool.setuptools]` → confirm directory exists on disk.
+
+**The PO moves the `.feature` file from `backlog/` to `in-progress/` before Step 2 starts. Software-engineer never moves feature files.**
+
+Update `TODO.md` Source path to `docs/features/in-progress/<name>.feature`.
 
 ### Package Verification (mandatory — before writing any code)
 
@@ -39,24 +43,18 @@ Design correctness is far more important than lint/pyright/coverage compliance. 
 2. Confirm directory exists: `ls <name>/`
 3. All new source files go under `<name>/` — never under a template placeholder.
 
-### Move Feature File
-
-```bash
-mv docs/features/backlog/<name>.feature docs/features/in-progress/<name>.feature
-```
-
-Update `TODO.md` Source path from `backlog/` to `in-progress/`.
-
 ### Read Phase (all before writing anything)
 
-1. Read `docs/features/discovery.md` (project-level)
-2. Read **ALL** `.feature` files in `docs/features/backlog/` (discovery + entities sections)
-3. Read in-progress `.feature` file (full: Rules + Examples + @id)
-4. Read **ALL** existing `.py` files in `<package>/` — understand what already exists before adding anything
+1. Read `docs/discovery.md` (project-level synthesis changelog)
+2. Read `docs/glossary.md` if it exists — use existing domain terms when naming classes, methods, and modules; do not invent synonyms for terms already defined
+3. Read `docs/architecture.md` (all architectural decisions to date)
+4. Read **ALL** `.feature` files in `docs/features/backlog/` (feature descriptions + Rules)
+5. Read in-progress `.feature` file (full: Rules + Examples + @id)
+6. Read **ALL** existing `.py` files in `<package>/` — understand what already exists before adding anything
 
 ### Domain Analysis
 
-From Entities table + Rules (Business) in `.feature` file:
+From the Domain Model in `docs/discovery.md` + Rules (Business) in the `.feature` file:
 - **Nouns** → named classes, value objects, aggregates
 - **Verbs** → method names with typed signatures
 - **Datasets** → named types (not bare dict/list)
@@ -116,19 +114,21 @@ class UserRepository(Protocol):
 
 Place stubs where responsibility dictates — do not pre-create `ports/` or `adapters/` folders unless a concrete external dependency was identified in scope. Structure follows domain analysis, not a template.
 
-### Write ADR Files (significant decisions only)
+### Write Architectural Decisions (significant decisions only)
 
-For each significant architectural decision, create `docs/architecture/adr-NNN-<title>.md`:
+For each significant architectural decision, append a dated block to `docs/architecture.md`:
 
 ```markdown
-# ADR-NNN: <title>
+---
 
-**Decision:** <what was decided>
-**Reason:** <why, one sentence>
-**Alternatives considered:** <what was rejected and why>
+## YYYY-MM-DD — <feature-name>: <decision title>
+
+Decision: <what was decided>
+Reason: <why, one sentence>
+Alternatives considered: <what was rejected and why>
 ```
 
-Only write an ADR if the decision is non-obvious or has meaningful trade-offs. Routine YAGNI choices do not need an ADR.
+Only append an entry if the decision is non-obvious or has meaningful trade-offs. Routine YAGNI choices do not need an entry. Never edit past entries — append only.
 
 ### Architecture Smell Check (hard gate)
 
@@ -141,7 +141,7 @@ Apply to the stub files just written:
 - [ ] No missing Creational pattern: repeated construction without Factory/Builder
 - [ ] No missing Structural pattern: type-switching without Strategy/Visitor
 - [ ] No missing Behavioral pattern: state machine or scattered notification without State/Observer
-- [ ] Each ADR consistent with each @id AC — no contradictions
+- [ ] Each architectural decision in `docs/architecture.md` consistent with each @id AC — no contradictions
 
 If any check fails: fix the stub files before committing.
 
@@ -153,8 +153,9 @@ Commit: `feat(<feature-name>): add architecture stubs`
 
 ### Prerequisites
 
+- [ ] Exactly one `.feature` file in `in-progress/`. If not present, load `skill feature-selection`
 - [ ] Architecture stubs present in `<package>/` (committed by Step 2)
-- [ ] Read all `docs/architecture/adr-NNN-*.md` files — understand the architectural decisions before writing any test
+- [ ] Read `docs/architecture.md` — understand all architectural decisions before writing any test
 - [ ] Test stub files exist in `tests/features/<feature-name>/` — one file per `Rule:` block, all `@id` functions present with `@pytest.mark.skip`; if missing, write them now before entering RED
 
 ### Write Test Stubs (if not present)
@@ -163,18 +164,15 @@ For each `Rule:` block in the in-progress `.feature` file, create `tests/feature
 
 ```python
 @pytest.mark.skip(reason="not yet implemented")
-def test_<rule_slug>_<8char_hex>() -> None:
+def test_<feature_slug>_<@id>() -> None:
     """
     Given: ...
     When: ...
     Then: ...
     """
-    # Given
-    # When
-    # Then
 ```
 
-Run `uv run task gen-todo` after writing stubs to sync `@id` rows into `TODO.md`.
+Add `[ ]` rows to `## Progress` in `TODO.md` for each `@id` in the in-progress `.feature` file that is not already listed.
 
 ### Build TODO.md Test List
 
@@ -231,45 +229,46 @@ All must pass before Self-Declaration.
 
 ### Self-Declaration (once, after all quality gates pass)
 
-Write into `TODO.md` under a `## Self-Declaration` block:
+Communicate verbally to the reviewer. Answer honestly for each principle:
 
-```markdown
-## Self-Declaration
-As a software-engineer I declare:
-* YAGNI: no code without a failing test — AGREE/DISAGREE | file:line
-* YAGNI: no speculative abstractions — AGREE/DISAGREE | file:line
-* KISS: simplest solution that passes — AGREE/DISAGREE | file:line
-* KISS: no premature optimization — AGREE/DISAGREE | file:line
-* DRY: no duplication — AGREE/DISAGREE | file:line
-* DRY: no redundant comments — AGREE/DISAGREE | file:line
-* SOLID-S: one reason to change per class — AGREE/DISAGREE | file:line
-* SOLID-O: open for extension, closed for modification — AGREE/DISAGREE | file:line
-* SOLID-L: subtypes substitutable — AGREE/DISAGREE | file:line
-* SOLID-I: no forced unused deps — AGREE/DISAGREE | file:line
-* SOLID-D: depend on abstractions, not concretions — AGREE/DISAGREE | file:line
-* OC-1: one level of indentation per method — AGREE/DISAGREE | deepest: file:line
-* OC-2: no else after return — AGREE/DISAGREE | file:line
-* OC-3: primitive types wrapped — AGREE/DISAGREE | file:line
-* OC-4: first-class collections — AGREE/DISAGREE | file:line
-* OC-5: one dot per line — AGREE/DISAGREE | file:line
-* OC-6: no abbreviations — AGREE/DISAGREE | file:line
-* OC-7: ≤20 lines per function, ≤50 per class — AGREE/DISAGREE | longest: file:line
-* OC-8: ≤2 instance variables per class (behavioural classes only; dataclasses, Pydantic models, value objects, and TypedDicts are exempt) — AGREE/DISAGREE | file:line
-* OC-9: no getters/setters — AGREE/DISAGREE | file:line
-* Patterns: no creational smell — AGREE/DISAGREE | file:line
-* Patterns: no structural smell — AGREE/DISAGREE | file:line
-* Patterns: no behavioral smell — AGREE/DISAGREE | file:line
-* Semantic: tests operate at same abstraction as AC — AGREE/DISAGREE | file:line
-```
+- YAGNI: no code without a failing test — AGREE/DISAGREE | file:line
+- YAGNI: no speculative abstractions — AGREE/DISAGREE | file:line
+- KISS: simplest solution that passes — AGREE/DISAGREE | file:line
+- KISS: no premature optimization — AGREE/DISAGREE | file:line
+- DRY: no duplication — AGREE/DISAGREE | file:line
+- DRY: no redundant comments — AGREE/DISAGREE | file:line
+- SOLID-S: one reason to change per class — AGREE/DISAGREE | file:line
+- SOLID-O: open for extension, closed for modification — AGREE/DISAGREE | file:line
+- SOLID-L: subtypes substitutable — AGREE/DISAGREE | file:line
+- SOLID-I: no forced unused deps — AGREE/DISAGREE | file:line
+- SOLID-D: depend on abstractions, not concretions — AGREE/DISAGREE | file:line
+- OC-1: one level of indentation per method — AGREE/DISAGREE | deepest: file:line
+- OC-2: no else after return — AGREE/DISAGREE | file:line
+- OC-3: primitive types wrapped — AGREE/DISAGREE | file:line
+- OC-4: first-class collections — AGREE/DISAGREE | file:line
+- OC-5: one dot per line — AGREE/DISAGREE | file:line
+- OC-6: no abbreviations — AGREE/DISAGREE | file:line
+- OC-7: ≤20 lines per function, ≤50 per class — AGREE/DISAGREE | longest: file:line
+- OC-8: ≤2 instance variables per class (behavioural classes only; dataclasses, Pydantic models, value objects, and TypedDicts are exempt) — AGREE/DISAGREE | file:line
+- OC-9: no getters/setters — AGREE/DISAGREE | file:line
+- Patterns: I have no good reason to refactor parts of the code using OOP or Design Patterns — AGREE/DISAGREE | file:line
+- Patterns: no creational smell — AGREE/DISAGREE | file:line
+- Patterns: no structural smell — AGREE/DISAGREE | file:line
+- Patterns: no behavioral smell — AGREE/DISAGREE | file:line
+- Semantic: tests operate at same abstraction as AC — AGREE/DISAGREE | file:line
 
-A `DISAGREE` answer is not automatic rejection — state the reason inline and fix before handing off.
+A `DISAGREE` answer is not automatic rejection — state the reason and fix before handing off.
 
 ### Hand off to Step 4 (Verify)
 
 Signal completion to the reviewer. Provide:
 - Feature file path
-- Self-Declaration from TODO.md
+- Self-Declaration (communicated verbally, as above)
 - Summary of what was implemented
+
+**After Step 4 APPROVED: do not move the `.feature` file. Escalate to PO.** Output:
+
+> Step 4 APPROVED for `<feature-name>`. Escalating to @product-owner — please move `docs/features/in-progress/<feature-name>.feature` to `docs/features/completed/<feature-name>.feature` and pick the next feature from backlog.
 
 ---
 
@@ -278,20 +277,30 @@ Signal completion to the reviewer. Provide:
 ### Test File Layout
 
 ```
-tests/features/<feature-name>/<rule_slug>_test.py
+tests/features/<feature-name>/<rule_slug>_test.py   ← one per Rule: block
+tests/features/<feature-name>/examples_test.py      ← when no Rule: blocks
 ```
 
-- `<feature_name>` = the `.feature` file stem
+- `<feature-name>` = the `.feature` file stem
 - `<rule_slug>` = the `Rule:` title slugified
 
 ### Function Naming
 
+All tests are top-level functions — no classes, no `self`.
+
 ```python
-def test_<rule_slug>_<8char_hex>() -> None:
+# Rule block → top-level functions in <rule_slug>_test.py
+def test_ball_game_a3f2b1c4() -> None: ...
+def test_ball_game_c4d5e6f7() -> None: ...
+
+# No Rule block → top-level functions in examples_test.py
+def test_ball_game_a3f2b1c4() -> None: ...
 ```
 
-- `rule_slug` = the `Rule:` title with spaces/hyphens replaced by underscores, lowercase
-- `8char_hex` = the `@id` from the `Example:` block
+Function naming in all cases: `test_<feature_slug>_<@id>`
+
+- `feature_slug` = the `.feature` file stem with hyphens replaced by underscores, lowercase
+- `@id` = the `@id` tag value from the `Example:` block
 
 ### Docstring Format (mandatory)
 
@@ -299,15 +308,12 @@ New tests start as skipped stubs. Remove `@pytest.mark.skip` when implementing i
 
 ```python
 @pytest.mark.skip(reason="not yet implemented")
-def test_wall_bounce_a3f2b1c4() -> None:
+def test_ball_game_a3f2b1c4() -> None:
     """
     Given: A ball moving upward reaches y=0
     When: The physics engine processes the next frame
     Then: The ball velocity y-component becomes positive
     """
-    # Given
-    # When
-    # Then
 ```
 
 **Rules**:

@@ -159,17 +159,28 @@ Add at the top of the changelog (below the `# Changelog` heading):
 
 Reference feature names (from `feat(<feature-name>): ...` commits), not PR numbers — this project uses direct commits rather than PRs.
 
-### 6. Regenerate lockfile and commit version bump
+### 6. Update living docs
+
+Run the `living-docs` skill to reflect the newly accepted feature in C4 diagrams and the glossary. This step runs inline — do not commit separately.
+
+Load and execute the full `living-docs` skill now:
+- Update `docs/c4/context.md` (C4 Level 1)
+- Update `docs/c4/container.md` (C4 Level 2, if multi-container)
+- Update `docs/glossary.md` (living glossary)
+
+The `living-docs` commit step is **skipped** here — all changed files are staged together with the version bump in step 7.
+
+### 7. Regenerate lockfile and commit version bump
 
 After updating `pyproject.toml`, regenerate the lockfile — CI runs `uv sync --locked` and will fail if it is stale:
 
 ```bash
 uv lock
-git add pyproject.toml CHANGELOG.md uv.lock
+git add pyproject.toml CHANGELOG.md uv.lock docs/c4/context.md docs/c4/container.md docs/glossary.md
 git commit -m "chore(release): bump version to v{version} — {Adjective Genus}"
 ```
 
-### 7. Create GitHub release
+### 8. Create GitHub release
 
 ```bash
 SHA=$(git rev-parse --short HEAD)
@@ -198,7 +209,7 @@ gh release create "v{version}" \
 **SHA**: \`${SHA}\`"
 ```
 
-### 8. If a hotfix commit follows the release tag
+### 9. If a hotfix commit follows the release tag
 
 If CI fails after the release (e.g. a stale lockfile) and a hotfix commit is pushed, reassign the tag and GitHub release to that commit:
 
@@ -228,4 +239,5 @@ The release notes and title do not need to change — only the target commit mov
 - [ ] Release name: adjective not used before, genus not used before
 - [ ] Genus chosen from curated pool (or new entry added to pool with character note)
 - [ ] Release notes follow the template format
+- [ ] `living-docs` skill run — C4 diagrams and glossary reflect the new feature
 - [ ] If a hotfix was pushed after the tag: tag reassigned to hotfix commit

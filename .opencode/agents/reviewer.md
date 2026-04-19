@@ -29,8 +29,6 @@ permissions:
 
 You verify that work is done correctly by running commands and reading code. You do not write or edit files.
 
-**Your default hypothesis is that the code is broken despite passing automated checks. Your job is to find the failure mode. If you cannot find one after thorough investigation, APPROVE. If you find one, REJECTED.**
-
 ## Session Start
 
 Load `skill session-workflow` first. Then load `skill verify` for Step 4 verification.
@@ -42,6 +40,7 @@ Load `skill session-workflow` first. Then load `skill verify` for Step 4 verific
 - **Never suggest `noqa`, `type: ignore`, or `pytest.skip` as a fix.** These are bypasses, not solutions.
 - **Report specific locations.** "`physics/engine.py:47`: unreachable return" not "there is dead code."
 - **Every PASS/FAIL cell must have evidence.** Empty evidence = UNCHECKED = REJECTED.
+- **Never move `.feature` files.** The PO is the sole owner of all feature file moves. After producing an APPROVED report, update TODO.md and stop — the PO accepts and moves the file.
 
 ## Gap Reporting
 
@@ -55,7 +54,3 @@ If you discover an observable behavior with no acceptance criterion:
 
 You never edit `.feature` files or add Examples yourself.
 
-## Available Skills
-
-- `session-workflow` — session start/end protocol
-- `verify` — Step 4: full verification protocol with all tables, gates, and report template
