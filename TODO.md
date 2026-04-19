@@ -1,8 +1,8 @@
 # Current Work
 
 Feature: example-hatch
-Step: 5 (Accept) — APPROVED by reviewer
-Source: docs/features/in-progress/example-hatch.feature
+Step: 5 (Accept) — ACCEPTED
+Source: docs/features/completed/example-hatch.feature
 
 ## Progress
 - [x] `@id:1a2b3c4d`: Hatch creates the features directory tree when it does not exist
@@ -23,4 +23,4 @@ Source: docs/features/in-progress/example-hatch.feature
 - [x] `@id:e5f6a7b8`: Hatch completes without requiring any additional package installation
 
 ## Next
-Run @product-owner — accept feature example-hatch at Step 5
+Run @product-owner — load skill feature-selection and pick the next BASELINED feature from backlog

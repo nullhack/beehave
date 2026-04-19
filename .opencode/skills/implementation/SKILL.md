@@ -234,6 +234,7 @@ Communicate verbally to the reviewer. Answer honestly for each principle.
 
 **The Self-Declaration has exactly 25 numbered items. Count yours before submitting. Fewer than 25 means you omitted something — find it and add it.**
 
+As a Software Engineer, I declare that:
 1.  YAGNI: no code without a failing test — AGREE/DISAGREE | file:line
 2.  YAGNI: no speculative abstractions — AGREE/DISAGREE | file:line
 3.  KISS: simplest solution that passes — AGREE/DISAGREE | file:line
