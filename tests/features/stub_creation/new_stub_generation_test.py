@@ -334,11 +334,41 @@ def test_stub_creation_c3a8f291() -> None:
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="not yet implemented")
-def test_stub_creation_f3e1a290() -> None:
+def test_stub_creation_f3e1a290(
+    tmp_path: Path,
+    make_feature: Callable[..., None],
+    read_test_file: Callable[..., str],
+) -> None:
     """
     Given: a backlog feature file containing a Scenario Outline with an Examples table
     When: pytest is invoked
     Then: a single @pytest.mark.parametrize test stub is created for that Scenario Outline with the Examples table rows as parameter values
     """
-    raise NotImplementedError
+    features_dir = tmp_path / "features"
+    tests_dir = tmp_path / "tests"
+    make_feature(
+        features_dir,
+        "backlog",
+        "my-feature",
+        "my-story.feature",
+        """\
+Feature: My feature
+  @id:aabbccdd
+  Scenario Outline: Template scenario
+    Given a <thing>
+    When it <action>
+    Then it <result>
+
+    Examples:
+      | thing | action | result |
+      | ball  | rolls  | stops  |
+      | cube  | slides | falls  |
+""",
+    )
+    sync_stubs(features_dir, tests_dir)
+    content = read_test_file(tests_dir, "my_feature", "examples")
+    assert '@pytest.mark.parametrize' in content
+    assert '"thing,action,result"' in content
+    assert '("ball", "rolls", "stops")' in content
+    assert '("cube", "slides", "falls")' in content
+    assert '@pytest.mark.skip' not in content

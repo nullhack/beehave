@@ -163,12 +163,50 @@ def _stub_decorator(is_deprecated: bool) -> str:
     return '@pytest.mark.skip(reason="not yet implemented")\n'
 
 
+def _parse_table_rows(outline_examples: str) -> list[list[str]]:
+    """Parse an Examples table string into a list of cell rows.
+
+    Args:
+        outline_examples: Rendered Examples table string.
+
+    Returns:
+        List of rows, each row is a list of stripped cell strings.
+    """
+    rows = []
+    for line in outline_examples.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|") and stripped.endswith("|"):
+            cells = [c.strip() for c in stripped[1:-1].split("|")]
+            rows.append(cells)
+    return rows
+
+
+def _parametrize_decorator(outline_examples: str) -> str:
+    """Build a @pytest.mark.parametrize decorator from an Examples table.
+
+    Args:
+        outline_examples: Rendered Examples table string.
+
+    Returns:
+        Decorator line string.
+    """
+    rows = _parse_table_rows(outline_examples)
+    if len(rows) < 2:
+        return '@pytest.mark.skip(reason="not yet implemented")\n'
+    param_names = ",".join(rows[0])
+    param_values = ", ".join(
+        "(" + ", ".join(f'"{cell}"' for cell in row) + ")" for row in rows[1:]
+    )
+    return f'@pytest.mark.parametrize("{param_names}", [{param_values}])\n'
+
+
 def _stub_function_source(
     function_name: str,
     docstring_body: str,
     is_deprecated: bool,
     *,
     is_method: bool = False,
+    outline_examples: str | None = None,
 ) -> str:
     """Build full source text for a single test stub function.
 
@@ -177,11 +215,15 @@ def _stub_function_source(
         docstring_body: The docstring body (without triple-quotes).
         is_deprecated: If True, add @pytest.mark.deprecated.
         is_method: If True, emit (self) as the parameter.
+        outline_examples: Rendered Examples table, if Scenario Outline.
 
     Returns:
         Full function source as a string.
     """
-    decorator = _stub_decorator(is_deprecated)
+    if outline_examples is not None and not is_deprecated:
+        decorator = _parametrize_decorator(outline_examples)
+    else:
+        decorator = _stub_decorator(is_deprecated)
     params = "self" if is_method else ""
     return (
         f"{decorator}"
@@ -273,7 +315,11 @@ def write_stub_to_file(path: Path, spec: StubSpec) -> SyncAction:
     docstring_body = build_docstring(spec.feature, rule, example)
     is_class_method = spec.rule_slug is not None and spec.stub_format == "classes"
     function_source = _stub_function_source(
-        function_name, docstring_body, example.is_deprecated, is_method=is_class_method
+        function_name,
+        docstring_body,
+        example.is_deprecated,
+        is_method=is_class_method,
+        outline_examples=example.outline_examples,
     )
     if is_class_method:
         return _write_class_based_stub(path, spec, function_name, function_source)
