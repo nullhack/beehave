@@ -92,14 +92,34 @@ class TestAutoIdWriteBack:
         assert feature_file.read_text() == original_content
 
 
-@pytest.mark.skip(reason="not yet implemented")
-def test_auto_id_generation_a7b5c493() -> None:
+def test_auto_id_generation_a7b5c493(tmp_path: Path) -> None:
     """
     Given: a writable .feature file containing an Example tagged @id:my-custom-name (non-hex format)
     When: pytest is invoked
     Then: the generated stub function is named test_<feature_slug>_my-custom-name and no additional @id tag is written to the .feature file
     """
-    raise NotImplementedError
+    from pytest_beehave.sync_engine import run_sync
+
+    features_dir = tmp_path / "features"
+    tests_dir = tmp_path / "tests" / "features"
+    feature_path = features_dir / "in-progress" / "my-feature" / "my-story.feature"
+    feature_path.parent.mkdir(parents=True)
+    feature_path.write_text(
+        "Feature: My feature\n"
+        "  Rule: My rule\n"
+        "    @id:my-custom-name\n"
+        "    Example: Something happens\n"
+        "      Given a condition\n"
+        "      When an action\n"
+        "      Then an outcome\n"
+    )
+    assign_ids(features_dir)
+    content_after_id = feature_path.read_text()
+    run_sync(features_dir, tests_dir)
+    test_file = tests_dir / "my_feature" / "my_rule_test.py"
+    stub_content = test_file.read_text()
+    assert content_after_id.count("@id:") == 1
+    assert "test_my_feature_my-custom-name" in stub_content
 
 
 @pytest.mark.skip(reason="not yet implemented")

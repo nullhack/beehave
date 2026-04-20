@@ -11,7 +11,7 @@ from gherkin import Parser as _GherkinParserImpl
 
 from pytest_beehave.models import ExampleId, FeatureSlug, RuleSlug
 
-_ID_TAG_RE: re.Pattern[str] = re.compile(r"@id:([a-f0-9]{8})")
+_ID_TAG_RE: re.Pattern[str] = re.compile(r"@id:(\S+)")
 
 
 class GherkinParserProtocol(Protocol):

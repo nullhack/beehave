@@ -9,7 +9,7 @@ from pathlib import Path
 
 FEATURE_STAGES: tuple[str, ...] = ("backlog", "in-progress", "completed")
 _EXAMPLE_LINE_RE: re.Pattern[str] = re.compile(r"^(\s+)Example:", re.MULTILINE)
-_ID_TAG_RE: re.Pattern[str] = re.compile(r"@id:[a-f0-9]{8}")
+_ID_TAG_RE: re.Pattern[str] = re.compile(r"@id:\S+")
 
 
 def _collect_existing_ids(content: str) -> set[str]:
