@@ -13,15 +13,19 @@ _ID_TAG_LINE_RE: re.Pattern[str] = re.compile(r"^\s*@id:\S+\s*$")
 
 
 def _collect_existing_ids(content: str) -> set[str]:
-    """Collect all @id hex values already present in file content.
+    """Collect all @id values already present in file content, regardless of format.
+
+    Captures every value after ``@id:`` up to the next whitespace so that
+    non-standard tags (wrong length, non-hex characters) are included in the
+    uniqueness set and never silently collide with newly generated IDs.
 
     Args:
         content: Full text of a .feature file.
 
     Returns:
-        Set of 8-char hex strings found in @id tags.
+        Set of all @id value strings found in the content.
     """
-    return set(re.findall(r"@id:([a-f0-9]{8})", content))
+    return set(re.findall(r"@id:(\S+)", content))
 
 
 def _candidate_stream() -> Iterator[str]:

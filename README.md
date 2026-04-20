@@ -5,6 +5,7 @@
 
   <p><strong>Keeps your Gherkin acceptance criteria and test stubs in sync — automatically, every time pytest runs.</strong></p>
 
+  [![PyPI][pypi-shield]][pypi-url]
   [![Contributors][contributors-shield]][contributors-url]
   [![Forks][forks-shield]][forks-url]
   [![Stargazers][stars-shield]][stars-url]
@@ -40,6 +41,8 @@ pytest-beehave is the middle ground. Write your acceptance criteria in plain Ghe
 ---
 
 ## Installation
+
+Available on [PyPI](https://pypi.org/project/pytest-beehave/):
 
 ```bash
 pip install pytest-beehave
@@ -322,6 +325,8 @@ MIT — see [LICENSE](LICENSE).
 **Author:** eol ([@nullhack](https://github.com/nullhack)) · [Documentation](https://nullhack.github.io/pytest-beehave)
 
 <!-- MARKDOWN LINKS & IMAGES -->
+[pypi-shield]: https://img.shields.io/pypi/v/pytest-beehave?style=for-the-badge&color=orange
+[pypi-url]: https://pypi.org/project/pytest-beehave/
 [contributors-shield]: https://img.shields.io/github/contributors/nullhack/pytest-beehave.svg?style=for-the-badge
 [contributors-url]: https://github.com/nullhack/pytest-beehave/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/nullhack/pytest-beehave.svg?style=for-the-badge

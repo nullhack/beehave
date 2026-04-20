@@ -92,6 +92,38 @@ class TestAutoIdWriteBack:
         assert feature_file.read_text() == original_content
 
 
+def test_auto_id_generation_e9d7f615(tmp_path: Path) -> None:
+    """
+    Given: a writable .feature file containing an Example tagged @id:abcdef012 (9 hex chars, not 8)
+    When: pytest is invoked
+    Then: no new @id tag is written to the .feature file
+    And: the existing @id:abcdef012 tag is preserved unchanged
+    And: any other generated IDs in the same file do not share their first 8 characters with abcdef012
+    """
+    original_content = (
+        "Feature: My feature\n"
+        "  @id:abcdef012\n"
+        "  Example: Tagged with nine-char id\n"
+        "    Given a condition\n"
+        "    When an action\n"
+        "    Then an outcome\n"
+        "  Example: Untagged sibling\n"
+        "    Given another condition\n"
+        "    When another action\n"
+        "    Then another outcome\n"
+    )
+    feature_file = _make_feature_file(tmp_path, original_content)
+    assign_ids(tmp_path)
+    updated_content = feature_file.read_text()
+    # The non-8-char tag must not be duplicated
+    assert updated_content.count("@id:abcdef012") == 1
+    # The untagged sibling must have received exactly one new @id (standalone 8-char hex)
+    generated_ids = re.findall(r"@id:([a-f0-9]{8})(?![a-f0-9])", updated_content)
+    assert len(generated_ids) == 1
+    # The generated ID must not start with the first 8 chars of the existing tag
+    assert not generated_ids[0].startswith("abcdef01")
+
+
 def test_auto_id_generation_a7b5c493(tmp_path: Path) -> None:
     """
     Given: a writable .feature file containing an Example tagged @id:my-custom-name (non-hex format)
