@@ -39,3 +39,9 @@ Feature: pytest lifecycle integration
       Given no pyproject.toml [tool.beehave] section is present and the default docs/features/ directory does not exist
       When pytest is invoked
       Then pytest completes collection without errors
+
+    @deprecated @id:e3a13b58
+    Example: Plugin does not crash when configured features directory is absent
+      Given a project where the configured features directory does not exist
+      When pytest is invoked
+      Then pytest completes collection without errors

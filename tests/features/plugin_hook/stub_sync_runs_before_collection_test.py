@@ -53,7 +53,7 @@ class TestStubSyncRunsBeforeCollection:
         result = pytester.runpytest()
         result.stdout.fnmatch_lines(["*CREATE*examples_test.py*"])
 
-    @pytest.mark.skip(reason="orphan: no matching @id in .feature files")
+    @pytest.mark.deprecated
     def test_plugin_hook_e3a13b58(self) -> None:
         """
         Given: a project where the configured features directory does not exist
