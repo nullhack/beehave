@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-import pytest
-
 from pytest_beehave.sync_engine import run_sync as sync_stubs
 
 

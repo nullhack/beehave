@@ -367,8 +367,8 @@ Feature: My feature
     )
     sync_stubs(features_dir, tests_dir)
     content = read_test_file(tests_dir, "my_feature", "examples")
-    assert '@pytest.mark.parametrize' in content
+    assert "@pytest.mark.parametrize" in content
     assert '"thing,action,result"' in content
     assert '("ball", "rolls", "stops")' in content
     assert '("cube", "slides", "falls")' in content
-    assert '@pytest.mark.skip' not in content
+    assert "@pytest.mark.skip" not in content

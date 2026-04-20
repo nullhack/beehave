@@ -417,3 +417,38 @@ def test_write_class_based_stub_creates_new_file(tmp_path: Path) -> None:
     lines = content.splitlines()
     def_line = next((ln for ln in lines if "def test_my_feature_aabbccdd" in ln), "")
     assert "(self)" in def_line
+
+
+def test_stub_creation_scenario_outline_empty_examples_table_falls_back_to_skip(
+    tmp_path: Path,
+) -> None:
+    """Scenario Outline with fewer than 2 rows in Examples falls back to skip marker."""
+    test_file = tmp_path / "my_rule_test.py"
+    example = ParsedExample(
+        example_id=ExampleId("ccddee00"),
+        steps=(
+            ParsedStep(
+                keyword="Given", text="x is <val>", doc_string=None, data_table=None
+            ),
+        ),
+        background_sections=(),
+        outline_examples="| val |\n",
+        is_deprecated=False,
+    )
+    rule = ParsedRule(
+        title="My Rule",
+        rule_slug=RuleSlug("my_rule"),
+        examples=(example,),
+        is_deprecated=False,
+    )
+    feature = _make_feature("my_feature", rules=(rule,))
+    spec = StubSpec(
+        feature_slug=FeatureSlug("my_feature"),
+        rule_slug=RuleSlug("my_rule"),
+        example=example,
+        feature=feature,
+        stub_format="functions",
+    )
+    write_stub_to_file(test_file, spec)
+    content = test_file.read_text(encoding="utf-8")
+    assert '@pytest.mark.skip(reason="not yet implemented")' in content
