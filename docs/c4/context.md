@@ -1,6 +1,6 @@
 # C4 Level 1 — System Context: pytest-beehave
 
-> Last updated: 2026-04-19
+> Last updated: 2026-04-19 (v3.2 — stub-format-config)
 > Source: docs/discovery.md, docs/features/completed/
 
 ```mermaid

@@ -20,7 +20,8 @@ Living glossary generated from the domain model in `docs/discovery.md` and archi
 | **`@deprecated` tag** | Gherkin tag placed directly on an `Example:`, `Rule:`, or `Feature:` node. When present, beehave applies `@pytest.mark.deprecated` to the corresponding test stub. Inheritance is resolved at parse time. |
 | **`@id` tag** | `@id:<hex>` tag on a Gherkin `Example:` block that uniquely identifies it. Format: `@id:<8-char-hex>`. beehave generates and writes these back if absent (or fails in CI). |
 | **`@pytest.mark.deprecated`** | pytest marker applied to a test stub when the corresponding Gherkin `Example:` carries a `@deprecated` tag (directly or via inheritance). Auto-skipped by conftest. |
-| **`[tool.beehave]` section** | Configuration section in `pyproject.toml` where the developer can set `features_path`. |
+| **`[tool.beehave]` section** | Configuration section in `pyproject.toml` where the developer can set `features_path` and other options. |
+| **`stub_format`** | Configuration key under `[tool.beehave]` that controls output format of generated test stubs for Rule-block features. Values: `"functions"` (default, top-level functions) and `"classes"` (class-wrapped methods). First appeared: `stub-format-config`. |
 | **`# language: xx` comment** | Language directive at the top of a Gherkin `.feature` file. Instructs `gherkin-official` to parse using the specified dialect (e.g. `es`, `zh-CN`). beehave delegates this fully to `gherkin-official`. |
 | **`--beehave-hatch` flag** | pytest CLI flag that triggers hatch generation. When passed, beehave writes bee-themed example `.feature` files to the configured features path and exits immediately — no test collection occurs. First appeared: `example-hatch`. |
 | **`--beehave-hatch-force` flag** | pytest CLI flag that allows overwriting existing hatch content. When passed alongside `--beehave-hatch`, beehave replaces any existing `.feature` files in the hatch output directories. First appeared: `example-hatch`. |
@@ -101,3 +102,5 @@ Living glossary generated from the domain model in `docs/discovery.md` and archi
 | **run before collection** | Invoke stub sync inside `pytest_configure` so new stubs are discoverable in the same pytest run. |
 | **suppress steps** | Omit step output when the channel is disabled (`show_steps_in_terminal = false` / `show_steps_in_html = false`) or the test is outside `tests/features/`. |
 | **write back** | Insert a generated `@id:<hex>` tag into the `.feature` file in-place, on the line immediately before the `Example:` keyword. |
+| **select format** | Choose between `"functions"` (top-level) and `"classes"` (class-wrapped) format based on `stub_format` config. First appeared: `stub-format-config`. |
+| **wrap class** | Output a test function as a method inside `class Test<RuleSlug>:` when `stub_format = "classes"`. First appeared: `stub-format-config`. |

@@ -2,6 +2,19 @@
 
 All notable changes to pytest-beehave will be documented in this file.
 
+## [v3.2.20260419] — Mason Osmia — 2026-04-19
+
+### Added
+- feat(stub-format-config): add `stub_format` config key under `[tool.beehave]` — controls output format of generated test stubs for Rule-block features
+- feat(stub-format-config): support two formats: `"functions"` (default, top-level functions) and `"classes"` (class-wrapped methods for backward compatibility)
+
+### Fixed
+- fix(stub-format-config): add `self` parameter to class-method stubs when `stub_format = "classes"` — pytest requires `self` in class methods
+
+### Changed
+- ci(release): add auto-tag workflow (`.github/workflows/tag-release.yml`) — creates `v{version}` tag on merge when `pyproject.toml` version bumps
+- chore(skills): simplify test naming convention in `implementation` skill — uses `<feature_slug>_<@id>` directly without `Rule:` block routing documentation
+
 ## [v3.1.20260419] — Generative Augochlora — 2026-04-19
 
 ### Added
