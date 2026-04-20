@@ -141,6 +141,8 @@ def build_docstring(
     lines: list[str] = []
     for bg_steps in example.background_sections:
         lines.extend(_render_background_section(bg_steps))
+    if example.background_sections and example.steps:
+        lines.append("")
     lines.extend(_render_step(step) for step in example.steps)
     if example.outline_examples is not None:
         lines.append(f"    {example.outline_examples}")

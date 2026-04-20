@@ -257,11 +257,43 @@ Feature: My feature
         assert "| ball  | rolls  | stops  |" in content
 
 
-@pytest.mark.skip(reason="not yet implemented")
-def test_stub_creation_e5c3b271() -> None:
+def test_stub_creation_e5c3b271(
+    tmp_path: Path,
+    make_feature: Callable[..., None],
+    read_test_file: Callable[..., str],
+) -> None:
     """
     Given: a backlog feature with a Background section and a Scenario with its own steps
     When: pytest is invoked and the stub is created
     Then: the generated test stub docstring contains a blank line between the last Background step and the first Scenario step
     """
-    raise NotImplementedError
+    features_dir = tmp_path / "features"
+    tests_dir = tmp_path / "tests"
+    make_feature(
+        features_dir,
+        "backlog",
+        "my-feature",
+        "my-story.feature",
+        """\
+Feature: My feature
+  Background:
+    Given the shop is open
+
+  @id:aabbccdd
+  Example: Something happens
+    When a customer arrives
+    Then they are served
+""",
+    )
+    sync_stubs(features_dir, tests_dir)
+    content = read_test_file(tests_dir, "my_feature", "examples")
+    lines = content.splitlines()
+    bg_step_idx = next(
+        (i for i, ln in enumerate(lines) if "Given: the shop is open" in ln), -1
+    )
+    assert bg_step_idx >= 0
+    assert lines[bg_step_idx + 1] == ""
+    when_idx = next(
+        (i for i, ln in enumerate(lines) if "When: a customer arrives" in ln), -1
+    )
+    assert when_idx == bg_step_idx + 2
