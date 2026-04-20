@@ -90,6 +90,13 @@ Feature: Test stub creation
       When pytest is invoked
       Then no new test stub is created for that Example
 
+    @bug
+    @id:f3e1a290
+    Example: Scenario Outline produces a parametrized stub
+      Given a backlog feature file containing a Scenario Outline with an Examples table
+      When pytest is invoked
+      Then a single @pytest.mark.parametrize test stub is created for that Scenario Outline with the Examples table rows as parameter values
+
   Rule: Docstring generation
     As a developer
     I want the stub docstring to contain all the steps from the Example
@@ -130,3 +137,10 @@ Feature: Test stub creation
       Given a backlog feature containing a Scenario Outline with placeholder values and an Examples table
       When pytest is invoked
       Then the generated test stub docstring contains the raw template step text followed by the Examples table
+
+    @bug
+    @id:e5c3b271
+    Example: Background steps are separated from scenario steps by a blank line in the docstring
+      Given a backlog feature with a Background section and a Scenario with its own steps
+      When pytest is invoked and the stub is created
+      Then the generated test stub docstring contains a blank line between the last Background step and the first Scenario step

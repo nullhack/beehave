@@ -121,7 +121,7 @@ Status: COMPLETE
 ---
 
 ## 2026-04-19 — Session 3
-Status: IN-PROGRESS
+Status: COMPLETE
 
 ### Feature: example-hatch
 
@@ -134,12 +134,10 @@ Status: IN-PROGRESS
 | Q5 | Where does the generated folder land? | Respects the configured features path (`features_path` in `[tool.beehave]`); defaults to `docs/features/` | ANSWERED |
 | Q6 | What happens if the target features directory already contains content? | Fail loudly with a descriptive error; provide a `--beehave-hatch-force` flag to overwrite (PO-resolved by convention — consistent with project hard-error philosophy) | RESOLVED-BY-PO |
 
-Status: COMPLETE
-
 ---
 
 ## 2026-04-19 — Feature: stub-format-config — Session 1
-Status: IN-PROGRESS
+Status: COMPLETE
 
 ### Feature: stub-format-config
 
@@ -156,4 +154,21 @@ Status: IN-PROGRESS
 | Q9 | What happens if a project was relying on class-based output? | They set `stub_format = "classes"` in `[tool.beehave]` to restore the old behavior | ANSWERED |
 | Q10 | Is the `"classes"` format identical to the old class-based stub output? | Yes — `class Test<RuleSlug>:` wrapper with methods inside, same as what `stub_writer.py` currently produces | ANSWERED |
 
+---
+
+## 2026-04-20 — Session 4
 Status: COMPLETE
+
+### Feature: stub-creation, stub-updates, auto-id-generation (Bug Session)
+
+| ID | Question | Answer | Status |
+|----|----------|--------|--------|
+| Q1a | Scenario Outline: 1 stub per row or 1 stub for whole outline? | 1 parametrized test using @pytest.mark.parametrize; docstring uses raw template text with <placeholders> intact | ANSWERED |
+| Q1b | What was observed when stubs were missing? | Stubs simply absent — no error raised | ANSWERED |
+| Q2a | If Example has any @id tag, skip ID generation? | Do not skip — create stub using existing @id; but do NOT add a new @id; each Example must have exactly one @id | ANSWERED |
+| Q2b | What does .feature file look like after double-ID bug? | Stub was created using hex ID (the added one), not the original non-hex ID — wrong; if two @id tags present, raise an error | ANSWERED |
+| Q3a | Other Gherkin constructs failing? | Unknown — SE to investigate during implementation | ANSWERED |
+| Q3b | Minimum expectation for new .feature file? | One Scenario → one test function; one Scenario Outline → one parametrized test function | ANSWERED |
+| Q4a | Background separator: docstring only or report too? | Both — stub docstring AND terminal/HTML report output | ANSWERED |
+| Q4b | What should separator look like? | Just a blank line between Background steps and Scenario steps | ANSWERED |
+| Q4c | Which stages / when? | Only during stub creation and updates — not active enforcement on every run | ANSWERED |

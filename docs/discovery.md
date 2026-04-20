@@ -231,3 +231,24 @@ Template §3: CONFIRMED — stakeholder approved 2026-04-18
 | Verb | fail on invalid | abort pytest startup with descriptive error when value is unrecognised | Yes |
 | Verb | generate function stub | write top-level `def test_<feature_slug>_<@id>()` with no class wrapper | Yes |
 | Verb | generate class stub | write method inside `class Test<RuleSlug>:` | Yes |
+
+---
+
+## Session: 2026-04-20 — Bug Reports
+
+### Feature List
+- `stub-creation` — bugs added: Scenario Outline → parametrized stub (missing silently), Background blank-line separator in docstring during creation
+- `stub-updates` — bug added: Background blank-line separator in docstring during update
+- `auto-id-generation` — bugs added: existing non-hex @id reused for stub naming (no new @id added); two @id tags on one Example → hard error at startup
+
+### Domain Model
+| Type | Name | Description | In Scope |
+|------|------|-------------|----------|
+| Noun | Scenario Outline | Gherkin parametrized scenario construct | Yes |
+| Noun | parametrized stub | `@pytest.mark.parametrize` test function generated from a Scenario Outline | Yes |
+| Noun | non-hex @id | `@id` tag whose value is not 8-char hex (e.g. `@id:my-custom-name`) | Yes |
+| Noun | double @id | two `@id` tags on the same Example — hard error at startup | Yes |
+| Noun | Background separator | blank line between Background steps and Scenario steps in stub docstring and report output | Yes |
+| Verb | parametrize | generate `@pytest.mark.parametrize` stub from Scenario Outline `Examples:` table | Yes |
+| Verb | reuse @id | use existing `@id` value (any format) as stub function name suffix | Yes |
+| Verb | raise double-id error | abort pytest with descriptive error when two `@id` tags found on one Example | Yes |

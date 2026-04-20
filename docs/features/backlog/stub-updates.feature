@@ -39,6 +39,13 @@ Feature: Test stub updates
       When pytest is invoked and the .feature file step text has changed
       Then the test function body below the docstring is unchanged
 
+    @bug
+    @id:d6a4f382
+    Example: Background steps are separated from scenario steps by a blank line when docstring is updated
+      Given an existing test stub for a feature with a Background section whose docstring does not have a blank line between Background steps and Scenario steps
+      When pytest is invoked and the stub docstring is updated
+      Then the updated docstring contains a blank line between the last Background step and the first Scenario step
+
   Rule: Function renames
     As a developer
     I want test stubs to be renamed when the feature slug changes

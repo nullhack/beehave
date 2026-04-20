@@ -40,6 +40,20 @@ Feature: Auto ID generation and enforcement
       When pytest is invoked
       Then the .feature file content is unchanged
 
+    @bug
+    @id:a7b5c493
+    Example: Existing non-hex @id is used as-is for stub naming and no new @id is added
+      Given a writable .feature file containing an Example tagged @id:my-custom-name (non-hex format)
+      When pytest is invoked
+      Then the generated stub function is named test_<feature_slug>_my-custom-name and no additional @id tag is written to the .feature file
+
+    @bug
+    @id:b8c6d504
+    Example: Two @id tags on one Example cause a hard error at startup
+      Given a .feature file containing an Example with two @id tags on separate lines before the Example keyword
+      When pytest is invoked
+      Then pytest exits with a non-zero status code and an error message naming the Example with duplicate @id tags
+
   Rule: CI ID enforcement
     As a CI pipeline
     I want pytest to fail when untagged Examples are found in a read-only environment
