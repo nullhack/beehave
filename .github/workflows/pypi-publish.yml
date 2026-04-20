@@ -28,6 +28,9 @@ jobs:
       - name: Set up Python 3.13
         run: uv python install 3.13
 
+      - name: Clean dist
+        run: rm -rf dist/
+
       - name: Build wheel and sdist
         run: uv build
 
