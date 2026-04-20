@@ -54,6 +54,15 @@ Feature: Auto ID generation and enforcement
       When pytest is invoked
       Then pytest exits with a non-zero status code and an error message naming the Example with duplicate @id tags
 
+    @bug
+    @id:e9d7f615
+    Example: Non-8-char @id tag is included in the uniqueness set so generated IDs never collide with it
+      Given a writable .feature file containing an Example tagged @id:abcdef012 (9 hex chars, not 8)
+      When pytest is invoked
+      Then no new @id tag is written to the .feature file
+      And the existing @id:abcdef012 tag is preserved unchanged
+      And any other generated IDs in the same file do not share their first 8 characters with abcdef012
+
   Rule: CI ID enforcement
     As a CI pipeline
     I want pytest to fail when untagged Examples are found in a read-only environment
