@@ -16,4 +16,4 @@ Source: docs/features/in-progress/auto-id-generation.feature
 - `stub-updates` — bug: Background docstring separator (@id:d6a4f382)
 
 ## Next
-Run @reviewer — verify feature auto-id-generation at Step 4 (re-review after OC-5 and b8c6d504 fixes)
+Run @reviewer — verify feature auto-id-generation at Step 4 (re-review after OC-1/nesting fix in _count_preceding_id_tags)
