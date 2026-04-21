@@ -1,6 +1,6 @@
 [project]
 name = "beehave"
-version = "0.1.0b0"
+version = "0.1.20250421"
 description = "A pytest plugin that runs acceptance criteria stub generation as part of the pytest lifecycle, with auto-ID assignment and generic step docstrings"
 readme = "README.md"
 requires-python = ">=3.13"
