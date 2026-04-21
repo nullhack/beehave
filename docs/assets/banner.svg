@@ -8,8 +8,12 @@
   <!-- Background -->
   <rect width="860" height="200" rx="14" ry="14" fill="#1e2128"/>
 
-  <!-- === LOGO MARK === -->
-  <g transform="translate(30, 40) scale(1.1)">
+  <!-- === LOGO MARK ===
+       mark is 100×100 units, scaled 1.6× = 160×160px
+       left zone: x:0–220, y:0–200 → center at (110, 100)
+       translate = center - scale*50 = (110 - 80, 100 - 80) = (30, 20)
+  -->
+  <g transform="translate(30, 20) scale(1.6)">
     <path d="M 42 18 L 58 18 L 58 36 Q 58 40 66 46 Q 78 56 78 72 Q 78 92 50 92 Q 22 92 22 72 Q 22 56 34 46 Q 42 40 42 36 Z"
           fill="#f5a800" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
     <g clip-path="url(#mark-body)">
@@ -26,12 +30,12 @@
   <!-- === WORDMARK === -->
   <text
     x="220"
-    y="105"
+    y="148"
     font-family="system-ui, -apple-system, sans-serif"
-    font-size="96"
+    font-size="110"
     font-weight="700"
     letter-spacing="-2"
-    dominant-baseline="middle"
+    dominant-baseline="auto"
   >
     <tspan fill="#f5a800">Bee</tspan><tspan fill="#e8eaef">have</tspan>
   </text>
