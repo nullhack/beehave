@@ -1,254 +1,220 @@
-# Discovery: pytest-beehave
+# Discovery: beehave
 
 ---
 
-## Session: 2026-04-18 — Initial Synthesis
+## Session: 2026-04-21 — Initial Synthesis (General + Cross-cutting)
 
 ### Scope
-pytest-beehave is a pytest plugin for Python developers using the python-project-template workflow. It eliminates the manual `gen-tests` step by automatically syncing test stubs from Gherkin `.feature` files on every `pytest` invocation — before collection, so new stubs are collected in the same run. It generates IDs for untagged Examples (failing hard in CI), writes step docstrings, and applies deprecation markers. The plugin is always-on with a configurable features folder path. It never modifies test bodies and must not corrupt `.feature` files. Out of scope: new test runner, non-standard layouts, GUI, Gherkin parser changes.
-
-Feature stages determine what the plugin does: backlog and in-progress features receive full stub creation and updates; completed features receive only orphan detection. Marker ownership is strictly split — stub-sync owns skip/deprecated markers; the developer owns slow.
+Beehave is a standalone CLI tool and Python library that keeps BDD living documentation in sync with test stubs. It treats `.feature` files as the source of truth and generates or updates test stubs in `tests/features/` without ever modifying test implementation bodies. Developers invoke it on-demand via CLI commands with subtle bee-world theming (`nest`, `hatch`, `sync`, `status`). The tool is framework-agnostic through pluggable adapters, starting with pytest. Configuration lives in `pyproject.toml` under `[tool.beehave]`. Output is silent by default (Unix philosophy), with `--verbose` and `--json` options for human and machine consumption. Beehave writes to `.feature` files only to add missing `@id` tags; all other mutations happen in `tests/`.
 
 ### Feature List
-- `features-path-config` — custom features folder path via pyproject.toml
-- `plugin-hook` — pytest lifecycle integration (register plugin, run before collection)
-- `auto-id-generation` — detect missing @id tags, generate IDs, write back or fail in CI
-- `stub-creation` — create new test stubs for backlog/in-progress; top-level functions, skip marker, docstrings
-- `stub-updates` — update/rename/orphan-mark existing stubs; conformance enforcement; non-conforming redirect
-- `deprecation-sync` — toggle @pytest.mark.deprecated across all 3 feature stages; Gherkin tag inheritance
+| Feature | Concern | Priority |
+|---------|---------|----------|
+| `nest` | Bootstrap the canonical `docs/features/` directory structure with `backlog/`, `in-progress/`, and `completed/` subfolders. | Foundational |
+| `hatch` | Generate bee-themed example/demo `.feature` files to showcase capabilities. | Foundational |
+| `config-reading` | Read `[tool.beehave]` from `pyproject.toml`; apply defaults. | Foundational |
+| `id-generation` | Detect untagged Examples, generate unique `@id` tags, and write them back to `.feature` files. | Core |
+| `sync-create` | Generate new test stubs for Examples that have no corresponding test function. | Core |
+| `sync-update` | Refresh auto-generated parts of existing test stubs (docstrings, markers, signatures) when the `.feature` Example changes. | Core |
+| `sync-cleanup` | Detect and warn on orphan test stubs whose `.feature` file or `@id` no longer exists. | Core |
+| `status` | Dry-run preview of what `sync` would do without making any changes. | Core |
+| `adapter-contract` | Define the abstract interface / protocol that all framework adapters must implement. | Core |
+| `pytest-adapter` | Generate pytest-specific test stubs (top-level functions, markers, docstrings, `raise NotImplementedError`). | Core |
+| `unittest-adapter` | Generate unittest-specific test stubs (future; not first release). | Backlog |
+| `template-customization` | Allow users to point to a custom template folder that overrides adapter defaults. | Extended |
+| `cache-management` | Maintain `.beehave_cache/` for incremental sync (hash-based change detection). | Extended |
+| `deprecation-sync` | Propagate `@deprecated` Gherkin tags to framework-specific deprecation markers on stubs. | Extended |
+| `parameter-handling` | Generate parametrized stubs from Scenario Outlines using native framework conventions (e.g., `@pytest.mark.parametrize`). | Extended |
+
+**Splits applied:**
+- `framework-adapters` → `pytest-adapter` + `unittest-adapter` (>2 concerns).
+- `sync` → `sync-create` + `sync-update` + `sync-cleanup` (>2 concerns).
 
 ### Domain Model
-| Type | Name | Description | In Scope |
-|------|------|-------------|----------|
-| Noun | test stub | top-level function `test_<feature_slug>_<@id>()` | Yes |
-| Noun | test file | `<rule_slug>_test.py` or `examples_test.py` | Yes |
-| Noun | feature slug | `.feature` file stem, hyphens → underscores, lowercase | Yes |
-| Noun | rule slug | `Rule:` title slugified with underscores, lowercase | Yes |
-| Noun | docstring | verbatim step-by-step content in test stub | Yes |
-| Noun | backlog stage | `docs/features/backlog/` | Yes |
-| Noun | in-progress stage | `docs/features/in-progress/` | Yes |
-| Noun | completed stage | `docs/features/completed/` — stub creation excluded | Yes |
-| Noun | conforming test | test with correct file name AND correct function name | Yes |
-| Noun | orphan test | test function with no matching `@id` in any `.feature` file | Yes |
-| Verb | create stub | write new top-level test function for new Example | Yes |
-| Verb | mark orphan | apply `@pytest.mark.skip(reason="orphan: ...")` | Yes |
-| Verb | mark non-conforming | apply `@pytest.mark.skip(reason="non-conforming: moved to <file>")` | Yes |
-| Verb | deprecate stub | apply `@pytest.mark.deprecated` when Gherkin `@deprecated` tag present | Yes |
-
-Template §3: CONFIRMED — stakeholder approved 2026-04-18
-
----
-
-## Session: 2026-04-18 — Behavior Groups
-
-### Scope
-Behavior groups and cross-cutting concerns established for the initial feature set.
+| Type | Name | Description |
+|------|------|-------------|
+| Noun | `.feature` file | Gherkin source-of-truth file containing Feature, Rule, and Example blocks |
+| Noun | feature slug | `.feature` file stem with hyphens → underscores, lowercase |
+| Noun | rule slug | `Rule:` title slugified with underscores, lowercase |
+| Noun | Example | Gherkin scenario (including Scenario Outline instances) |
+| Noun | `@id` tag | `@id:<8-char-hex>` identifier attached to an Example |
+| Noun | test stub | Auto-generated test function with docstring and `raise NotImplementedError` body |
+| Noun | test directory | `tests/features/<feature_snake_name>/` mapping from source folder |
+| Noun | test file | `<rule_slug>_test.py` or `examples_test.py` |
+| Noun | backlog stage | `docs/features/backlog/` — organizational folder |
+| Noun | in-progress stage | `docs/features/in-progress/` — organizational folder |
+| Noun | completed stage | `docs/features/completed/` — organizational folder |
+| Noun | orphan stub | Test function whose `@id` no longer exists in any `.feature` file |
+| Noun | adapter | Framework-specific stub generator (pytest, unittest, …) |
+| Noun | template | Jinja-like (or literal string) template used by an adapter to render a stub |
+| Noun | `[tool.beehave]` | Configuration section in `pyproject.toml` |
+| Noun | `features_path` | Configurable root path for `.feature` files (default `docs/features/`) |
+| Noun | `.beehave_cache/` | Directory storing hashes for incremental sync |
+| Verb | nest | Create canonical features directory and subfolders |
+| Verb | hatch | Write example/demo `.feature` files to the features path |
+| Verb | sync | Scan, diff, generate, update, and warn — the main orchestration command |
+| Verb | status | Dry-run preview of sync operations |
+| Verb | generate ID | Produce a unique 8-character lowercase hex string |
+| Verb | write back | Insert `@id` tag into `.feature` file in-place |
+| Verb | create stub | Write a new test function for a new Example |
+| Verb | update stub | Rewrite docstring/tags of an existing test function without touching its body |
+| Verb | warn orphan | Emit a warning when a `.feature` file or Example is deleted |
+| Verb | deprecate stub | Apply framework-specific deprecation marker when `@deprecated` tag is present |
+| Verb | parametrize | Generate framework-native parametrized stub from Scenario Outline Examples table |
 
 ### Decisions
-- **Lifecycle**: backlog + in-progress receive full stub creation and updates; completed receives orphan detection only — no new stubs, no docstring/rename updates
-- **Conformance**: two-part — correct file name (`<rule_slug>_test.py` or `examples_test.py`) AND correct function name (`test_<feature_slug>_<@id>`) — both must match
-- **Marker ownership**: two non-overlapping domains — stub-sync owns `skip/not-yet-implemented`, `skip/orphan`, `skip/non-conforming`, `deprecated`; developer owns `slow` — neither crosses into the other's territory
+- **No auto-detect**: Framework is explicit via `--framework <name>` (default `pytest`).
+- **On-demand only**: No watch mode, no pre-commit hooks, no auto-triggers.
+- **Config source**: `pyproject.toml` under `[tool.beehave]` only.
+- **Feature file mutability**: Beehave writes to `.feature` files ONLY to add `@id` tags to Examples that have no ID.
+- **Deletion handling**: Warn by default when a `.feature` file is deleted; configurable to error instead.
+- **One framework per invocation**: `--framework` targets a single adapter per run.
+- **Template customization**: Users can point to a custom template folder.
+- **CLI output**: Silent by default; `--verbose` for human output; `--json` for machine-readable output.
+- **Stub ownership**: `@id` in function name (`test_<feature_slug>_<id>`) makes identification unambiguous; no section comments. Feature files may live in `docs/features/backlog/`, `docs/features/in-progress/`, `docs/features/completed/`, or `docs/features/` (root-level, no subfolder) — all four locations map identically to `tests/features/<feature_snake_name>/`. The stage subfolder is irrelevant to test stub mapping.
+- **Feature stages**: No behavioral difference between `backlog/`, `in-progress/`, `completed/`, or root-level — all map identically to `tests/features/<feature_snake_name>/`.
+
+Template §3: CONFIRMED — stakeholder approved 2026-04-21
 
 ---
 
-## Session: 2026-04-18 — Per-feature scope: features-path-config, plugin-hook, deprecation-sync, auto-id-generation
+## Session: 2026-04-21 — Per-feature Discovery (Session 1 Complete)
 
-### Feature List
-- `features-path-config` — custom features folder path via pyproject.toml; default `docs/features/`; hard error on missing configured path
-- `plugin-hook` — pytest lifecycle integration; `pytest_configure` hook; always-on; graceful skip when features directory absent
-- `deprecation-sync` — toggle `@pytest.mark.deprecated` across all 3 stages; Gherkin tag inheritance from Rule/Feature nodes
-- `auto-id-generation` — detect missing `@id` tags; write back in writable environments; fail in CI with descriptive error
+### Summary
 
-### Domain Model
-| Type | Name | Candidate Class/Method | In Scope |
-|------|------|----------------------|----------|
-| Noun | features folder path | path to `docs/features/` directory | Yes |
-| Noun | `pyproject.toml` | project configuration file | Yes |
-| Noun | `[tool.beehave]` section | configuration section in `pyproject.toml` | Yes |
-| Noun | default path | `docs/features/` relative to project root | Yes |
-| Noun | pytest plugin | `BeehavePlugin` | Yes |
-| Noun | pytest session | pytest lifecycle | Yes |
-| Noun | pytest config | `pytest_configure` hook | Yes |
-| Noun | stub sync | full sync operation | Yes |
-| Noun | `@deprecated` tag | Gherkin tag directly on an Example block | Yes |
-| Noun | Gherkin tag inheritance | `@deprecated` on a `Rule:` or `Feature:` node applies to all child Examples | Yes |
-| Noun | `@pytest.mark.deprecated` | pytest marker on a test function | Yes |
-| Noun | Example block | Gherkin scenario | Yes |
-| Noun | `@id` tag | `@id:<8-char-hex>` tag on Example | Yes |
-| Noun | hex ID | 8-character lowercase hex string | Yes |
-| Noun | CI environment | read-only or automated environment | Yes |
-| Verb | read config | parse `[tool.beehave]` from `pyproject.toml` | Yes |
-| Verb | resolve path | make the configured path absolute relative to project root | Yes |
-| Verb | fall back to default | use `docs/features/` if no config present | Yes |
-| Verb | register plugin | `pytest_configure` entry point | Yes |
-| Verb | run before collection | invoke sync logic before collection begins | Yes |
-| Verb | detect deprecated | check Example tags for `@deprecated` (direct and inherited) | Yes |
-| Verb | add marker | prepend `@pytest.mark.deprecated` to test function | Yes |
-| Verb | remove marker | remove `@pytest.mark.deprecated` when tag is gone | Yes |
-| Verb | detect missing ID | scan Example tags for `@id` | Yes |
-| Verb | generate ID | produce a unique 8-char hex string | Yes |
-| Verb | write back | insert `@id` tag into `.feature` file in-place | Yes |
-| Verb | fail run | abort pytest with a clear error message | Yes |
+Session 1 is now fully complete. All per-feature questions were answered by the stakeholder. The following decisions were made and recorded:
 
-Template §3: CONFIRMED — stakeholder approved 2026-04-18
+**ID Generation**
+- IDs are 8-char lowercase hex, generated randomly and retried silently on collision.
+- Developer-supplied `@id` values are always respected; malformed tags (empty value or non-hex) are treated as missing and replaced.
+- Uniqueness is project-wide across all `.feature` files.
+- Write-back is in-place, preserving all whitespace and formatting.
+- Idempotent: valid existing IDs are never touched.
+- Python API: `from beehave import assign_ids`.
+- Dry-run preview is via `beehave status` (no separate preview mode for id-generation).
 
----
+**Status**
+- Exit 0 = in sync; Exit 1 = changes pending. Standard Unix CI contract.
+- Output: silent by default, `--verbose` for human detail, `--json` for machine-readable.
+- Reports what `sync` would do without making any changes.
 
-## Session: 2026-04-18 — Per-feature scope: multilingual-feature-parsing
+**Cache Management**
+- Cache file: `.beehave_cache/features.json`.
+- Auto-rebuilds silently if stale/missing/corrupted.
+- `beehave nest` adds `.beehave_cache/` to `.gitignore`.
+- Not user-visible in normal operation.
 
-### Scope
-pytest-beehave delegates all language handling to gherkin-official. When a `.feature` file begins
-with `# language: es`, the parser switches to Spanish keywords (Característica:, Dado:, Cuando:,
-Entonces:, etc.) automatically. When it begins with `# language: zh-CN`, it switches to Chinese
-keywords (功能:, 假设:, 当:, 那么:, etc.). The plugin never inspects the language directive itself.
-Generated test stubs use the feature folder name for function names (always ASCII-safe slugs),
-and preserve the original keyword text verbatim in docstrings. A project with mixed-language
-`.feature` files works because each file is parsed in isolation.
+**Template Customization**
+- Override via `--template-dir` CLI flag or `template_path` in `[tool.beehave]`.
+- Custom folder is a full replacement for matched built-in template files.
+- Built-in templates remain default when no custom folder is configured.
 
-### Feature List
-- `multilingual-feature-parsing` — transparent non-English parsing via `# language: xx`; no beehave configuration needed
+**Sync-Create**
+- One test file per `Rule:` block: `tests/features/<feature_snake>/<rule_slug>_test.py`.
+- Stub: `test_<feature_slug>_<id>`, skip marker from adapter template, verbatim Gherkin docstring, `-> None`, body `...`.
+- All markers come from the adapter template (core is framework-agnostic).
 
-### Domain Model
-| Type | Name | Candidate Class/Method | In Scope |
-|------|------|----------------------|----------|
-| Noun | `# language: xx` comment | Language directive at top of feature file | Yes |
-| Noun | non-English keyword | Gherkin keyword in a supported dialect | Yes |
-| Noun | pyproject.toml language config | Project-level default language setting | No |
-| Noun | bad language code error handling | Custom error for unrecognised language codes | No |
+**Sync-Update**
+- Updates only: docstring, function name (on feature rename), `@deprecated` marker.
+- NEVER modifies the test body.
+- Scenario Outline column changes: WARN only, flag as "manual intervention required."
 
-Template §3: CONFIRMED — stakeholder approved 2026-04-18
+**Sync-Cleanup**
+- Orphan = `@id` in test function name has no matching `@id` in any `.feature` file.
+- Orphan action: warn only, leave stub unchanged.
+- Feature renamed: rename test function (sync-update territory), preserve body.
+- Feature deleted: warn only (C5 behavior); stubs become orphans.
+- Test in wrong location: move to correct location, preserve body.
 
----
+**Adapter Contract**
+- Registered via `framework` key in `[tool.beehave]`; `--framework` CLI flag overrides.
+- Default: `pytest`. v1 built-in adapters only.
+- Each adapter provides: skip marker template, deprecated marker template, parametrize template, stub file header.
 
-## Session: 2026-04-18 — Per-feature scope: features-dir-bootstrap
+**Pytest Adapter**
+- Skip: `@pytest.mark.skip(reason="not yet implemented")`
+- Deprecated: `@pytest.mark.deprecated`
+- Parametrize: `@pytest.mark.parametrize(...)`
+- Prefix: `test_`, return type: `-> None`, body: `...`
 
-### Scope
-The features-dir-bootstrap feature ensures the Beehave plugin can always operate on a well-structured
-features directory. When pytest is invoked, the plugin runs a bootstrap step as its very first action
-(before stub sync). The bootstrap inspects the configured features directory and, if it exists,
-ensures all three canonical subfolders (backlog/, in-progress/, completed/) are present — creating
-any that are missing. It then scans for `.feature` files directly in the root features directory (not
-inside any subfolder) and moves them to backlog/, making them available for stub sync in the same
-pytest run. Non-`.feature` files in the root are left untouched. If a name collision occurs (a
-root-level `.feature` file shares a name with an existing backlog/ file), the root-level file is left
-in place and a warning is emitted. If the structure is already correct and no root-level `.feature`
-files exist, the bootstrap is a complete no-op with no terminal output. If the root features
-directory does not exist, the bootstrap is skipped entirely.
+**Parameter Handling**
+- Scenario Outlines → adapter renders parametrized stub.
+- Column changes after stub creation: warn only, "manual intervention required."
 
-### Feature List
-- `features-dir-bootstrap` — create missing canonical subfolders; migrate root-level `.feature` files to `backlog/`; collision warning; silent no-op when structure is correct
+**Unittest Adapter**
+- PARKED for v2. Out of v1 scope.
 
-### Domain Model
-| Type | Name | Candidate Class/Method | In Scope |
-|------|------|----------------------|----------|
-| Noun | features directory | root configured features path (e.g. docs/features/) | Yes |
-| Noun | backlog subfolder | docs/features/backlog/ | Yes |
-| Noun | in-progress subfolder | docs/features/in-progress/ | Yes |
-| Noun | completed subfolder | docs/features/completed/ | Yes |
-| Verb | bootstrap | create missing canonical subfolders | Yes |
-| Verb | migrate | move root-level .feature files to backlog/ | Yes |
-| Verb | detect | check whether the three-subfolder structure exists | Yes |
+**Hatch, Config-Reading, Deprecation-Sync**
+- Baselined as-is. No per-feature questions required.
 
-Template §3: CONFIRMED — stakeholder approved 2026-04-18
+### Updated Domain Model
 
----
+| Type | Name | Description |
+|------|------|-------------|
+| Noun | `.feature` file | Gherkin source-of-truth file containing Feature, Rule, and Example blocks |
+| Noun | feature slug | `.feature` file stem with hyphens → underscores, lowercase |
+| Noun | rule slug | `Rule:` title slugified with underscores, lowercase |
+| Noun | Example | Gherkin scenario (including Scenario Outline instances) |
+| Noun | `@id` tag | `@id:<8-char-hex>` identifier attached to an Example |
+| Noun | malformed `@id` | `@id:` with no value, or `@id:` with non-hex characters — treated as missing |
+| Noun | test stub | Auto-generated test function with docstring and `...` body |
+| Noun | test directory | `tests/features/<feature_snake_name>/` mapping from source folder |
+| Noun | test file | `<rule_slug>_test.py` — one per `Rule:` block |
+| Noun | orphan stub | Test function whose `@id` no longer exists in any `.feature` file |
+| Noun | adapter | Framework-specific stub generator (pytest, unittest, …) |
+| Noun | adapter template | Template supplied by adapter for skip, deprecated, parametrize markers, and stub header |
+| Noun | template folder | Directory of template files; custom folder fully replaces built-in for matched files |
+| Noun | `[tool.beehave]` | Configuration section in `pyproject.toml` |
+| Noun | `features_path` | Configurable root path for `.feature` files (default `docs/features/`) |
+| Noun | `framework` | Config/CLI key selecting the adapter (default `pytest`) |
+| Noun | `deletion_mode` | Config key: `warn` (default) or `error` on `.feature` file deletion |
+| Noun | `template_path` | Config/CLI key pointing to custom template folder |
+| Noun | `.beehave_cache/` | Directory storing `features.json` hash cache for incremental sync |
+| Noun | backlog stage | `docs/features/backlog/` — organizational folder |
+| Noun | in-progress stage | `docs/features/in-progress/` — organizational folder |
+| Noun | completed stage | `docs/features/completed/` — organizational folder |
+| Verb | nest | Create canonical features directory, subfolders, `.gitignore` entry |
+| Verb | hatch | Write bee-themed example/demo `.feature` files to the features path |
+| Verb | sync | Scan, diff, generate, update, and warn — the main orchestration command |
+| Verb | status | Dry-run preview of sync operations; exit 0/1 CI gate |
+| Verb | generate ID | Produce a unique 8-character lowercase hex string, retry on collision |
+| Verb | write back | Insert `@id` tag into `.feature` file in-place, preserving formatting |
+| Verb | create stub | Write a new test function for a new Example |
+| Verb | update stub | Rewrite docstring/tags of an existing test function without touching its body |
+| Verb | warn orphan | Emit a warning when a `.feature` file or Example is deleted |
+| Verb | deprecate stub | Apply framework-specific deprecation marker when `@deprecated` tag is present |
+| Verb | parametrize | Generate framework-native parametrized stub from Scenario Outline Examples table |
+| Verb | move stub | Relocate test function/file to correct path when location is wrong |
+| Verb | assign IDs | Python API entry point: `from beehave import assign_ids` |
 
-## Session: 2026-04-18 — Revision: remove class-based test structure
+### Feature List (Final v1 Scope)
 
-### Scope
-All test stubs are top-level functions. The `class Test<RuleSlug>` wrapper discussed during initial discovery was never implemented. Conformance is two-part: (1) correct file name and (2) correct function name. No class context check exists.
+| Feature | One-line Description | Status |
+|---------|---------------------|--------|
+| `nest` | Bootstrap canonical `docs/features/` directory structure with stage subfolders | BASELINED |
+| `hatch` | Generate bee-themed example/demo `.feature` files showcasing all capabilities | BASELINED |
+| `config-reading` | Read `[tool.beehave]` from `pyproject.toml`; apply defaults; hard error on invalid config | BASELINED |
+| `id-generation` | Detect untagged Examples, generate unique 8-char hex `@id` tags, write back in-place | BASELINED |
+| `sync-create` | Generate new test stubs for Examples with no corresponding test function | BASELINED |
+| `sync-update` | Refresh docstring, function name, and `@deprecated` marker when Example changes | BASELINED |
+| `sync-cleanup` | Detect orphan stubs (no matching `@id`) and warn; move misplaced stubs | BASELINED |
+| `status` | Dry-run preview of sync changes; exit 0/1 CI gate | BASELINED |
+| `adapter-contract` | Abstract interface all framework adapters must implement | BASELINED |
+| `pytest-adapter` | Default adapter: pytest markers, `test_` prefix, `-> None`, `...` body | BASELINED |
+| `template-customization` | User-defined template folder overrides built-in adapter templates | BASELINED |
+| `cache-management` | `.beehave_cache/features.json` for incremental sync; auto-rebuilds silently | BASELINED |
+| `deprecation-sync` | Propagate `@deprecated` Gherkin tag to framework deprecation marker on stubs | BASELINED |
+| `parameter-handling` | Render parametrized stubs from Scenario Outlines; warn on column changes | BASELINED |
+| `unittest-adapter` | *(PARKED — v2)* unittest.TestCase stubs; out of v1 scope | PARKED |
 
-### Feature List
-- `stub-creation` — updated: top-level functions only, not class methods
-- `stub-updates` — updated: conformance is 2-part (file + function name), not 3-part
+### Open Questions
+- **A1 — Error handling patterns:** How should beehave behave when `pyproject.toml` is malformed, a `.feature` file has invalid Gherkin syntax, or the filesystem is read-only?
+- **A2 — Performance constraints:** What is the target sync time for projects with 100 / 1,000 / 10,000 Examples? Is there a memory budget?
+- **A3 — Versioning and backwards compatibility:** Will beehave v1 `.feature` files with `@id` tags remain compatible with v2? What is the deprecation policy for CLI flags and config keys?
+- **A4 — Logging and observability:** Beyond `--verbose`, should beehave support structured logging, log levels, or log files?
 
-### Domain Model
-| Type | Name | Description | Change |
-|------|------|-------------|--------|
-| Noun | conforming test | test with correct file name AND correct function name | Updated: was 3-part (file + class context + function name), now 2-part |
+> These architectural gaps were identified during quality review and are scheduled for a future discovery session before v1 ships.
 
----
-
-## Session: 2026-04-19 — Feature: report-steps
-
-### Scope
-`report-steps` surfaces BDD acceptance criteria in two independent output channels: the terminal (at `-v` or above) and pytest-html reports (when `pytest-html` is installed). Both channels are scoped exclusively to tests under `tests/features/` and are independently configurable via `pyproject.toml`. Steps are always rendered verbatim from the test docstring — no reformatting. Both channels are wired into the single existing `pytest_configure` entry point. `pytest-html` is an optional install extra (`pip install pytest-beehave[html]`); when it is absent the HTML channel is silently inactive with no error raised.
-
-Feature stages and marker state do not affect rendering — steps are shown regardless of test outcome (pass, fail, skip, error).
-
-### Feature List
-- `report-steps` — terminal steps display and HTML acceptance criteria column for `tests/features/` tests
-
-### Domain Model
-| Type | Name | Description | In Scope |
-|------|------|-------------|----------|
-| Noun | terminal channel | verbatim docstring printed below test path at -v or above | Yes |
-| Noun | HTML channel | "Acceptance Criteria" column in pytest-html report | Yes |
-| Noun | feature test | any test residing under `tests/features/` | Yes |
-| Noun | non-feature test | any test outside `tests/features/` (e.g. `tests/unit/`) | Yes — explicitly excluded from output |
-| Noun | verbatim steps | docstring content rendered with no reformatting | Yes |
-| Verb | render steps | print/inject docstring into the appropriate output channel | Yes |
-| Verb | suppress steps | omit output when channel is disabled or test is out of scope | Yes |
-
-Template §3: CONFIRMED — stakeholder approved 2026-04-18
-
----
-
-## Session: 2026-04-19 — Feature: example-hatch
-
-### Feature List
-- `example-hatch` — generate a bee-themed `docs/features/` directory tree showcasing all plugin capabilities via `pytest --beehave-hatch`; stdlib-only randomisation; respects configured features path; fails loudly on existing content unless `--beehave-hatch-force` is passed
-
-### Domain Model
-| Type | Name | Description | In Scope |
-|------|------|-------------|----------|
-| Noun | hatch | generated `docs/features/` directory tree with example `.feature` files | Yes |
-| Noun | `--beehave-hatch` flag | pytest CLI flag that triggers hatch generation | Yes |
-| Noun | `--beehave-hatch-force` flag | pytest CLI flag that allows overwriting existing hatch content | Yes |
-| Noun | bee/hive-themed content | Feature names, Rule titles, Example titles, and step text using bee/hive metaphors | Yes |
-| Noun | capability showcase | set of generated `.feature` files that together exercise every plugin capability | Yes |
-| Noun | stdlib randomisation | use of `random` / `secrets` from Python stdlib to vary generated content | Yes |
-| Verb | hatch | write the example features directory tree to the configured path | Yes |
-| Verb | overwrite-protect | fail loudly when target directory already contains `.feature` files | Yes |
-| Verb | force-overwrite | replace existing hatch content when `--beehave-hatch-force` is passed | Yes |
-
----
-
-## Session: 2026-04-19 — Feature: stub-format-config
-
-### Feature List
-- `stub-format-config` — new `stub_format` key under `[tool.beehave]`; `"functions"` (default, top-level functions) or `"classes"` (class-wrapped methods); hard error on invalid value; no-Rule features unaffected; project-wide setting; does not reformat existing stubs
-
-### Domain Model
-| Type | Name | Description | In Scope |
-|------|------|-------------|----------|
-| Noun | `stub_format` | config key under `[tool.beehave]` controlling stub output format | Yes |
-| Noun | `"functions"` format | top-level functions in `<rule_slug>_test.py`, no class wrapper (default) | Yes |
-| Noun | `"classes"` format | methods inside `class Test<RuleSlug>` in `<rule_slug>_test.py` | Yes |
-| Noun | invalid format value | any `stub_format` value other than `"functions"` or `"classes"` | Yes |
-| Verb | read stub_format | parse `stub_format` from `[tool.beehave]` at pytest startup | Yes |
-| Verb | default to functions | use `"functions"` when `stub_format` key is absent | Yes |
-| Verb | fail on invalid | abort pytest startup with descriptive error when value is unrecognised | Yes |
-| Verb | generate function stub | write top-level `def test_<feature_slug>_<@id>()` with no class wrapper | Yes |
-| Verb | generate class stub | write method inside `class Test<RuleSlug>:` | Yes |
-
----
-
-## Session: 2026-04-20 — Bug Reports
-
-### Feature List
-- `stub-creation` — bugs added: Scenario Outline → parametrized stub (missing silently), Background blank-line separator in docstring during creation
-- `stub-updates` — bug added: Background blank-line separator in docstring during update
-- `auto-id-generation` — bugs added: existing non-hex @id reused for stub naming (no new @id added); two @id tags on one Example → hard error at startup
-
-### Domain Model
-| Type | Name | Description | In Scope |
-|------|------|-------------|----------|
-| Noun | Scenario Outline | Gherkin parametrized scenario construct | Yes |
-| Noun | parametrized stub | `@pytest.mark.parametrize` test function generated from a Scenario Outline | Yes |
-| Noun | non-hex @id | `@id` tag whose value is not 8-char hex (e.g. `@id:my-custom-name`) | Yes |
-| Noun | double @id | two `@id` tags on the same Example — hard error at startup | Yes |
-| Noun | Background separator | blank line between Background steps and Scenario steps in stub docstring and report output | Yes |
-| Verb | parametrize | generate `@pytest.mark.parametrize` stub from Scenario Outline `Examples:` table | Yes |
-| Verb | reuse @id | use existing `@id` value (any format) as stub function name suffix | Yes |
-| Verb | raise double-id error | abort pytest with descriptive error when two `@id` tags found on one Example | Yes |
+### Corrections (2026-04-21 Supplement)
+- **`deprecation-sync`**: `@deprecated` cascade from Feature/Rule to child Examples is **absolute** — there is no override mechanism in v1. The `@deprecated-off` Example in the criteria was removed.
+- **`hatch`**: Generates one or two bee-themed `.feature` files covering common Gherkin patterns (Feature, Rule, Example, Scenario Outline).
