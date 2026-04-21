@@ -24,13 +24,13 @@
   </g>
 
   <!-- Center zone: wordmark -->
-  <text x="320" y="145" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700">
+  <text x="320" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="96" font-weight="700" letter-spacing="-2">
     <tspan fill="#f5a800">Bee</tspan><tspan fill="#e8eaef">have</tspan>
   </text>
-  <text x="320" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#a0a5b0">BDD living documentation in sync</text>
+  <text x="320" y="175" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#a0a5b0">BDD living documentation in sync</text>
 
   <!-- Accent underline -->
-  <rect x="320" y="215" width="680" height="4" rx="2" fill="#f5a800" opacity="0.35"/>
+  <rect x="320" y="195" width="680" height="4" rx="2" fill="#f5a800" opacity="0.35"/>
 
   <!-- Right zone: subtle decorative circles -->
   <circle cx="1080" cy="80"  r="25" fill="#f5a800" opacity="0.06"/>
