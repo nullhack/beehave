@@ -1,65 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="beehave banner">
-  <style>
-    :root {
-      --color-primary: #1e2128;
-      --color-accent: #f5a800;
-    }
-    .bg { fill: var(--color-primary, #1e2128); }
-    .title { font-family: system-ui, -apple-system, sans-serif; font-size: 64px; font-weight: 700; }
-    .title-bee { fill: var(--color-accent, #f5a800); }
-    .title-have { fill: #e8eaef; }
-    .tagline { fill: #a0a5b0; font-family: system-ui, -apple-system, sans-serif; font-size: 24px; font-weight: 400; }
-    .flask { fill: #323742; stroke: #5a6070; stroke-width: 5; stroke-linejoin: round; }
-    .stripe-accent { fill: var(--color-accent, #f5a800); }
-    .stripe-deep { fill: #c87d00; }
-    .antenna { fill: none; stroke: var(--color-accent, #f5a800); stroke-width: 4.5; stroke-linecap: round; }
-    .antenna-tip { fill: var(--color-accent, #f5a800); }
-    .highlight { fill: none; stroke: #ffffff; stroke-width: 2.5; stroke-linecap: round; opacity: 0.25; }
-    .accent-line { fill: var(--color-accent, #f5a800); opacity: 0.35; }
-    .deco { fill: var(--color-accent, #f5a800); opacity: 0.06; }
-  </style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="beehave project banner">
+  <defs>
+    <!-- Body clip for the mark stripes -->
+    <clipPath id="mark-body">
+      <path d="M 38 38 L 62 38 L 62 44 Q 62 48 68 52 Q 80 62 80 76 Q 80 92 50 92 Q 20 92 20 76 Q 20 62 32 52 Q 38 48 38 44 Z"/>
+    </clipPath>
+  </defs>
 
-  <rect class="bg" width="1200" height="300"/>
+  <!-- Background -->
+  <rect width="1200" height="300" fill="#1e2128"/>
 
-  <!-- Left zone: logo mark (scaled 2x, centered at 120,150) -->
-  <g transform="translate(20, 50) scale(2)">
-    <!-- Antennae -->
-    <path class="antenna" d="M 38 30 Q 28 18 22 14"/>
-    <circle class="antenna-tip" cx="22" cy="14" r="5.5"/>
-    <path class="antenna" d="M 62 30 Q 72 18 78 14"/>
-    <circle class="antenna-tip" cx="78" cy="14" r="5.5"/>
-
-    <!-- Flask outline -->
-    <path class="flask" d="M 36 28 L 64 28 L 64 38 L 60 38 L 60 44 L 80 62 Q 86 74 80 84 Q 50 96 20 84 Q 14 74 20 62 L 40 44 L 40 38 L 36 38 Z"/>
-
-    <!-- Stripes -->
-    <defs>
-      <clipPath id="banner-flask-body">
-        <path d="M 40 44 L 20 62 Q 14 74 20 84 Q 50 96 80 84 Q 86 74 80 62 L 60 44 Z"/>
-      </clipPath>
-    </defs>
-    <g clip-path="url(#banner-flask-body)">
-      <rect class="stripe-accent" x="10" y="46" width="80" height="14"/>
-      <rect class="stripe-deep" x="10" y="60" width="80" height="14"/>
-      <rect class="stripe-accent" x="10" y="74" width="80" height="14"/>
+  <!-- Left zone: brand mark (scaled 2x) -->
+  <g transform="translate(70, 50) scale(2)">
+    <path d="M 38 38 L 62 38 L 62 44 Q 62 48 68 52 Q 80 62 80 76 Q 80 92 50 92 Q 20 92 20 76 Q 20 62 32 52 Q 38 48 38 44 Z" fill="#f5a800"/>
+    <g clip-path="url(#mark-body)">
+      <rect x="10" y="56" width="80" height="10" rx="5" fill="#c87d00"/>
+      <rect x="10" y="70" width="80" height="10" rx="5" fill="#c87d00"/>
+      <rect x="10" y="84" width="80" height="10" rx="5" fill="#c87d00"/>
     </g>
-
-    <!-- Highlight -->
-    <path class="highlight" d="M 32 66 L 28 76"/>
+    <path d="M 42 38 Q 40 22 32 18" fill="none" stroke="#f5a800" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="32" cy="18" r="4.5" fill="#f5a800"/>
+    <path d="M 58 38 Q 60 22 68 18" fill="none" stroke="#f5a800" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="68" cy="18" r="4.5" fill="#f5a800"/>
   </g>
 
-  <!-- Center zone: wordmark + tagline -->
-  <text x="300" y="145" class="title">
-    <tspan class="title-bee">Bee</tspan><tspan class="title-have">have</tspan>
+  <!-- Center zone: wordmark -->
+  <text x="320" y="145" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700">
+    <tspan fill="#f5a800">Bee</tspan><tspan fill="#e8eaef">have</tspan>
   </text>
-  <text x="300" y="195" class="tagline">BDD living documentation in sync</text>
+  <text x="320" y="195" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#a0a5b0">BDD living documentation in sync</text>
 
   <!-- Accent underline -->
-  <rect class="accent-line" x="300" y="215" width="680" height="4" rx="2"/>
+  <rect x="320" y="215" width="680" height="4" rx="2" fill="#f5a800" opacity="0.35"/>
 
   <!-- Right zone: subtle decorative circles -->
-  <circle class="deco" cx="1080" cy="80" r="25"/>
-  <circle class="deco" cx="1140" cy="120" r="20"/>
-  <circle class="deco" cx="1050" cy="180" r="30"/>
-  <circle class="deco" cx="1120" cy="230" r="22"/>
+  <circle cx="1080" cy="80"  r="25" fill="#f5a800" opacity="0.06"/>
+  <circle cx="1140" cy="120" r="20" fill="#f5a800" opacity="0.06"/>
+  <circle cx="1050" cy="180" r="30" fill="#f5a800" opacity="0.06"/>
+  <circle cx="1120" cy="230" r="22" fill="#f5a800" opacity="0.06"/>
 </svg>
