@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" role="img" aria-label="beehave project banner">
+  <defs>
+    <clipPath id="mark-body">
+      <path d="M 42 18 L 58 18 L 58 36 Q 58 40 66 46 Q 78 56 78 72 Q 78 92 50 92 Q 22 92 22 72 Q 22 56 34 46 Q 42 40 42 36 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="860" height="200" rx="14" ry="14" fill="#1e2128"/>
+
+  <!-- === LOGO MARK ===
+       mark is 100×100 units, scaled 1.6× = 160×160px
+       left zone: x:0–220, y:0–200 → center at (110, 100)
+       translate = center - scale*50 = (110 - 80, 100 - 80) = (30, 20)
+  -->
+  <g transform="translate(30, 20) scale(1.6)">
+    <path d="M 42 18 L 58 18 L 58 36 Q 58 40 66 46 Q 78 56 78 72 Q 78 92 50 92 Q 22 92 22 72 Q 22 56 34 46 Q 42 40 42 36 Z"
+          fill="#f5a800" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+    <g clip-path="url(#mark-body)">
+      <rect x="10" y="50" width="80" height="10" rx="5" fill="#c87d00"/>
+      <rect x="10" y="64" width="80" height="10" rx="5" fill="#c87d00"/>
+      <rect x="10" y="78" width="80" height="10" rx="5" fill="#c87d00"/>
+    </g>
+    <path d="M 46 18 Q 44 8 36 6" fill="none" stroke="#f5a800" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="36" cy="6" r="3.5" fill="#ffffff"/>
+    <path d="M 54 18 Q 56 8 64 6" fill="none" stroke="#f5a800" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="64" cy="6" r="3.5" fill="#ffffff"/>
+  </g>
+
+  <!-- === WORDMARK === -->
+  <text
+    x="220"
+    y="135"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="110"
+    font-weight="700"
+    letter-spacing="-2"
+    dominant-baseline="auto"
+  >
+    <tspan fill="#f5a800">Bee</tspan><tspan fill="#e8eaef">have</tspan>
+  </text>
+
+  <!-- Thin amber underline accent -->
+  <rect x="220" y="158" width="620" height="4" rx="2" ry="2" fill="#c87d00"/>
+</svg>
