@@ -1,0 +1,17 @@
+"""Unit tests for the application entry point."""
+
+from hypothesis import example, given
+from hypothesis import strategies as st
+
+from pytest_beehave.__main__ import main
+
+
+@given(verbosity=st.sampled_from(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]))
+@example(verbosity="INFO")
+def test_app_main_runs_with_valid_verbosity(verbosity: str) -> None:
+    """
+    Given: A valid verbosity level string
+    When: main() is called with that verbosity
+    Then: It completes without raising an exception
+    """
+    main(verbosity)
