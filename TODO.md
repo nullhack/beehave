@@ -8,19 +8,26 @@ Next: Stakeholder to answer per-feature discovery questions for `nest`.
 - Cross-cutting questions: COMPLETE
 - Per-feature discovery: IN-PROGRESS (starting with `nest`)
 
-## Feature Stubs Created
-- `docs/features/backlog/nest.feature`
-- `docs/features/backlog/hatch.feature`
-- `docs/features/backlog/sync.feature`
-- `docs/features/backlog/status.feature`
-- `docs/features/backlog/id-generation.feature`
-- `docs/features/backlog/pytest-adapter.feature`
-- `docs/features/backlog/unittest-adapter.feature`
-- `docs/features/backlog/config-reading.feature`
-- `docs/features/backlog/cache-management.feature`
-- `docs/features/backlog/template-customization.feature`
-- `docs/features/backlog/deprecation-sync.feature`
-- `docs/features/backlog/parameter-handling.feature`
+## Feature Stubs Created (docs/features/backlog/)
+- `nest` — bootstrap canonical directory structure
+- `hatch` — generate example/demo feature files
+- `sync-create` — generate new test stubs
+- `sync-update` — update existing test stubs
+- `sync-cleanup` — handle orphan test stubs
+- `status` — dry-run preview
+- `id-generation` — assign @id tags
+- `adapter-contract` — common adapter interface
+- `pytest-adapter` — pytest stub generation
+- `unittest-adapter` — unittest stub generation (future)
+- `config-reading` — read [tool.beehave]
+- `cache-management` — incremental sync cache
+- `template-customization` — user-defined templates
+- `deprecation-sync` — propagate @deprecated tags
+- `parameter-handling` — Scenario Outline parametrization
+
+## Splits Applied
+- `framework-adapters` → `pytest-adapter` + `unittest-adapter`
+- `sync` → `sync-create` + `sync-update` + `sync-cleanup`
 
 ## Next
 Run @product-owner — continue per-feature discovery for `nest` after stakeholder answers.

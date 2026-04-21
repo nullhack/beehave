@@ -89,3 +89,6 @@ Status: COMPLETE
 
 ### Per-feature discovery
 Status: IN-PROGRESS
+
+#### Feature: `nest` — bootstrap canonical directory structure
+*Questions pending stakeholder answers.*
