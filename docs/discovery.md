@@ -86,7 +86,7 @@ Session 1 is now fully complete. All per-feature questions were answered by the 
 
 **ID Generation**
 - IDs are 8-char lowercase hex, generated randomly and retried silently on collision.
-- Developer-supplied `@id` values are always respected; malformed tags are treated as missing and replaced.
+- Developer-supplied `@id` values are always respected; malformed tags (empty value or non-hex) are treated as missing and replaced.
 - Uniqueness is project-wide across all `.feature` files.
 - Write-back is in-place, preserving all whitespace and formatting.
 - Idempotent: valid existing IDs are never touched.
@@ -208,7 +208,12 @@ Session 1 is now fully complete. All per-feature questions were answered by the 
 | `unittest-adapter` | *(PARKED — v2)* unittest.TestCase stubs; out of v1 scope | PARKED |
 
 ### Open Questions
-- None. All per-feature questions answered. Session 1 is complete.
+- **A1 — Error handling patterns:** How should beehave behave when `pyproject.toml` is malformed, a `.feature` file has invalid Gherkin syntax, or the filesystem is read-only?
+- **A2 — Performance constraints:** What is the target sync time for projects with 100 / 1,000 / 10,000 Examples? Is there a memory budget?
+- **A3 — Versioning and backwards compatibility:** Will beehave v1 `.feature` files with `@id` tags remain compatible with v2? What is the deprecation policy for CLI flags and config keys?
+- **A4 — Logging and observability:** Beyond `--verbose`, should beehave support structured logging, log levels, or log files?
+
+> These architectural gaps were identified during quality review and are scheduled for a future discovery session before v1 ships.
 
 ### Corrections (2026-04-21 Supplement)
 - **`deprecation-sync`**: `@deprecated` cascade from Feature/Rule to child Examples is **absolute** — there is no override mechanism in v1. The `@deprecated-off` Example in the criteria was removed.

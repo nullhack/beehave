@@ -16,12 +16,11 @@ Status: COMPLETE
 | Q4 | When and where is it used? | It can be used as a package, and it should also have CLI capabilities. Python API: `from beehave import ...`; CLI: `beehave --<keywords>` from bash. |
 | Q5 | Success — what does "done" look like? | Success is when stubs are generated and updated without destroying anything, and when the tool successfully informs the user when something changed that is beyond the scope of the project to handle. |
 | Q6 | Failure — what must never happen? | Failure is when it breaks the user tests or fails to inform the user about something. Users must still be able to force changes and see dry-run changes. |
-| Q7 | Out-of-scope — what are we explicitly not building? | Not doing any coding (i.e. not modifying test implementation bodies). There is a configurable structure for tests, and that structure will be followed. Parameters should be handled the way each target framework treats them natively. Outlines should show completely in docstrings/templates per framework. |
-| Q8 | What is the public API surface — CLI, Python API, or both? | Both CLI and Python API. Commands have a subtle bee-world-related flavor. CLI commands selected: `beehave sync`, `beehave status`, `beehave version`, `beehave nest`, `beehave hatch`. Flags: `--overwrite`. |
+| Q7 | Out-of-scope — what are we explicitly not building? | - Not doing any coding (i.e. not modifying test implementation bodies).<br>- There is a configurable structure for tests, and that structure will be followed.<br>- Parameters should be handled the way each target framework treats them natively.<br>- Outlines should show completely in docstrings/templates per framework. |
+| Q8 | What is the public API surface — CLI, Python API, or both? What is the difference between bootstrap and generate commands? | - Both CLI and Python API are first-class surfaces.<br>- CLI commands have a subtle bee-world-related flavor.<br>- Commands selected: `beehave sync`, `beehave status`, `beehave version`, `beehave nest`, `beehave hatch`.<br>- Flags: `--overwrite`.<br>- `nest`/`init` = project directory setup; `hatch`/`example` = demo content generation. |
 | Q9 | How do consumers (like pytest-beehave) register marker templates? | Stubs and changes will be templated per framework adapter. Start with pytest only, then add unittest. The difference between adapters is mostly marker style and framework conventions. |
 | Q10 | Who configures beehave — end developers or framework authors? | End developers. Framework authors can use it if they want to integrate, but that is not the primary concern. |
 | Q11 | What is the exact relationship between `beehave` and the future `pytest-beehave` wrapper? | `pytest-beehave` is a pytest-only wrapper using `beehave` under the hood. It adds specific pytest capabilities like automatic running, HTML acceptance criteria injection, and terminal acceptance criteria. |
-| Q8-CLI-diff | What is the difference between bootstrap and generate? | `nest`/`init` is project directory setup; `hatch`/`example` is demo content generation. |
 
 ### Cross-cutting
 Status: COMPLETE
@@ -39,6 +38,18 @@ Status: COMPLETE
 | C9 | Test stub ownership: When beehave updates a test stub file, how does it avoid overwriting developer-written code? | Features map from source folder (`docs/features/` by default, configurable) to `tests/features/<feature_snake_name>/`. Each test function carries the `@id` in its name (`test_<feature_slug>_<id>`), making identification unambiguous. **CORRECTION (2026-04-21):** Feature files can live in four locations — `docs/features/backlog/<name>.feature`, `docs/features/in-progress/<name>.feature`, `docs/features/completed/<name>.feature`, and `docs/features/<name>.feature` (root-level, no subfolder). All four map identically to the same `tests/features/<feature_snake_name>/` directory. The stage subfolder is irrelevant to test stub mapping. |
 | C10 | Feature stages (backlog/in-progress/completed): Does beehave handle these three directories differently? | No behavioral difference. After `beehave nest`, all three folders (`backlog/`, `in-progress/`, `completed/`) exist but features in any of them map identically to `tests/features/<feature_snake_name>/`. Root-level `.feature` files (no subfolder) also map identically. The structure is independent of which folder the `.feature` file lives in. |
 
+### Architectural Cross-cutting (Gaps)
+Status: RECORDED FOR FUTURE SESSION
+
+The following questions were identified during quality review as missing architectural probes. They will be addressed in a future discovery session before v1 ships:
+
+| ID | Question | Status |
+|----|----------|--------|
+| A1 | Error handling patterns: How should beehave behave when `pyproject.toml` is malformed, a `.feature` file has invalid Gherkin syntax, or the filesystem is read-only? | Unanswered |
+| A2 | Performance constraints: What is the target sync time for a project with 100 / 1,000 / 10,000 Examples? Is there a memory budget? | Unanswered |
+| A3 | Versioning and backwards compatibility: Will `beehave` v1 `.feature` files with `@id` tags remain compatible with v2? What is the deprecation policy for CLI flags and config keys? | Unanswered |
+| A4 | Logging and observability: Beyond `--verbose`, should beehave support structured logging, log levels, or log files? | Unanswered |
+
 ### Per-feature
 Status: COMPLETE
 
@@ -46,8 +57,8 @@ Status: COMPLETE
 
 | ID | Question | Answer |
 |----|----------|--------|
-| N1 | What does `beehave nest` create? | Creates `docs/features/{backlog,in-progress,completed}/`, `tests/features/`, and `.gitkeep` files in each empty directory. Also injects a `[tool.beehave]` snippet into `pyproject.toml` if not already present. |
-| N2 | Who runs nest? | Developers. Running on an existing structure will warn or error depending on configuration. |
+| N1 | What does `beehave nest` create? | Creates: `docs/features/{backlog,in-progress,completed}/`, `tests/features/`, and `.gitkeep` files in each empty directory. Also injects a `[tool.beehave]` snippet into `pyproject.toml` if not already present. |
+| N2 | Who is the expected user running `nest`? | Developers setting up a new project. It is run once per repo and the result is committed. It is not intended to be run repeatedly by every contributor. |
 | N3 | Partial structure? | Additive and idempotent. Creates only the missing parts; never removes or overwrites existing content. |
 | N4 | pyproject.toml injection? | Yes — injects `[tool.beehave]` snippet if not present. |
 | N5 | Non-default layout? | Accepts `--features-dir` argument (at minimum) to override the default `docs/features/` path. |
@@ -55,29 +66,26 @@ Status: COMPLETE
 | N7 | Run twice? | Idempotent. If the project is already fully nested, warns (or errors, configurable — same pattern as C5). |
 | N8 | Starter .feature file? | No — generating starter `.feature` content is strictly `hatch`'s responsibility. |
 | N9 | --check mode for CI? | Yes — `nest --check` verifies the structure without modifying anything. Exits non-zero if structure is incomplete. |
-| N10 | Unrelated files in directory? | Only creates what is missing. Never refuses or prompts due to unrelated files. |
+| N10 | Unrelated files in directory? | Only creates what is missing. Never refuses or prompts due to unrelated files. Safe to run in an existing Python project. |
 | N11 | --overwrite flag? | Yes — `nest --overwrite` recreates the structure from scratch (removes and recreates managed dirs). |
 
 #### Feature: `id-generation` — assign @id tags to untagged Examples
 
 | ID | Question | Answer |
 |----|----------|--------|
-| I1 | ID format? | 8-char lowercase hex when beehave generates. If the developer already added their own `@id:<value>` before running beehave, beehave respects it as-is and never overwrites or regenerates it. |
+| I1 | ID format, developer-supplied IDs, and idempotency? | - **Format:** 8-char lowercase hex when beehave generates (e.g. `@id:a1b2c3d4`).<br>- **Developer-supplied:** If a developer already added `@id:<value>`, beehave respects it as-is and never overwrites or regenerates it.<br>- **Idempotency:** Valid existing IDs are left untouched.<br>- **Malformed tags:** `@id:` with no value, or `@id:ZZZZZZZZ` (non-hex), are treated as missing — a new ID is generated and replaces the malformed one. |
 | I2 | Uniqueness scope? | Project-wide (all `.feature` files). If a duplicate `@id` is detected, warn/error (configurable, same pattern as C5). |
 | I3 | Collision on generation? | Retry with new random value silently until unique. |
 | I4 | Write-back strategy? | In-place. Preserves all whitespace and formatting exactly — only adds the `@id:` tag line. |
-| I5 | Idempotency? | If an Example already has a valid `@id`, it is left completely untouched. Malformed tags (e.g. `@id:` with no value, `@id:ZZZZZZZZ` non-hex) are treated as missing — a new ID is generated and replaces the malformed one. |
-| I6 | Dry-run/preview mode? | Covered by `beehave status` — no separate preview mode for id-generation. |
-| I7 | Ordering? | Top-to-bottom file order. Order is not reproducible (random hex each run), but the same Example never gets a new ID once assigned. |
-| I8 | Python API? | Yes — programmatic entry point available (e.g. `from beehave import assign_ids`). |
+| I5 | Dry-run / preview mode? | Covered by `beehave status` — no separate preview mode for id-generation. |
+| I6 | Ordering? | Top-to-bottom file order. Order is not reproducible (random hex each run), but the same Example never gets a new ID once assigned. |
+| I7 | Python API? | Yes — programmatic entry point available (e.g. `from beehave import assign_ids`). |
 
 #### Feature: `status` — dry-run preview of sync changes
 
 | ID | Question | Answer |
 |----|----------|--------|
-| S1 | Output? | Summary of changed files (what would change if `sync` were run), or "OK" if nothing is out of sync. |
-| S2 | Exit codes? | Exit 0 if in sync. Exit 1 if changes are pending. Standard Unix CI contract. |
-| S3 | Output format? | Silent by default, `--verbose` for human-readable detail, `--json` for machine-readable. |
+| S1 | Output and format? | - **Content:** Summary of changed files (what would change if `sync` were run), or "OK" if nothing is out of sync.<br>- **Exit codes:** Exit 0 if in sync. Exit 1 if changes are pending. Standard Unix CI contract.<br>- **Format:** Silent by default, `--verbose` for human-readable detail, `--json` for machine-readable. |
 
 #### Feature: `cache-management` — incremental sync cache
 
@@ -153,13 +161,16 @@ Status: COMPLETE
 | UA1 | v1 scope? | PARKED — out of v1 scope. Moved to a separate backlog item for future work. |
 
 #### Feature: `hatch` — generate example/demo feature files
-*Baselined as-is. No per-feature questions required — demo `.feature` file generation, bee-themed, no framework dependency.*
+
+*Baselined as-is. No per-feature questions required — behavior is fully defined by cross-cutting decisions (Q8 command palette, Q7 out-of-scope) and the supplement entry. Generating demo `.feature` files is a content concern, not a behavioral one.*
 
 #### Feature: `config-reading` — read [tool.beehave] from pyproject.toml
-*Baselined as-is. Reads `[tool.beehave]` from `pyproject.toml`; applies defaults.*
+
+*Baselined as-is. No per-feature questions required — behavior is fully defined by cross-cutting decision C3 (config source) and the feature description. Reading TOML and applying defaults is a mechanical concern with no stakeholder-facing ambiguity.*
 
 #### Feature: `deprecation-sync` — propagate @deprecated tags to stubs
-*Baselined as-is. Propagates `@deprecated` Gherkin tag to framework-specific deprecation marker on stubs.*
+
+*Baselined as-is. No per-feature questions required — behavior is fully defined by cross-cutting decision C4 (feature file mutability) and the supplement correction (absolute cascade, no override). Propagation logic is deterministic and requires no further stakeholder input.*
 
 ---
 
