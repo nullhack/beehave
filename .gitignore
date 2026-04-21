@@ -176,5 +176,5 @@ cython_debug/
 # OpenCode (local only)
 .opencode/
 
-# OpenCode (local only)
-.opencode/
+# Agent instructions (local only)
+AGENTS.md
