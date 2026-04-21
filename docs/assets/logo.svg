@@ -18,7 +18,7 @@
 
   <!-- Cute downward-bending antennae -->
   <path d="M 46 18 Q 44 8 36 6" fill="none" stroke="#f5a800" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="36" cy="6" r="3.5" fill="#1e2128"/>
-  <path d="M 54 18 Q 56 8 64 6" fill="none" stroke="#f5a800" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="64" cy="6" r="3.5" fill="#1e2128"/>
+<circle cx="36" cy="6" r="3.5" fill="#ffffff"/>
+    <path d="M 54 18 Q 56 8 64 6" fill="none" stroke="#f5a800" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="64" cy="6" r="3.5" fill="#ffffff"/>
 </svg>
