@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="beehave project banner">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" role="img" aria-label="beehave project banner">
   <defs>
     <clipPath id="mark-body">
       <path d="M 42 18 L 58 18 L 58 36 Q 58 40 66 46 Q 78 56 78 72 Q 78 92 50 92 Q 22 92 22 72 Q 22 56 34 46 Q 42 40 42 36 Z"/>
@@ -6,10 +6,10 @@
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="300" fill="#1e2128"/>
+  <rect width="860" height="200" rx="14" ry="14" fill="#1e2128"/>
 
-  <!-- Left zone: brand mark (scaled 2x) -->
-  <g transform="translate(70, 50) scale(2)">
+  <!-- === LOGO MARK === -->
+  <g transform="translate(30, 40) scale(1.1)">
     <path d="M 42 18 L 58 18 L 58 36 Q 58 40 66 46 Q 78 56 78 72 Q 78 92 50 92 Q 22 92 22 72 Q 22 56 34 46 Q 42 40 42 36 Z"
           fill="#f5a800" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
     <g clip-path="url(#mark-body)">
@@ -23,20 +23,19 @@
     <circle cx="64" cy="6" r="3.5" fill="#ffffff"/>
   </g>
 
-  <!-- Center zone: wordmark -->
-  <text x="320" y="130" font-family="system-ui, -apple-system, sans-serif" font-size="96" font-weight="700" letter-spacing="-2">
+  <!-- === WORDMARK === -->
+  <text
+    x="220"
+    y="105"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="96"
+    font-weight="700"
+    letter-spacing="-2"
+    dominant-baseline="middle"
+  >
     <tspan fill="#f5a800">Bee</tspan><tspan fill="#e8eaef">have</tspan>
   </text>
 
-  <!-- Accent underline -->
-  <rect x="320" y="155" width="680" height="4" rx="2" fill="#f5a800" opacity="0.35"/>
-
-  <!-- Subtitle below the line -->
-  <text x="320" y="185" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#a0a5b0">BDD living documentation in sync</text>
-
-  <!-- Right zone: subtle decorative circles -->
-  <circle cx="1080" cy="80"  r="25" fill="#f5a800" opacity="0.06"/>
-  <circle cx="1140" cy="120" r="20" fill="#f5a800" opacity="0.06"/>
-  <circle cx="1050" cy="180" r="30" fill="#f5a800" opacity="0.06"/>
-  <circle cx="1120" cy="230" r="22" fill="#f5a800" opacity="0.06"/>
+  <!-- Thin amber underline accent -->
+  <rect x="220" y="158" width="620" height="4" rx="2" ry="2" fill="#f5a800" opacity="0.35"/>
 </svg>
