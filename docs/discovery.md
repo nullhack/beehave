@@ -209,3 +209,7 @@ Session 1 is now fully complete. All per-feature questions were answered by the 
 
 ### Open Questions
 - None. All per-feature questions answered. Session 1 is complete.
+
+### Corrections (2026-04-21 Supplement)
+- **`deprecation-sync`**: `@deprecated` cascade from Feature/Rule to child Examples is **absolute** — there is no override mechanism in v1. The `@deprecated-off` Example in the criteria was removed.
+- **`hatch`**: Generates one or two bee-themed `.feature` files covering common Gherkin patterns (Feature, Rule, Example, Scenario Outline).

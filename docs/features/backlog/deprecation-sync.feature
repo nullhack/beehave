@@ -57,10 +57,3 @@ Feature: Deprecation sync — propagate @deprecated tags to stubs
       When beehave sync runs
       Then all test stubs in that feature receive the adapter's deprecated marker
 
-    @id:d6e7f8a9
-    Example: Explicit @id overrides parent deprecation
-      Given a Rule tagged with `@deprecated` but one child Example is explicitly
-        tagged with `@deprecated-off` (or similar override)
-      When beehave sync runs
-      Then the override Example's stub does NOT receive the deprecated marker
-        (this behavior is adapter-defined; the core delegates the decision)

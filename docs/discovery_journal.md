@@ -160,3 +160,15 @@ Status: COMPLETE
 
 #### Feature: `deprecation-sync` — propagate @deprecated tags to stubs
 *Baselined as-is. Propagates `@deprecated` Gherkin tag to framework-specific deprecation marker on stubs.*
+
+---
+
+## 2026-04-21 — Session 1 (Supplement)
+Status: COMPLETE
+
+### Corrections and Clarifications
+
+| Feature | Question | Answer |
+|---------|----------|--------|
+| `deprecation-sync` | Does `@deprecated` cascade from Feature/Rule to child Examples? | Yes — cascade is absolute. A `@deprecated` tag on a Feature or Rule applies to all Examples beneath it. There is NO override mechanism in v1. |
+| `hatch` | What should generated demo content look like? | One or two bee-themed `.feature` files covering common Gherkin patterns (Feature, Rule, Example, Scenario Outline). Enough to demo the full sync workflow end-to-end. |
