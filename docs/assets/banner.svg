@@ -41,5 +41,5 @@
   </text>
 
   <!-- Thin amber underline accent -->
-  <rect x="220" y="158" width="620" height="4" rx="2" ry="2" fill="#f5a800" opacity="0.35"/>
+  <rect x="220" y="158" width="620" height="4" rx="2" ry="2" fill="#c87d00"/>
 </svg>
