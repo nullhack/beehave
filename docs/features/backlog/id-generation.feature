@@ -28,7 +28,7 @@ Feature: id-generation — assign @id tags to untagged Examples
     Example: Untagged Example receives a beehave-generated @id
       Given a .feature file with an Example that has no @id tag
       When beehave assigns IDs
-      Then the Example receives an @id tag whose value is 8 lowercase hex characters (beehave's generation format)
+      Then the Example receives an @id tag whose value is exactly 8 lowercase hex characters
 
     @id:f381c49d
     Example: @id tag is inserted immediately before the Example keyword
