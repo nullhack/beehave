@@ -1,7 +1,7 @@
 [project]
 name = "beehave"
 version = "0.2.20250421"
-description = "A pytest plugin that runs acceptance criteria stub generation as part of the pytest lifecycle, with auto-ID assignment and generic step docstrings"
+description = "Framework-agnostic CLI and Python library that keeps Gherkin .feature files and test stubs in sync"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"

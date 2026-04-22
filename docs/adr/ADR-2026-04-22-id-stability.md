@@ -1,4 +1,4 @@
-# ADR: @id assignment and collision policy
+# ADR: @id assignment, collision, and orphan policy
 
 | Field | Value |
 |-------|-------|
@@ -8,11 +8,15 @@
 
 ## Decision
 
-`@id` values are 8-character lowercase hex strings; once assigned they are never replaced (unless malformed); collisions trigger a silent retry; uniqueness is enforced project-wide across all `.feature` files.
+`@id` values are 8-character lowercase hex strings. Once assigned, they are never replaced unless malformed (empty value or non-hex characters). Generation collisions trigger a silent retry. Uniqueness is enforced project-wide across all `.feature` files.
+
+**Duplicate `@id` found in files** (hand-edited by developer): **always a hard error** — beehave cannot determine which stub to bind and must stop. This is never produced by beehave itself; its presence means a developer manually edited an `@id`.
+
+**Edited or deleted `@id`**: the old stub becomes an orphan, subject to the `on_orphan` policy (configurable warn/error, default warn). A new `@id` is assigned and a new stub generated.
 
 ## Reason
 
-Stable IDs are the sole link between an Example and its test stub. Any ID change breaks that link, orphaning the stub and losing the developer's test body. Project-wide uniqueness prevents ambiguous stub lookups.
+Stable IDs are the sole link between an Example and its test stub. Any ID change breaks that link, orphaning the stub. Project-wide uniqueness prevents ambiguous stub lookups. Duplicate IDs are an unrecoverable ambiguity — beehave cannot guess which stub is canonical without risking silent data loss, so it must hard-error.
 
 ## Alternatives Considered
 
@@ -20,10 +24,13 @@ Stable IDs are the sole link between an Example and its test stub. Any ID change
 - **UUID v4 (full 32 hex chars)**: rejected — too verbose in `.feature` files; 8 hex chars gives 4 billion values, sufficient for any realistic project
 - **Content-hash of step text**: rejected — changes when steps are edited, breaking the stability guarantee
 - **File-scoped uniqueness**: rejected — beehave scans all feature files; project-wide uniqueness is required for unambiguous stub lookup
+- **Configurable policy for duplicate @id**: rejected — there is no safe resolution strategy; hard error is the only honest response
 
 ## Consequences
 
 - (+) Stubs survive Example reordering, file renames, and step text edits
 - (+) `@id` in function name is the only lookup key needed — no path or title matching required
+- (+) Duplicate ID is surfaced immediately as an error, never silently resolved
 - (-) ID generation requires a full scan of all `.feature` files before assigning new IDs (to check uniqueness)
 - (-) Malformed IDs must be detected and replaced — requires careful validation logic
+- (-) Developer who manually edits an `@id` must resolve duplicates before beehave will run
