@@ -11,7 +11,7 @@ Features flow through 5 steps with a WIP limit of 1 feature at a time. The files
 
 ```
 STEP 1: SCOPE          (product-owner)     → discovery + Gherkin stories + criteria
-STEP 2: ARCH           (system-architect)  → branch from main; read system.md + glossary.md + in-progress feature + targeted package files; write domain stubs; create/update domain-model.md; significant decisions as docs/adr/ADR-YYYY-MM-DD-<slug>.md; system.md rewritten
+STEP 2: ARCH           (system-architect)  → branch from main; read system.md + glossary.md + in-progress feature + targeted package files; write domain stubs; update ## Domain Model section in system.md; significant decisions as docs/adr/ADR-YYYY-MM-DD-<slug>.md; system.md rewritten
 STEP 3: TDD LOOP       (software-engineer) → RED → GREEN → REFACTOR, one @id at a time
 STEP 4: VERIFY         (system-architect)  → run all commands, review code against architecture
 STEP 5: ACCEPT         (product-owner)     → demo, validate, SE merges branch to main with --no-ff, move .feature to completed/ (PO only)
@@ -116,8 +116,7 @@ Discovery follows a block structure per session. See `skill define-scope` for th
 
 **Key rules**:
 - PO owns `scope_journal.md`, `discovery.md`, `glossary.md`, and `.feature` files
-- PO reads `domain-model.md` but never writes to it — entity suggestions go in `discovery.md` for SA formalization at Step 2
-- `domain-model.md` does not exist as a standalone file; the domain model is the `## Domain Model` section in `docs/system.md`
+- PO reads the `## Domain Model` section of `docs/system.md` but never writes to `system.md` — entity suggestions go in `discovery.md` for SA formalization at Step 2
 - Real-time split rule: >2 concerns or >8 candidate Examples → split immediately
 - Completed feature touched and changed → move to `backlog/`
 

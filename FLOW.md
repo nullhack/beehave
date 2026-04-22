@@ -105,8 +105,9 @@ States are checked **in order**. The first matching condition is the current sta
 10. All unskipped tests pass, skipped tests remain → **[STEP-3-GREEN]**
 11. All tests pass, no skipped tests → **[STEP-4-READY]**
 12. Manual state set by SA after Step 4 approval → **[STEP-5-READY]**
-13. On main branch, feature still in `in-progress/` → **[STEP-5-MERGE]**
-14. Post-mortem file exists for current feature → **[POST-MORTEM]**
+13. On main branch, feature still in `in-progress/` AND `WORK.md @state = STEP-5-COMPLETE` → **[STEP-5-COMPLETE]**
+14. On feature branch (`feat/` or `fix/`), feature still in `in-progress/` → **[STEP-5-MERGE]**
+15. Post-mortem file exists for current feature → **[POST-MORTEM]**
 
 ---
 
@@ -157,9 +158,9 @@ States are checked **in order**. The first matching condition is the current sta
 ---
 
 ### [STEP-2-READY]
-**Owner**: `system-architect`
+**Owner**: `software-engineer`
 **Entry condition**: Feature has `@id` tags, no `feat/<stem>` or `fix/<stem>` branch
-**Action**: Create branch `feat/<stem>` from `main`; set `@branch` in `WORK.md`
+**Action**: Load `skill version-control`; create branch `feat/<stem>` from `main`; set `@branch` in `WORK.md`
 **Exit**: Branch created → update `@state: STEP-2-ARCH` in `WORK.md`
 
 ---
@@ -220,7 +221,7 @@ States are checked **in order**. The first matching condition is the current sta
 
 ### [STEP-5-MERGE]
 **Owner**: `software-engineer`
-**Entry condition**: Feature accepted; still on `@branch`
+**Entry condition**: Feature accepted; on `feat/<stem>` or `fix/<stem>` branch; feature still in `in-progress/`
 **Action**: Merge `@branch` to `main` with `--no-ff`; delete `@branch`
 **Exit**: Merged → update `@state: STEP-5-COMPLETE` in `WORK.md`
 
@@ -228,17 +229,17 @@ States are checked **in order**. The first matching condition is the current sta
 
 ### [STEP-5-COMPLETE]
 **Owner**: `product-owner`
-**Entry condition**: On `main`, feature still in `in-progress/`
+**Entry condition**: On `main`; `WORK.md @state = STEP-5-COMPLETE`; feature still in `in-progress/`
 **Action**: Move feature from `in-progress/` to `completed/`
 **Exit**: Feature moved → remove item from `WORK.md` active items; return to `[IDLE]`
 
 ---
 
 ### [POST-MORTEM]
-**Owner**: `product-owner`
+**Owner**: `product-owner` (post-mortem doc) + `software-engineer` (fix branch)
 **Entry condition**: Post-mortem file exists for current feature
-**Action**: Write post-mortem in `docs/post-mortem/`; create `fix/<stem>` branch from original start commit
-**Exit**: Post-mortem committed → update `@state: STEP-2-ARCH`, `@branch: fix/<stem>` in `WORK.md`
+**Action**: PO writes post-mortem in `docs/post-mortem/`; SE loads `skill version-control` and creates `fix/<stem>` branch from original start commit; PO updates `WORK.md`
+**Exit**: Post-mortem committed, fix branch created → update `@state: STEP-2-ARCH`, `@branch: fix/<stem>` in `WORK.md`
 
 ---
 
