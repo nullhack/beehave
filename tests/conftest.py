@@ -1,7 +1,5 @@
 import pytest
 
-pytest_plugins = ["pytester"]
-
 
 def pytest_html_report_title(report):
     report.title = "Test Report"
@@ -23,10 +21,3 @@ def pytest_html_results_table_header(cells):
 def pytest_html_results_table_row(report, cells):
     docstring = getattr(report, "docstrings", "") or ""
     cells.insert(2, f"<td style='white-space: pre-wrap;'>{docstring}</td>")
-
-
-def pytest_collection_modifyitems(items):
-    """Automatically skip tests marked as deprecated."""
-    for item in items:
-        if item.get_closest_marker("deprecated"):
-            item.add_marker(pytest.mark.skip(reason="deprecated"))

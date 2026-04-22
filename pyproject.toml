@@ -13,7 +13,6 @@ maintainers = [
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Framework :: Pytest",
 ]
 dependencies = [
     "fire>=0.7.1",

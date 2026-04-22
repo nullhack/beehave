@@ -1,8 +1,5 @@
 .DS_Store
 .coverage
-*.swp
-*.swo
-~*
 .vscode/\n.idea/
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -14,6 +11,7 @@ docs/api/
 docs/coverage/
 docs/tests/
 mutants
+.opencode
 
 # C extensions
 *.so
@@ -172,9 +170,3 @@ cython_debug/
 #.idea/
 .mutmut-cache
 # Trigger CI run to verify linting fixes
-
-# OpenCode (local only)
-.opencode/
-
-# Agent instructions (local only)
-AGENTS.md
