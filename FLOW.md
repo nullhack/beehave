@@ -58,6 +58,8 @@ All must be satisfied before starting any session. If any are missing, stop and 
 States are checked **in order**. The first matching condition is the current state.
 
 ```
+[IDLE] ──► [STEP-1-BACKLOG-CRITERIA] (Stage 2 on backlog files — no WIP slot needed)
+
 [IDLE] ──► [STEP-1-DISCOVERY] ──► [STEP-1-STORIES] ──► [STEP-1-CRITERIA]
                                                                │
                                                                ▼
@@ -91,27 +93,38 @@ States are checked **in order**. The first matching condition is the current sta
 
 ### Detection Rules (evaluated in order)
 
-1. No file in `docs/features/in-progress/` → **[IDLE]**
-2. Feature in `in-progress/`, no `Status: BASELINED` → **[STEP-1-DISCOVERY]**
-3. Feature has `Status: BASELINED`, no `Rule:` blocks → **[STEP-1-STORIES]**
-4. Feature has `Rule:` blocks, no `Example:` with `@id` → **[STEP-1-CRITERIA]**
-5. Feature has `@id` tags, no `feat/` or `fix/` branch exists → **[STEP-2-READY]**
-6. On feature branch, no test stubs in `tests/features/<stem>/` → **[STEP-2-ARCH]**
-7. Test stubs exist, any have `@pytest.mark.skip` → **[STEP-3-READY]**
-8. Unskipped test exists that fails → **[STEP-3-RED]**
-9. All unskipped tests pass, skipped tests remain → **[STEP-3-GREEN]**
-10. All tests pass, no skipped tests → **[STEP-4-READY]**
-11. Manual state set by SA after Step 4 approval → **[STEP-5-READY]**
-12. On main branch, feature still in `in-progress/` → **[STEP-5-MERGE]**
-13. Post-mortem file exists for current feature → **[POST-MORTEM]**
+1. No file in `docs/features/in-progress/` AND any `backlog/` feature has `Status: BASELINED` but no `Example:` with `@id` → **[STEP-1-BACKLOG-CRITERIA]**
+2. No file in `docs/features/in-progress/` → **[IDLE]**
+3. Feature in `in-progress/`, no `Status: BASELINED` → **[STEP-1-DISCOVERY]**
+4. Feature has `Status: BASELINED`, no `Rule:` blocks → **[STEP-1-STORIES]**
+5. Feature has `Rule:` blocks, no `Example:` with `@id` → **[STEP-1-CRITERIA]**
+6. Feature has `@id` tags, no `feat/` or `fix/` branch exists → **[STEP-2-READY]**
+7. On feature branch, no test stubs in `tests/features/<stem>/` → **[STEP-2-ARCH]**
+8. Test stubs exist, any have `@pytest.mark.skip` → **[STEP-3-READY]**
+9. Unskipped test exists that fails → **[STEP-3-RED]**
+10. All unskipped tests pass, skipped tests remain → **[STEP-3-GREEN]**
+11. All tests pass, no skipped tests → **[STEP-4-READY]**
+12. Manual state set by SA after Step 4 approval → **[STEP-5-READY]**
+13. On main branch, feature still in `in-progress/` → **[STEP-5-MERGE]**
+14. Post-mortem file exists for current feature → **[POST-MORTEM]**
 
 ---
 
 ## States
 
+### [STEP-1-BACKLOG-CRITERIA]
+**Owner**: `product-owner`
+**Entry condition**: No file in `in-progress/` AND one or more `backlog/` features have `Status: BASELINED` but no `Example:` with `@id`
+**Action**: Write `Rule:` blocks and `Example:` blocks with `@id` tags for BASELINED backlog features. Files stay in `backlog/` — do **not** move to `in-progress/`. No `WORK.md` entry required.
+**Exit**: All BASELINED backlog features have `@id` tags → transition to `[IDLE]`
+**Commit**: `feat(criteria): write acceptance criteria for <feature-stem>` per feature
+**Note**: This state exists specifically for bulk Stage 2 work before a feature is selected for development. It does not consume the WIP slot. `run-session` must **not** treat this state as `[IDLE]` — there is work to do.
+
+---
+
 ### [IDLE]
 **Owner**: `product-owner`
-**Entry condition**: No file in `docs/features/in-progress/`
+**Entry condition**: No file in `docs/features/in-progress/` AND all BASELINED backlog features already have `@id` tags (or no BASELINED features exist)
 **Action**: Select next BASELINED feature from `backlog/`; move it to `in-progress/`
 **Exit**: Feature moved → create `WORK.md` entry with `@state: STEP-1-DISCOVERY`
 
@@ -262,6 +275,11 @@ git add WORK.md && git commit -m "chore: @id transition to @state"
 Run in order; first matching condition determines the state.
 
 ```bash
+# 0. Check for STEP-1-BACKLOG-CRITERIA: no in-progress file AND backlog has BASELINED features without @id
+NO_INPROGRESS=$(ls docs/features/in-progress/*.feature 2>/dev/null | grep -v ".gitkeep" | wc -l)
+HAS_BASELINED_WITHOUT_IDS=$(grep -rl "Status: BASELINED" docs/features/backlog/ 2>/dev/null | xargs grep -L "@id:" 2>/dev/null | wc -l)
+# If NO_INPROGRESS=0 AND HAS_BASELINED_WITHOUT_IDS>0 → [STEP-1-BACKLOG-CRITERIA]
+
 # 1. Check for in-progress feature
 ls docs/features/in-progress/*.feature 2>/dev/null | grep -v ".gitkeep"
 
@@ -269,7 +287,7 @@ ls docs/features/in-progress/*.feature 2>/dev/null | grep -v ".gitkeep"
 grep -q "Status: BASELINED" docs/features/in-progress/*.feature
 
 # 3. Check for Rule blocks
-grep -q "^Rule:" docs/features/in-progress/*.feature
+grep -q "^  Rule:" docs/features/in-progress/*.feature
 
 # 4. Check for Example blocks with @id
 grep -q "@id:" docs/features/in-progress/*.feature
