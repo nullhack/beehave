@@ -167,7 +167,7 @@ States are checked **in order**. The first matching condition is the current sta
 ### [STEP-2-ARCH]
 **Owner**: `system-architect`
 **Entry condition**: On `@branch`, no test stubs in `tests/features/<stem>/`
-**Action**: Read feature; design domain stubs; write ADRs; update `system.md` (domain model + C4 sections); run `uv run task test-fast` to generate stubs
+**Action**: Read feature; design domain stubs; write ADRs; update `system.md` (domain model + Context + Container sections); run `uv run task test-fast` to generate stubs
 **Exit**: Stubs generated → update `@state: STEP-3-READY` in `WORK.md`
 **Failure**: Spec unclear → escalate to `product-owner`; update `@state: STEP-1-DISCOVERY` in `WORK.md`
 **Commit**: `feat(arch): design @id architecture`

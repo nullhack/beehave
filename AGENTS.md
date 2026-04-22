@@ -49,7 +49,7 @@ All feature work happens on branches. `main` is the single source of truth and r
 
 - **Product Owner (PO)** — AI agent. Interviews the stakeholder, writes discovery docs, Gherkin features, and acceptance criteria. Accepts or rejects deliveries. **Sole owner of all `.feature` file moves** (backlog → in-progress before Step 2; in-progress → completed after Step 5 acceptance).
 - **Stakeholder** — Human. Answers PO's questions, provides domain knowledge, approves PO syntheses to confirm discovery is complete.
-- **System Architect (SA)** — AI agent. Designs architecture, writes domain stubs, records decisions in ADRs, and verifies implementation respects those decisions. Owns `docs/system.md` (including domain model, C4 context, and C4 container sections) and `docs/adr/ADR-*.md`. Never edits or moves `.feature` files. Escalates spec gaps to PO.
+- **System Architect (SA)** — AI agent. Designs architecture, writes domain stubs, records decisions in ADRs, and verifies implementation respects those decisions. Owns `docs/system.md` (including domain model, Context, and Container sections) and `docs/adr/ADR-*.md`. Never edits or moves `.feature` files. Escalates spec gaps to PO.
 - **Software Engineer (SE)** — AI agent. Implements everything: test bodies, production code, releases. Owns all `.py` files under the package. Never edits or moves `.feature` files. Escalates spec gaps to PO. If no `.feature` file is in `in-progress/`, stops and escalates to PO.
 
 ## Feature File Chain of Responsibility
@@ -87,7 +87,7 @@ All feature work happens on branches. `main` is the single source of truth and r
 | `version-control` | software-engineer | Step 2 (branch creation), Step 5 (merge to main), post-mortem branches |
 | `create-pr` | system-architect | post-acceptance |
 | `git-release` | stakeholder | post-acceptance |
-| `update-docs` | product-owner | post-acceptance + on stakeholder demand |
+| `update-docs` | system-architect | post-acceptance + on stakeholder demand |
 | `design-colors` | designer | branding, color, WCAG compliance |
 | `design-assets` | designer | SVG asset creation and updates |
 | `flow` | all agents | every session — flow protocol, state machine design, FLOW/WORK templates |
@@ -164,7 +164,7 @@ docs/
   scope_journal.md                    ← raw Q&A, PO appends after every session
   discovery.md                        ← session synthesis changelog (behavioral changes only), PO appends after every session
   adr/                                ← one file per decision: ADR-YYYY-MM-DD-<slug>.md, SA creates at Step 2
-  system.md                           ← SA-owned current-state snapshot: domain model + C4 context + C4 container + modules + constraints + ADR index; SA rewrites at Step 2, PO reviews at Step 5
+  system.md                           ← SA-owned current-state snapshot: domain model + Context + Container sections + modules + constraints + ADR index; SA rewrites at Step 2, PO reviews at Step 5
   glossary.md                         ← living glossary, PO updates after each session
   branding.md                         ← project identity, colors, release naming, wording (designer owns)
   assets/                             ← logo.svg, banner.svg, and other visual assets (designer owns)
