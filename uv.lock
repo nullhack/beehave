@@ -46,6 +46,62 @@ wheels = [
 ]
 
 [[package]]
+name = "beehave"
+version = "0.2.20250421"
+source = { editable = "." }
+dependencies = [
+    { name = "fire" },
+    { name = "gherkin-official" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "ghp-import" },
+    { name = "hypothesis" },
+    { name = "pdoc" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-html" },
+    { name = "pytest-mock" },
+    { name = "ruff" },
+    { name = "taskipy" },
+]
+html = [
+    { name = "pytest-html" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "gherkin-official" },
+    { name = "safety" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fire", specifier = ">=0.7.1" },
+    { name = "gherkin-official", specifier = ">=39.0.0" },
+    { name = "ghp-import", marker = "extra == 'dev'", specifier = ">=2.1.0" },
+    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.148.4" },
+    { name = "pdoc", marker = "extra == 'dev'", specifier = ">=14.0" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.407" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.1.1" },
+    { name = "pytest-html", marker = "extra == 'dev'", specifier = ">=4.1.1" },
+    { name = "pytest-html", marker = "extra == 'html'", specifier = ">=4.1.1" },
+    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.5" },
+    { name = "taskipy", marker = "extra == 'dev'", specifier = ">=1.14.1" },
+]
+provides-extras = ["html", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "gherkin-official", specifier = ">=39.0.0" },
+    { name = "safety", specifier = ">=3.7.0" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.2.25"
 source = { registry = "https://pypi.org/simple" }
@@ -747,24 +803,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-beehave"
-version = "0.1.20260421"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "fire" },
-    { name = "gherkin-official" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/56/32/5ef8f7ad22dfe574c2b06d92fdd6ff6fbe3950d4076d830451089cb38a29/pytest_beehave-0.1.20260421.tar.gz", hash = "sha256:3c39384a1bf318f7d31e589bb436cd233671a1f7db04accfe34445b25b94ab64", size = 35163, upload-time = "2026-04-21T05:00:35.742Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/7c/a0773bf67e013972c22ec6a3099949dcfda37be6b034e3bdca5d851058ce/pytest_beehave-0.1.20260421-py3-none-any.whl", hash = "sha256:f4efc05b0487637ef2e75a0e272960b56f4c76ede5754ca4ee46397da4399e00", size = 35553, upload-time = "2026-04-21T05:00:34.18Z" },
-]
-
-[package.optional-dependencies]
-html = [
-    { name = "pytest-html" },
-]
-
-[[package]]
 name = "pytest-cov"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1046,56 +1084,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/44/572261df3db9c6c3332f8618fafeb07a578fd18b06673c73f000f3586749/taskipy-1.14.1.tar.gz", hash = "sha256:410fbcf89692dfd4b9f39c2b49e1750b0a7b81affd0e2d7ea8c35f9d6a4774ed", size = 14475, upload-time = "2024-11-26T16:37:46.155Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/97/4e4cfb1391c81e926bebe3d68d5231b5dbc3bb41c6ba48349e68a881462d/taskipy-1.14.1-py3-none-any.whl", hash = "sha256:6e361520f29a0fd2159848e953599f9c75b1d0b047461e4965069caeb94908f1", size = 13052, upload-time = "2024-11-26T16:37:44.546Z" },
-]
-
-[[package]]
-name = "temple8"
-version = "7.0.20260422"
-source = { virtual = "." }
-dependencies = [
-    { name = "fire" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "ghp-import" },
-    { name = "hypothesis" },
-    { name = "pdoc" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-beehave", extra = ["html"] },
-    { name = "pytest-cov" },
-    { name = "pytest-mock" },
-    { name = "ruff" },
-    { name = "taskipy" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "gherkin-official" },
-    { name = "safety" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fire", specifier = ">=0.7.1" },
-    { name = "ghp-import", marker = "extra == 'dev'", specifier = ">=2.1.0" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.148.4" },
-    { name = "pdoc", marker = "extra == 'dev'", specifier = ">=14.0" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.407" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
-    { name = "pytest-beehave", extras = ["html"], marker = "extra == 'dev'", specifier = ">=0.1,<1" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.1.1" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.5" },
-    { name = "taskipy", marker = "extra == 'dev'", specifier = ">=1.14.1" },
-]
-provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "gherkin-official", specifier = ">=39.0.0" },
-    { name = "safety", specifier = ">=3.7.0" },
 ]
 
 [[package]]
