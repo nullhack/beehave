@@ -1,18 +1,26 @@
 # C4 — System Context
 
-> Last updated: YYYY-MM-DD
-> Source: docs/domain-model.md, docs/glossary.md, docs/features/completed/
+> Last updated: 2026-04-22
+> Source: docs/domain-model.md, docs/system.md, docs/arch_journal.md
 
 ```mermaid
 C4Context
-  title System Context — <project-name>
+  title System Context — beehave
 
-  Person(actor1, "<role name>", "<one-line description from feature As a clauses>")
+  Person(developer, "Developer", "Writes Gherkin .feature files and Python tests; runs beehave to keep them in sync")
+  Person(ci, "CI Pipeline", "Runs beehave status to gate on drift; reads --json exit codes")
+  Person(framework_author, "Framework Author", "Implements FrameworkAdapter Protocol to support a new test framework")
 
-  System(system, "<project-name>", "<3–5 word system description from discovery.md Scope>")
+  System(beehave, "beehave", "Assigns @id tags to Gherkin Examples and generates/updates skipped test stubs so living documentation and test scaffolding stay in sync")
 
-  System_Ext(ext1, "<external system name>", "<what it provides>")
+  System_Ext(feature_files, "Feature Files", ".feature files on disk — source of truth for requirements (Gherkin)")
+  System_Ext(test_suite, "Test Suite", "Python test files under tests/features/ — generated and updated by beehave")
+  System_Ext(pyproject, "pyproject.toml", "Project configuration; contains [tool.beehave] config block")
 
-  Rel(actor1, system, "<verb from When clause>")
-  Rel(system, ext1, "<verb from relevant ADR decision>")
+  Rel(developer, beehave, "runs sync / status / nest / hatch", "CLI / Python API")
+  Rel(ci, beehave, "runs status --json", "CLI")
+  Rel(framework_author, beehave, "implements FrameworkAdapter Protocol", "Python API")
+  Rel(beehave, feature_files, "reads; writes @id tags only", "filesystem")
+  Rel(beehave, test_suite, "creates, updates, and warns about stubs", "filesystem")
+  Rel(beehave, pyproject, "reads [tool.beehave] config", "filesystem")
 ```
