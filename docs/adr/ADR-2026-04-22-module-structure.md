@@ -6,6 +6,14 @@
 | **Feature** | all |
 | **Status** | Accepted (supersedes speculative v0 from same date) |
 
+## Context
+
+**Question (D1):** How should the `beehave` package be organized into submodules?
+
+Initial proposal was 7 submodules (with separate `scaffold` and `cache` modules). Two problems: (1) "scaffold" has no place in the bee-themed vocabulary — the CLI command is `nest`; the submodule must match; (2) `cache` has no independent public API — it exists solely to serve `parsing`, making it a sub-file, not a separate module. Six submodules was confirmed as the minimum necessary for clear single-responsibility boundaries.
+
+---
+
 ## Decision
 
 The `beehave` package is organized into **six submodules**:

@@ -6,6 +6,14 @@
 | **Feature** | all |
 | **Status** | Accepted |
 
+## Context
+
+**Question (A3):** What is the policy for CLI flags, config keys, and `@id` format changes across versions?
+
+Stakeholder confirmed best-effort as the right balance for v1. A hard semver contract requires deprecation tracking and migration tooling that is out of scope. The key concern was that `@id` tags in `.feature` files (and therefore all test function names) must never be silently broken — at minimum, users must get a warning before any removal.
+
+---
+
 ## Decision
 
 beehave follows a **best-effort deprecation** policy: any CLI flag, config key, or `@id` format change is preceded by a deprecation warning visible to users for at least one minor release before removal. No hard semver guarantee is enforced.

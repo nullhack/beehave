@@ -6,6 +6,14 @@
 | **Feature** | all (CLI) |
 | **Status** | Accepted |
 
+## Context
+
+**Question (A4):** Beyond `--verbose` and `--json`, should beehave support structured logging, log levels, or log files?
+
+Stakeholder confirmed log levels (DEBUG/INFO/WARNING/ERROR) are needed so users can control verbosity without code changes. Standard Python `logging` was the clear choice: zero extra dependency, universally understood, integrates cleanly with library use. `--verbose` maps to INFO; `--json` switches output format but respects the active level.
+
+---
+
 ## Decision
 
 beehave uses the **standard Python `logging` module** with four levels: DEBUG, INFO, WARNING, ERROR. The active log level is configurable via a `[tool.beehave]` key (`log_level`) or a `--log-level` CLI flag. Default level is WARNING (silent for normal use). `--verbose` is sugar for INFO; `--json` switches output format but respects the active log level.

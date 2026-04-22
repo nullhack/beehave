@@ -6,6 +6,14 @@
 | **Feature** | sync-create, sync-update, sync-cleanup, nest |
 | **Status** | Accepted |
 
+## Context
+
+**Question (D4):** How is the feature slug derived? Does the stage folder (`backlog/`, `in-progress/`, `completed/`) affect it? What happens when a feature file is renamed?
+
+A feature moves through stage folders during its lifecycle. If the slug included the stage path, moving from `in-progress/` to `completed/` would change the slug, rename the test directory, and orphan all stubs — a destructive side-effect of a purely administrative operation. The stakeholder confirmed stage-folder-independence. On rename: no feature-level ID exists, so beehave cannot detect renames; auto-rename was explicitly rejected (cannot distinguish rename from delete + new file).
+
+---
+
 ## Decision
 
 `FeatureSlug` is derived solely from the `.feature` file's **stem** (filename without extension and without the stage subfolder path); the stage folder (`backlog/`, `in-progress/`, `completed/`, or root) is ignored.

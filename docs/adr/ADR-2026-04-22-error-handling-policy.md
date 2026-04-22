@@ -6,6 +6,14 @@
 | **Feature** | sync-cleanup, id-generation, config-reading |
 | **Status** | Accepted |
 
+## Context
+
+**Question (A1/D6):** How should beehave behave when `pyproject.toml` is malformed, a `.feature` file has invalid Gherkin, or the filesystem is read-only? Which conditions warrant a hard error vs. a configurable warn/error?
+
+Stakeholder decisions: malformed (present but invalid) `pyproject.toml` → hard error; absent `pyproject.toml` → use defaults, no error; invalid Gherkin → hard error; read-only filesystem → hard error. Deleted feature file and orphan stubs → configurable, default warn. Duplicate `@id` → hard error always, never configurable (see `ADR-2026-04-22-id-stability`). New config keys surfaced: `on_delete` and `on_orphan`.
+
+---
+
 ## Decision
 
 | Condition | Policy | Configurable? |

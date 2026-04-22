@@ -6,6 +6,14 @@
 | **Feature** | id-generation, sync-create, sync-update |
 | **Status** | Accepted |
 
+## Context
+
+**Question (D5):** What may beehave write to `.feature` files, and what write strategy should it use?
+
+The core constraint from discovery (Q4/C4): beehave is not the author of `.feature` files — it only assigns `@id` tags. Any write beyond that risks corrupting human-authored Gherkin. The stakeholder confirmed that formatting, comments, and surrounding content must be byte-identical after a run. Full parse-and-reserialize was considered and rejected: the official Gherkin parser has no canonical serializer.
+
+---
+
 ## Decision
 
 beehave writes to `.feature` files **only** to add `@id` tags to untagged Examples; all other content is read-only.

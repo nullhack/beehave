@@ -6,6 +6,14 @@
 | **Feature** | cache-management, id-generation |
 | **Status** | Accepted |
 
+## Context
+
+**Question (A2):** What is the target scale (Examples per project)? Does the cache need to be load-bearing or is it an optimisation?
+
+Stakeholder confirmed medium scale (100–1,000 Examples) as the design target. At that scale, a full scan of all `.feature` files completes in well under 1 second. Making the cache load-bearing adds hard dependency on cache coherence and complicates failure modes. The stakeholder preferred simplicity: cache speeds things up, but sync must be correct without it.
+
+---
+
 ## Decision
 
 The target scale is **medium** (100–1,000 Examples per project). A full scan of all `.feature` files on every run is acceptable at this scale. The cache is a **performance optimisation**, not a load-bearing architectural requirement — sync must be correct without it; the cache only speeds it up.

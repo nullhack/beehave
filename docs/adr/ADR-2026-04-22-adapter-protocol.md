@@ -6,6 +6,14 @@
 | **Feature** | adapter-contract, pytest-adapter |
 | **Status** | Accepted |
 
+## Context
+
+**Question (D2):** Should `FrameworkAdapter` be a `typing.Protocol` or an ABC?
+
+Structural protocols allow third-party adapters to satisfy the interface without importing from `beehave`. An ABC forces a hard import coupling. pyright enforces Protocol conformance statically with zero runtime overhead. The stakeholder confirmed zero import coupling as a design goal.
+
+---
+
 ## Decision
 
 `FrameworkAdapter` is defined as a `typing.Protocol` (structural subtyping), not an abstract base class.

@@ -6,6 +6,14 @@
 | **Feature** | id-generation |
 | **Status** | Accepted |
 
+## Context
+
+**Question (D3):** What is the format for `@id` tags? How are generation collisions handled? What happens to a stub when its `@id` is edited or deleted?
+
+From discovery (I1/I1a): beehave generates 8-char lowercase hex IDs via `secrets.token_hex(4)`. Human-assigned IDs (any non-empty string) are valid and respected. Only an empty `@id:` value is malformed and gets replaced. The stakeholder confirmed that project-wide uniqueness is required — stubs are looked up by `@id` alone, so file-scoped uniqueness is insufficient. Duplicate `@id` found in files (always a hand-edit) → hard error, no safe resolution exists.
+
+---
+
 ## Decision
 
 `@id` values are 8-character lowercase hex strings. Once assigned, they are never replaced unless malformed (empty value or non-hex characters). Generation collisions trigger a silent retry. Uniqueness is enforced project-wide across all `.feature` files.
