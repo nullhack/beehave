@@ -102,6 +102,9 @@ def resolve_features_path(rootdir: Path) -> Path:
     return rootdir / configured
 
 
+def inject_beehave_section(rootdir: Path, features_path: str = DEFAULT_FEATURES_PATH) -> bool: ...
+
+
 def read_stub_format(rootdir: Path) -> StubFormat:
     """Read stub_format from [tool.beehave] in pyproject.toml.
 
