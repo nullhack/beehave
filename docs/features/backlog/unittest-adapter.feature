@@ -1,10 +1,12 @@
-Feature: Unittest adapter — generate unittest test stubs
+Feature: Unittest Adapter — generate unittest test stubs
+Status: PARKED (out of v1 scope)
 
-  # PARKED — out of v1 scope. Scheduled for v2.
-  #
-  # The unittest adapter will produce `unittest.TestCase` method stubs from
-  # `.feature` Examples, using unittest-native patterns for skip markers,
-  # deprecation, and parametrization. It will not be part of the initial release
-  # and will be added after the pytest adapter is stable.
+The unittest adapter will provide unittest-specific marker templates and
+conventions for stub generation. This feature is parked for v2.
 
-  Status: PARKED (v2)
+Rule: Unittest adapter is not available in v1
+
+  @id:c5bd5fb8
+  Example: Unittest adapter is out of scope
+    Given beehave v1
+    Then the unittest adapter is not available

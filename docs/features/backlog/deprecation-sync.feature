@@ -1,59 +1,36 @@
-Feature: Deprecation sync — propagate @deprecated tags to stubs
+Feature: Deprecation Sync — propagate @deprecated tags to stubs
+Status: BASELINED (2026-04-23)
 
-  When a Gherkin Example (or its parent Rule or Feature) carries a `@deprecated`
-  tag, beehave ensures the corresponding test stub receives the framework-native
-  deprecation marker (e.g., `@pytest.mark.deprecated` for pytest). When the
-  `@deprecated` tag is removed from the Gherkin source, the marker is also removed
-  from the stub.
+Beehave propagates `@deprecated` tags from `.feature` files to the
+corresponding test stubs. The cascade is absolute: a `@deprecated` tag on a
+Feature or Rule applies to all Examples beneath it with NO override in v1.
 
-  This propagation is handled as part of `sync-update` — it is one of the
-  auto-generated parts of a stub that beehave is permitted to modify.
+Rule: @deprecated cascades from Feature and Rule to all child Examples
 
-  Status: BASELINED (2026-04-21)
+  @id:c1f44d6c
+  Example: @deprecated on Feature cascades to all Examples
+    Given a Feature tagged `@deprecated` with three Examples
+    When beehave sync runs
+    Then all three corresponding stubs receive the deprecated marker
 
-  Rules (Business):
-  - A `@deprecated` tag on a Feature or Rule applies to all Examples beneath it.
-  - `@deprecated` on an Example overrides any inherited deprecated state.
+  @id:3f9939c1
+  Example: @deprecated on Rule cascades to all Examples under that Rule
+    Given a Rule tagged `@deprecated` with two Examples
+    When beehave sync runs
+    Then both corresponding stubs receive the deprecated marker
 
-  Constraints:
-  - Frameworks without a native deprecation mechanism receive a no-op or comment
-    marker instead of a hard error.
+  @id:7e966f90
+  Example: No override mechanism in v1
+    Given a Feature tagged `@deprecated`
+    And an Example under it that should not be deprecated
+    When beehave sync runs
+    Then the Example's stub still receives the deprecated marker
 
-  Rule: Propagate @deprecated from Example to stub
-    As a developer deprecating a scenario
-    I want the corresponding test stub to be marked deprecated automatically
-    So that my test runner skips or warns about it appropriately
+Rule: @deprecated is propagated as adapter-specific marker
 
-    @id:f2a3b4c5
-    Example: Example gains @deprecated tag
-      Given a `.feature` Example newly tagged with `@deprecated`
-        and a matching test stub without a deprecation marker
-      When beehave sync runs
-      Then the stub receives the adapter's deprecated marker
-
-    @id:a3b4c5d6
-    Example: Example loses @deprecated tag
-      Given a `.feature` Example where the `@deprecated` tag was removed
-        and a matching test stub with a deprecation marker
-      When beehave sync runs
-      Then the deprecation marker is removed from the stub
-
-  Rule: Inherit @deprecated from parent Rule or Feature
-    As a developer marking an entire Rule as deprecated
-    I want all Examples under that Rule to be deprecated without tagging each one
-    So that deprecation is DRY
-
-    @id:b4c5d6e7
-    Example: Rule with @deprecated deprecates all child Examples
-      Given a `.feature` Rule tagged with `@deprecated` containing two Examples
-      When beehave sync runs
-      Then both test stubs receive the adapter's deprecated marker even though
-        the individual Examples have no `@deprecated` tag
-
-    @id:c5d6e7f8
-    Example: Feature with @deprecated deprecates all Rules and Examples
-      Given a `.feature` Feature tagged with `@deprecated` containing Rules
-        and Examples without individual `@deprecated` tags
-      When beehave sync runs
-      Then all test stubs in that feature receive the adapter's deprecated marker
-
+  @id:d3f502c3
+  Example: Pytest adapter uses @pytest.mark.deprecated
+    Given the pytest adapter is active
+    And an Example is affected by `@deprecated`
+    When beehave sync runs
+    Then the stub is decorated with `@pytest.mark.deprecated`
