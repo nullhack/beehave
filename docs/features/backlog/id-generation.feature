@@ -1,101 +1,79 @@
-Feature: ID generation — assign @id tags to untagged Examples
+Feature: ID Generation — assign @id tags to untagged Examples
+Status: BASELINED (2026-04-23)
 
-  Beehave detects Examples that lack an `@id` tag, generates a unique 8-character
-  lowercase hexadecimal identifier, and writes it back into the `.feature` file
-  in-place, preserving all whitespace and formatting exactly.
+Beehave assigns unique 8-character lowercase hex `@id` tags to Gherkin
+Examples that lack them. Existing valid IDs are never overwritten.
+Malformed `@id` tags are treated as missing and replaced.
 
-  ID assignment is project-wide: uniqueness is enforced across all `.feature` files.
-  If a developer has already added their own `@id:<value>` before running beehave,
-  beehave respects it as-is and never overwrites or regenerates it. Malformed tags
-  (e.g. `@id:` with no value, or `@id:ZZZZZZZZ` with non-hex characters) are treated
-  as missing — a new valid ID is generated and replaces the malformed one.
+Rule: Beehave generates IDs for untagged Examples
 
-  Collision during generation is resolved by silent retry until a unique value is found.
-  Ordering follows top-to-bottom file order. The operation is idempotent: an Example
-  with a valid `@id` is left completely untouched on subsequent runs.
+  @id:f888a23f
+  Example: Untagged Example receives a new @id
+    Given a `.feature` file with an Example that has no `@id` tag
+    When beehave assigns IDs
+    Then the Example receives an `@id:<8-char-hex>` tag
+    And the tag is a valid 8-character lowercase hex string
 
-  A Python API entry point is available: `from beehave import assign_ids`.
-  Dry-run preview is provided by `beehave status` — there is no separate preview mode
-  for id-generation.
+  @id:ec32fe63
+  Example: Multiple untagged Examples each get unique IDs
+    Given a `.feature` file with three Examples without `@id` tags
+    When beehave assigns IDs
+    Then each Example receives a distinct `@id` tag
 
-  Status: BASELINED (2026-04-21)
+Rule: Existing valid IDs are preserved
 
-  Rules (Business):
-  - Every Example in every `.feature` file must have exactly one `@id` tag.
-  - beehave-generated IDs are 8-char lowercase hex; user-provided IDs of any
-    format are accepted as-is once valid.
-  - Malformed `@id` tags are treated as missing and replaced.
-  - Feature files are only ever mutated to add missing `@id` tags; no other edits.
+  @id:d2e63026
+  Example: Developer-supplied ID is left untouched
+    Given a `.feature` file with an Example tagged `@id:custom01`
+    When beehave assigns IDs
+    Then the `@id:custom01` tag is preserved as-is
 
-  Constraints:
-  - Validity check: an `@id:` value must contain exactly 8 hexadecimal characters.
-  - Uniqueness scope is the entire project (all `.feature` files combined).
+  @id:8499105f
+  Example: Valid hex ID is never regenerated
+    Given a `.feature` file with an Example tagged `@id:a1b2c3d4`
+    When beehave assigns IDs
+    Then the `@id:a1b2c3d4` tag is left unchanged
 
-  Rule: Detect and tag untagged Examples
-    As a PO writing acceptance criteria
-    I want beehave to add stable IDs to Examples so that test stubs can map
-      to criteria unambiguously
-    So that I never have to manage IDs manually
+Rule: Malformed IDs are replaced
 
-    @id:e7f8a9b0
-    Example: Tags single untagged Example
-      Given a `.feature` file containing one Example with no `@id` tag
-      When I run `beehave sync` or `beehave assign-ids`
-      Then the Example now has an `@id:<8-char-hex>` tag inserted above it
+  @id:4282d12b
+  Example: Empty @id is replaced
+    Given a `.feature` file with an Example tagged `@id:`
+    When beehave assigns IDs
+    Then the malformed tag is replaced with a new valid `@id`
 
-    @id:f8a9b0c1
-    Example: Tags multiple untagged Examples in file order
-      Given a `.feature` file containing three untagged Examples in sequence
-      When I run `beehave sync`
-      Then each Example receives a unique `@id` tag in top-to-bottom order
+  @id:553b3cf7
+  Example: Non-hex @id is replaced
+    Given a `.feature` file with an Example tagged `@id:ZZZZZZZZ`
+    When beehave assigns IDs
+    Then the malformed tag is replaced with a new valid `@id`
 
-    @id:a9b0c1d2
-    Example: Preserves existing formatting and comments
-      Given a `.feature` file with a blank line above an untagged Example
-      When beehave writes the `@id` tag
-      Then the blank line is preserved and the `@id` tag is inserted directly
-        above the `Example:` keyword
+Rule: ID uniqueness is project-wide
 
-    @id:b0c1d2e3
-    Example: Ignores already tagged Examples
-      Given a `.feature` file with one tagged and one untagged Example
-      When beehave assigns IDs
-      Then the tagged Example is untouched and the untagged one gets a new ID
+  @id:12a7a112
+  Example: Duplicate @id across files triggers warning or error
+    Given two `.feature` files each containing `@id:a1b2c3d4`
+    When beehave assigns IDs
+    Then a warning or error is raised depending on configuration
 
-  Rule: Validate existing IDs
-    As a developer who may have hand-written IDs
-    I want beehave to tell me when my IDs are malformed
-    So that I can fix them before sync proceeds
+  @id:9ecaf8b1
+  Example: Collision on generation is silently retried
+    Given a randomly generated ID that already exists in the project
+    When beehave assigns IDs
+    Then a new random ID is generated until unique
 
-    @id:c1d2e3f4
-    Example: Replaces empty value @id:
-      Given a `.feature` file containing `@id:` (no value)
-      When beehave validates IDs
-      Then the empty tag is replaced with a valid generated `@id` and a warning
-        is emitted
+Rule: Write-back preserves formatting
 
-    @id:d2e3f4a5
-    Example: Replaces non-hex characters
-      Given a `.feature` file containing `@id:XYZ12345`
-      When beehave validates IDs
-      Then the invalid tag is replaced with a valid generated `@id` and a warning
-        is emitted
+  @id:b491f526
+  Example: Only the @id tag line is modified
+    Given a `.feature` file with specific whitespace and formatting
+    When beehave assigns IDs
+    Then all whitespace and formatting is preserved except for the added `@id` tag
 
-  Rule: Enforce uniqueness across the project
-    As a team with many feature files
-    I want all IDs to be unique project-wide
-    So that test stubs never map to the wrong Example
+Rule: Python API is available
 
-    @id:e3f4a5b6
-    Example: Re-rolls on collision
-      Given a `.feature` file where an existing `@id:a1b2c3d4` is already used
-        in another `.feature` file, and beehave is about to generate the same ID
-      When beehave assigns IDs
-      Then it retries with a new random value until the ID is unique project-wide
-
-    @id:f4a5b6c7
-    Example: Warns on user-supplied duplicate
-      Given two `.feature` files both containing `@id:deadbeef`
-      When beehave validates IDs
-      Then a warning is emitted naming both files and the duplicate tag is left
-        as-is (user owns the ID)
+  @id:e23fa86f
+  Example: Programmatic ID assignment
+    Given a project with untagged Examples
+    When the developer calls `from beehave import assign_ids`
+    Then IDs are assigned the same way as the CLI

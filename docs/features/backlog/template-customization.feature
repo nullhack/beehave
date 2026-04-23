@@ -1,55 +1,34 @@
-Feature: Template customization — user-defined stub templates
+Feature: Template Customization — user-defined stub templates
+Status: BASELINED (2026-04-23)
 
-  End users may override the built-in adapter templates by pointing beehave to a
-  custom template folder. The override is specified via the `--template-dir` CLI
-  flag or the `template_path` key in `[tool.beehave]` in `pyproject.toml`.
+Users can override built-in adapter templates by pointing to a custom template
+folder via `--template-dir` flag or `[tool.beehave]` config key `template_path`.
+Custom templates fully replace the built-in for matched template files.
 
-  A custom template folder is a full replacement for the matched built-in template
-  files — it overrides the built-in adapter templates entirely for any file present
-  in the custom folder. This allows teams to enforce their own coding standards,
-  docstring formats, or marker styles without forking the adapter code.
+Rule: Default templates come from the adapter
 
-  Built-in adapter templates remain the default when no custom folder is configured.
+  @id:e0314dc7
+  Example: Built-in templates are used by default
+    Given a project using the pytest adapter with no custom template path
+    When beehave generates stubs
+    Then the built-in pytest adapter templates are used
 
-  Status: BASELINED (2026-04-21)
+Rule: User overrides via custom template folder
 
-  Rules (Business):
-  - Only files present in the custom folder override the built-in; missing files
-    fall back to the built-in template.
-  - Custom templates must expose the same variables the adapter contract expects
-    (e.g. `function_name`, `docstring`, `id`, `markers`).
+  @id:21350e47
+  Example: Custom template folder via CLI flag
+    Given a project with custom templates in `my_templates/`
+    When the user runs "beehave sync --template-dir my_templates/"
+    Then stubs are generated using the custom templates
 
-  Constraints:
-  - Custom template syntax must match whatever the core renderer expects (e.g.
-    Jinja2, string.Template). This is documented in the adapter contract.
+  @id:f971adb3
+  Example: Custom template folder via config
+    Given a project with `template_path = 'my_templates/'` in `[tool.beehave]`
+    When the user runs "beehave sync"
+    Then stubs are generated using the custom templates
 
-  Rule: Override specific templates via custom folder
-    As a team lead enforcing coding standards
-    I want beehave to use my custom skip marker instead of the built-in one
-    So that our test suite follows our conventions
-
-    @id:e5f6a7b8
-    Example: Custom skip marker template
-      Given a custom template folder containing a `skip.txt` with the text
-        `@pytest.mark.skip("TODO")` instead of the default reason string
-      When beehave sync runs with `--template-dir` pointing to that folder
-      Then every generated skip marker uses `TODO` as the reason
-
-    @id:f6a7b8c9
-    Example: Unchanged templates fall back to built-in
-      Given a custom template folder containing only `skip.txt`
-      When beehave sync runs with `--template-dir` pointing to that folder
-      Then the skip marker is from the custom template but deprecated and
-        parametrize markers use the built-in templates
-
-  Rule: Validate custom template variables
-    As a developer writing a custom template
-    I want beehave to tell me if my template references an unknown variable
-    So that I catch typos early
-
-    @id:a7b8c9d0
-    Example: Missing variable causes hard error
-      Given a custom template with `{{ unknown_variable }}`
-      When beehave attempts to render it
-      Then the command exits with an error naming the unknown variable and
-        the template file path
+  @id:7afb1c6f
+  Example: Custom folder is a full replacement
+    Given a custom template folder with only a skip marker template
+    When beehave sync runs using the custom folder
+    Then the custom skip marker template replaces the built-in entirely

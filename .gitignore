@@ -178,3 +178,7 @@ cython_debug/
 
 # Agent instructions (local only)
 AGENTS.md
+
+# Workflow state (local only)
+WORK.md
+FLOW.md
