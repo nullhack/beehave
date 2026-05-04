@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.1
         
       - name: Install uv
-        uses: astral-sh/setup-uv@cdfb2ee6dde255817c739680168ad81e184c4bfb # v4.0.0
+        uses: astral-sh/setup-uv@05143d3dcd540a42aa638bb0920ac4e3123808a5 # v4.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -73,7 +73,7 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.1
         
       - name: Install uv
-        uses: astral-sh/setup-uv@cdfb2ee6dde255817c739680168ad81e184c4bfb # v4.0.0
+        uses: astral-sh/setup-uv@05143d3dcd540a42aa638bb0920ac4e3123808a5 # v4.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.1
         
       - name: Install uv
-        uses: astral-sh/setup-uv@cdfb2ee6dde255817c739680168ad81e184c4bfb # v4.0.0
+        uses: astral-sh/setup-uv@05143d3dcd540a42aa638bb0920ac4e3123808a5 # v4.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -174,7 +174,7 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@cdfb2ee6dde255817c739680168ad81e184c4bfb # v4.0.0
+        uses: astral-sh/setup-uv@05143d3dcd540a42aa638bb0920ac4e3123808a5 # v4.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
