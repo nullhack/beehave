@@ -1,3 +1,4 @@
+import hashlib
 import re
 import secrets
 import string
@@ -49,6 +50,12 @@ class TestFunctionName:
 @dataclass(frozen=True)
 class LineNumber:
     value: int
+
+
+@dataclass(frozen=True)
+class Placeholder:
+    name: str
+    is_string: bool = False
 
 
 @dataclass(frozen=True)
@@ -110,6 +117,7 @@ class TraceabilityReport:
 class Scenario:
     name: ScenarioName
     id_tag: IdTag | None
+    placeholders: tuple[Placeholder, ...] = ()
 
     def has_identifier(self):
         return self.id_tag is not None
@@ -133,17 +141,58 @@ def _extract_scenarios(lines: list[str]) -> list[Scenario]:
     return scenarios
 
 
+def _derive_row_id(heading_id: IdTag | None, row_index: int) -> IdTag:
+    """Derive a deterministic @id for an expanded Scenario Outline row."""
+    raw = f"{heading_id.value}{row_index}" if heading_id is not None else f"{row_index}"
+    value = hashlib.sha256(raw.encode()).hexdigest()[:8]
+    return IdTag(value=value)
+
+
 def _try_append_scenario(lines, index, stripped, scenarios):
     if not _is_scenario_heading(stripped):
         return
     name = _extract_scenario_name(stripped)
     example_rows = _count_example_rows(lines, index)
+    placeholders = _extract_step_placeholders(lines, index)
     if example_rows > 1:
-        for _ in range(example_rows):
-            scenarios.append(Scenario(name=ScenarioName(name), id_tag=generate_id()))
+        heading_id = _find_preceding_identifier(lines, index)
+        for row_index in range(example_rows):
+            scenarios.append(
+                Scenario(
+                    name=ScenarioName(name),
+                    id_tag=_derive_row_id(heading_id, row_index),
+                    placeholders=placeholders,
+                )
+            )
     else:
         identifier = _find_preceding_identifier(lines, index)
-        scenarios.append(Scenario(name=ScenarioName(name), id_tag=identifier))
+        scenarios.append(
+            Scenario(
+                name=ScenarioName(name),
+                id_tag=identifier,
+                placeholders=placeholders,
+            )
+        )
+
+
+def _extract_step_placeholders(lines, heading_index):
+    seen = set()
+    placeholders = []
+    for i in range(heading_index + 1, len(lines)):
+        stripped = lines[i].strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if _is_section_break(stripped) or stripped.startswith("Examples:"):
+            break
+        for match in re.finditer(r"<([^>]+)>", stripped):
+            name = match.group(1)
+            if name not in seen:
+                seen.add(name)
+                before = stripped[match.start() - 1 : match.start()]
+                after = stripped[match.end() : match.end() + 1]
+                is_string = before == "'" and after == "'"
+                placeholders.append(Placeholder(name=name, is_string=is_string))
+    return tuple(placeholders)
 
 
 def _count_example_rows(lines, heading_index):
@@ -189,7 +238,7 @@ def _process_scan_line(lines, index):
     for scan_index in range(index - 1, -1, -1):
         text = lines[scan_index].strip()
         if text.startswith("@id:"):
-            return IdTag(value=text[4:])
+            return IdTag(value=text[4:].strip())
         if _is_section_break(text):
             return None
     return None

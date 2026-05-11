@@ -262,20 +262,6 @@ def _generate_stub_content(
 ) -> str:
     lines = []
 
-    if include_imports:
-        lines.append("import pytest")
-        lines.append("from beehave.decorators import Given, When, Then, Example")
-        lines.append("from hypothesis import strategies as st")
-        lines.append("")
-        lines.append("")
-        lines.append("# Strategy variables")
-        lines.append("default_strategy = st.integers()")
-        lines.append("")
-        lines.append("")
-
-    if not include_imports:
-        lines.append("")
-
     # Normalize steps to (keyword, step_text) tuples
     normalized_steps: list[tuple[str, str]] = []
     for step in steps:
@@ -286,6 +272,29 @@ def _generate_stub_content(
             keyword = parts[0]
             text = parts[1] if len(parts) > 1 else ""
             normalized_steps.append((keyword, text))
+
+    # Collect unique decorator keywords in canonical order
+    canonical_order = ["Given", "When", "Then", "And", "But", "Example"]
+    used_keywords = {kw for kw, _ in normalized_steps}
+    decorator_names = [kw for kw in canonical_order if kw in used_keywords]
+    # Example is always included for Scenario Outline support
+    if "Example" not in decorator_names:
+        decorator_names.append("Example")
+
+    if include_imports:
+        lines.append("import pytest")
+        if decorator_names:
+            lines.append(f"from beehave.decorators import {', '.join(decorator_names)}")
+        lines.append("from hypothesis import strategies as st")
+        lines.append("")
+        lines.append("")
+        lines.append("# Strategy variables")
+        lines.append("default_strategy = st.integers()")
+        lines.append("")
+        lines.append("")
+
+    if not include_imports:
+        lines.append("")
 
     # Extract placeholder names from step text
     all_placeholders: list[str] = []
@@ -359,7 +368,7 @@ def _parse_feature_steps(text: str) -> dict[str, list[tuple[str, str]]]:
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("@id:"):
-            current_id = stripped[4:]
+            current_id = stripped[4:].strip()
         elif stripped.startswith(("Feature:", "Rule:")):
             current_id = None
         elif current_id:
@@ -607,6 +616,11 @@ def _align_steps(feature_path: str, test_dir: str) -> tuple[list[dict], list[dic
         info = test_info[id_tag]
         decorators = info["decorators"]
         decorator_texts = [dt for _, dt in decorators]
+        # Unescape Python string escapes so that e.g. "the hive\'s honey"
+        # matches the feature step text "the hive's honey".
+        decorator_texts = [
+            dt.replace("\\'", "'").replace('\\"', '"') for dt in decorator_texts
+        ]
         feature_step_texts = [st for _, st in steps]
 
         sm = SequenceMatcher(autojunk=False, a=decorator_texts, b=feature_step_texts)
