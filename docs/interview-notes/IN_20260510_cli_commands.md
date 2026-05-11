@@ -32,7 +32,7 @@
 | Q9 | What does `beehave generate` do? | Create test stub files for orphan scenarios (scenarios with @id that have no matching Python test function). |
 | Q10 | What if the target file already exists? | Warn that the file exists, then offer an interactive prompt: "balance_accounting/default_test.py already exists. Add function? [y/N]". If yes, append the new function to the end of the existing file. |
 | Q11 | What if a function with the same @id already exists? | Skip with warning: "function for @id:a1b2c3d4 already exists". Generate is idempotent — running twice is safe. |
-| Q12 | What does a generated stub look like? | Includes: imports (hypothesis strategies, beehave decorators), module-level strategy variables for all `<placeholders>` (defaulting to `st.integers()`), @Given/@When/@Then/@And/@But decorators matching .feature steps, @Example decorators from .feature Examples table (if any), function with `...` body. Function name follows `test_<scenario_title_snake_case>_<id>` pattern. |
+| Q12 | What does a generated stub look like? | Includes: imports (hypothesis strategies, beehave decorators, pytest), module-level strategy variables for all `<placeholders>` (defaulting to `st.integers()`), @Given/@When/@Then/@And/@But decorators matching .feature steps, @Example decorators from .feature Examples table (if any), `@pytest.mark.skip(reason="not yet implemented")` decorator, function with `raise NotImplementedError` body. Function name follows `test_<scenario_title_snake_case>_<id>` pattern. *(Updated per IN_20260511_self_validation_pain_points PP4.)* |
 | Q13 | Risk level? | **Safe (additive).** Generate creates new files or appends functions to existing files. It does not modify existing functions or delete anything. |
 
 ## `beehave fix`

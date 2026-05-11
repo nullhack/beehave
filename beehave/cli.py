@@ -55,9 +55,16 @@ def generate(feature_name: str | None = None, json_output: bool = False) -> str 
             )
             continue
 
+        # Parse steps from the feature text for each scenario
+        feature_steps = _parse_feature_steps(text)
+
         for scenario in orphans:
+            sid = str(scenario.id_tag)
+            steps = feature_steps.get(sid, [])
             results.append(
-                _process_scenario(scenario, test_dir, test_file, json_output)
+                _process_scenario(
+                    scenario, test_dir, test_file, json_output, steps=steps
+                )
             )
 
     if json_output:
@@ -85,29 +92,58 @@ def _format_json_output(results: list) -> str:
 
 def _format_text_output(results: list) -> str:
     lines: list[str] = []
+
+    # Group created/appended results by test_file, preserving first-appearance order
+    file_groups: dict[str, dict] = {}
+    file_order: list[tuple[str, str | dict]] = []
+
     for r in results:
         action = r.get("action", "")
-        fpath = r.get("file", "")
-        if action == "skipped":
-            lines.append(f"{fpath}: {r.get('reason', '')}")
+        if action in ("created", "appended"):
+            tf = r.get("file", "")
+            if tf not in file_groups:
+                file_groups[tf] = {"has_created": False, "ids": []}
+                file_order.append(("file", tf))
+            if action == "created":
+                file_groups[tf]["has_created"] = True
+            file_groups[tf]["ids"].append(r.get("id", ""))
+        elif action == "skipped":
+            file_order.append(("skipped", r))
         elif action == "error":
-            lines.append(f"ERROR: {fpath}: {r.get('error', '')}")
-        elif action == "created":
-            lines.append(f"Created {r.get('test_file', '')} for @{r.get('id', '')}")
-        elif action == "appended":
-            lines.append(f"Appended to {r.get('test_file', '')}: @{r.get('id', '')}")
+            file_order.append(("error", r))
         elif action == "skipped_existing":
-            lines.append(
-                f"Skipped @{r.get('id', '')} (exists in {r.get('test_file', '')})"
-            )
+            file_order.append(("skipped_existing", r))
+
+    for item_type, item in file_order:
+        if isinstance(item, str):
+            group = file_groups[item]
+            ids_str = " ".join(f"@{i}" for i in group["ids"])
+            if group["has_created"]:
+                lines.append(f"Created {item} for {ids_str}")
+            else:
+                lines.append(f"Appended to {item}: {ids_str}")
+        elif isinstance(item, dict):
+            if item_type == "skipped":
+                lines.append(f"{item.get('file', '')}: {item.get('reason', '')}")
+            elif item_type == "error":
+                lines.append(f"ERROR: {item.get('file', '')}: {item.get('error', '')}")
+            elif item_type == "skipped_existing":
+                lines.append(
+                    f"Skipped @{item.get('id', '')} (exists in {item.get('file', '')})"
+                )
     return "\n".join(lines)
 
 
 def _process_scenario(
-    scenario, test_dir: str, test_file: str, json_output: bool
+    scenario,
+    test_dir: str,
+    test_file: str,
+    json_output: bool,
+    steps: list | None = None,
 ) -> dict:
     """Process a single orphan scenario: create or append test stub."""
-    from beehave.cli import _ensure_test_directory, _generate_stub_content
+    if steps is None:
+        steps = []
 
     test_ids = _extract_test_id_strings(test_dir)
     sid = str(scenario.id_tag)
@@ -120,15 +156,18 @@ def _process_scenario(
             "action": "skipped_existing",
         }
 
+    test_path = Path(test_file)
+    file_exists = test_path.exists()
+
     content = _generate_stub_content(
         scenario_name=scenario.name.value,
         scenario_id=sid,
-        steps=[],
+        steps=steps,
         examples=[],
+        include_imports=not file_exists,
     )
 
-    test_path = Path(test_file)
-    if test_path.exists():
+    if file_exists:
         _append_function_stub(test_file, content, json_output)
         return {
             "file": test_file,
@@ -185,37 +224,57 @@ def _build_function_name(scenario_name: str, scenario_id: str) -> str:
 
 
 def _generate_stub_content(
-    scenario_name: str, scenario_id: str, steps: list, examples: list
+    scenario_name: str,
+    scenario_id: str,
+    steps: list,
+    examples: list,
+    include_imports: bool = True,
 ) -> str:
     lines = []
-    lines.append("from beehave.decorators import Given, When, Then, Example")
-    lines.append("from hypothesis import strategies as st")
-    lines.append("")
-    lines.append("")
-    lines.append("# Strategy variables")
-    lines.append("default_strategy = st.integers()")
-    lines.append("")
-    lines.append("")
-    for step_text in steps:
-        step_type = step_text.split()[0]
-        step_content = step_text[len(step_type) :].strip()
-        decorator_map = {
-            "Given": "Given",
-            "When": "When",
-            "Then": "Then",
-            "And": "And",
-            "But": "But",
-        }
-        decorator_name = decorator_map[step_type]
-        step_snake = _to_snake_case(step_content)
-        lines.append(f'@{decorator_name}("{step_content}")')
-        lines.append(f"def step_{step_snake}():")
-        lines.append("    ...")
+
+    if include_imports:
+        lines.append("import pytest")
+        lines.append("from beehave.decorators import Given, When, Then, Example")
+        lines.append("from hypothesis import strategies as st")
         lines.append("")
         lines.append("")
+        lines.append("# Strategy variables")
+        lines.append("default_strategy = st.integers()")
+        lines.append("")
+        lines.append("")
+
+    if not include_imports:
+        lines.append("")
+
+    # Normalize steps to (keyword, step_text) tuples
+    normalized_steps: list[tuple[str, str]] = []
+    for step in steps:
+        if isinstance(step, tuple):
+            normalized_steps.append(step)
+        else:
+            parts = step.split(None, 1)
+            keyword = parts[0]
+            text = parts[1] if len(parts) > 1 else ""
+            normalized_steps.append((keyword, text))
+
+    # Extract placeholder names from step text
+    all_placeholders: list[str] = []
+    for _, step_text in normalized_steps:
+        all_placeholders.extend(re.findall(r"<([^>]+)>", step_text))
+    unique_placeholders = list(dict.fromkeys(all_placeholders))
+
+    # Add skip decorator
+    lines.append('@pytest.mark.skip(reason="not yet implemented")')
+
+    # Add step decorators
+    for keyword, step_text in normalized_steps:
+        lines.append(f'@{keyword}("{step_text}")')
+
+    # Build function name and params
     func_name = _build_function_name(scenario_name, scenario_id)
-    lines.append(f"def {func_name}():")
-    lines.append("    ...")
+    params = ", ".join(unique_placeholders)
+    lines.append(f"def {func_name}({params}):")
+    lines.append("    raise NotImplementedError(...)")
     lines.append("")
     return "\n".join(lines)
 
@@ -250,6 +309,9 @@ def _extract_test_id_strings(test_dir: str) -> set:
 
 def _ensure_test_directory(feature_name: str) -> str:
     os.makedirs(feature_name, exist_ok=True)
+    init_path = Path(feature_name) / "__init__.py"
+    if not init_path.exists():
+        init_path.write_text("")
     return feature_name
 
 

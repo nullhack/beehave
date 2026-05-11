@@ -1,5 +1,6 @@
 import re
 import sys
+import warnings
 
 from hypothesis import example as hypothesis_example
 from hypothesis import given, settings
@@ -34,6 +35,7 @@ def _resolve_placeholder(name, caller_module, examples=None):
     candidate = getattr(caller_module, name, None)
     if _is_strategy(candidate):
         return candidate
+    warnings.warn(f"{name}: st.integers() fallback", UserWarning, stacklevel=2)
     return st.integers()
 
 
@@ -51,13 +53,9 @@ def _step_type_or_default(resolved):
     return "Given"
 
 
-def _find_preceding_step_type(resolved):
-    return _step_type_or_default(resolved)
-
-
 def _resolve_step_type(step_type, resolved):
     if step_type in ("And", "But"):
-        return _find_preceding_step_type(resolved)
+        return _step_type_or_default(resolved)
     return step_type
 
 

@@ -72,6 +72,7 @@ Existing BDD frameworks (pytest-bdd, behave) force splitting one scenario across
 3a. **Feature Parsing — File Mapping + Step Text** — .feature file to test module mapping (Rule-based); exact step text matching between .feature and decorators
 3b. **Feature Parsing — Ordering + Placeholders + Adoption** — step ordering validation (Given→When→Then); placeholder-parameter matching; progressive adoption levels
 4. **Failure Reporting** — Gherkin-readable failure reports via Hypothesis report_example callback; step rendering with counterexample values; Then-failed and line-number heuristics
+5. **Self-Validation Fixes** — generate() output observability (file paths); clean import blocks on append; __init__.py creation; skip markers on stubs; step decorators in stubs; strategy fallback warnings
 
 ---
 
