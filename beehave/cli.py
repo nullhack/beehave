@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import unicodedata
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from beehave.traceability import parse_feature
@@ -394,42 +395,62 @@ def fix(feature_name: str | None = None, dry_run: bool = False) -> str | None:
         stem = Path(fpath).stem
         test_dir = str(Path("tests") / "features" / stem)
 
-        # Fix text mismatches
-        mismatches = _find_text_mismatches(fpath, test_dir)
+        # Fix text mismatches and add missing decorators
+        mismatches, additions = _align_steps(fpath, test_dir)
         for m in mismatches:
             file_path = m["file"]
             with open(file_path) as f:
                 content = f.read()
-            old_dec = f'@{m["keyword"]}("{m["old_text"]}")'
-            new_dec = f'@{m["keyword"]}("{m["new_text"]}")'
+            escaped_old = m["old_text"].replace("'", "\\'")
+            escaped_new = m["new_text"].replace("'", "\\'")
+            op = m.get("operation", "replace")
+            if op == "delete":
+                old_dec = f"@{m['keyword']}('{escaped_old}')"
+                if dry_run:
+                    diffs.append(f"--- {file_path}\n+++ {file_path}")
+                    diffs.append(f"-{old_dec}")
+                continue
+
+            escaped_new = m["new_text"].replace("'", "\\'")
+            old_pattern = (
+                rf"""@{re.escape(m["keyword"])}\("""
+                rf"""(["']){re.escape(m["old_text"])}\1\)"""
+            )
             if dry_run:
                 diffs.append(f"--- {file_path}\n+++ {file_path}")
-                diffs.append(f"-{old_dec}")
-                diffs.append(f"+{new_dec}")
-            else:
-                updated = content.replace(old_dec, new_dec)
-                with open(file_path, "w") as f:
-                    f.write(updated)
+                diffs.append(f"-@{m['keyword']}('{escaped_old}')")
+                diffs.append(f"+@{m['keyword']}('{escaped_new}')")
+                continue
 
-        # Add missing decorators
-        additions = _add_missing_decorators(fpath, test_dir)
+            def _replacer(match, _kw=m["keyword"], _new=m["new_text"]):
+                q = match.group(1)
+                esc = _new.replace(q, f"\\{q}")
+                return f"@{_kw}({q}{esc}{q})"
+
+            updated = re.sub(old_pattern, _replacer, content)
+            with open(file_path, "w") as f:
+                f.write(updated)
+
         for a in additions:
             file_path = a["file"]
+            escaped = a["step_text"].replace("'", "\\'")
+            dec_line = f"@{a['keyword']}('{escaped}')"
             if dry_run:
-                dec_line = f'@{a["keyword"]}("{a["step_text"]}")'
                 diffs.append(f"--- {file_path}\n+++ {file_path}")
                 diffs.append(f"+{dec_line}")
-            else:
-                with open(file_path) as f:
-                    content = f.read()
-                _insert_decorator_before_function(
-                    file_path,
-                    content,
-                    a["function_name"],
-                    a["keyword"],
-                    a["step_text"],
-                    a["params"],
-                )
+                continue
+
+            with open(file_path) as f:
+                content = f.read()
+            _insert_decorator_before_function(
+                file_path,
+                content,
+                a["function_name"],
+                a["keyword"],
+                a["step_text"],
+                a["params"],
+                insert_at=a.get("insert_at"),
+            )
 
     if dry_run and diffs:
         return "\n".join(diffs)
@@ -443,27 +464,48 @@ def _insert_decorator_before_function(
     keyword: str,
     step_text: str,
     new_params: list[str],
+    insert_at: int | None = None,
 ) -> None:
-    """Insert a decorator line before a function definition and add params."""
+    """Insert a decorator line at the correct position and add params."""
     lines = content.split("\n")
     result_lines: list[str] = []
     inserted = False
-    for line in lines:
-        if (
-            not inserted
-            and _FUNC_DEF_RE.search(line.strip())
-            and func_name in _FUNC_DEF_RE.search(line.strip()).group(1)
-        ):
-            # Insert decorator before this function
+
+    # Find decorator lines and function line
+    decorator_line_indices: list[int] = []
+    func_line_idx: int | None = None
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if _DECORATOR_RE.search(stripped):
+            decorator_line_indices.append(idx)
+        func_match = _FUNC_DEF_RE.search(stripped)
+        if func_match and func_name in func_match.group(1):
+            func_line_idx = idx
+            break
+
+    if func_line_idx is None:
+        with open(file_path, "w") as f:
+            f.write(content)
+        return
+
+    # Determine insertion point
+    target_idx = func_line_idx
+    if insert_at is not None and insert_at < len(decorator_line_indices):
+        target_idx = decorator_line_indices[insert_at]
+
+    for idx, line in enumerate(lines):
+        if idx == target_idx and not inserted:
             indent = line[: len(line) - len(line.lstrip())]
             escaped = step_text.replace("'", "\\'")
             result_lines.append(f"{indent}@{keyword}('{escaped}')")
-            # Add new params to function signature
+            inserted = True
+        func_match = _FUNC_DEF_RE.search(line.strip())
+        if func_match and func_name in func_match.group(1):
             new_line = _add_params_to_func(line, new_params)
             result_lines.append(new_line)
-            inserted = True
-            continue
-        result_lines.append(line)
+        else:
+            result_lines.append(line)
+
     with open(file_path, "w") as f:
         f.write("\n".join(result_lines))
 
@@ -521,63 +563,67 @@ def clean(feature_name: str | None = None, force: bool = False) -> None:
             _remove_functions(test_file, func_names)
 
 
-def _find_text_mismatches(feature_path: str, test_dir: str) -> list[dict]:
-    """Find decorators whose text diverges from .feature step text."""
+def _align_steps(feature_path: str, test_dir: str) -> tuple[list[dict], list[dict]]:
+    """Align feature steps with test decorators, returning mismatches and additions."""
     with open(feature_path) as f:
         text = f.read()
     feature_steps = _parse_feature_steps(text)
     test_info = _parse_test_decorators(test_dir)
 
     mismatches: list[dict] = []
-    for id_tag, steps in feature_steps.items():
-        if id_tag not in test_info:
-            continue
-        info = test_info[id_tag]
-        decorators = info["decorators"]
-        for i, (_kw, step_text) in enumerate(steps):
-            if i < len(decorators):
-                dec_kw, dec_text = decorators[i]
-                if dec_text != step_text:
-                    mismatches.append(
-                        {
-                            "file": info["file"],
-                            "function_name": info["function_name"],
-                            "old_text": dec_text,
-                            "new_text": step_text,
-                            "keyword": dec_kw,
-                        }
-                    )
-    return mismatches
-
-
-def _add_missing_decorators(feature_path: str, test_dir: str) -> list[dict]:
-    """Add step decorators for .feature steps missing from test code."""
-    with open(feature_path) as f:
-        text = f.read()
-    feature_steps = _parse_feature_steps(text)
-    test_info = _parse_test_decorators(test_dir)
-
     additions: list[dict] = []
     for id_tag, steps in feature_steps.items():
         if id_tag not in test_info:
             continue
         info = test_info[id_tag]
         decorators = info["decorators"]
-        if len(steps) <= len(decorators):
-            continue
-        for i in range(len(decorators), len(steps)):
-            kw, step_text = steps[i]
-            placeholders = re.findall(r"<([^>]+)>", step_text)
-            additions.append(
-                {
-                    "file": info["file"],
-                    "function_name": info["function_name"],
-                    "keyword": kw,
-                    "step_text": step_text,
-                    "params": placeholders,
-                }
-            )
-    return additions
+        decorator_texts = [dt for _, dt in decorators]
+        feature_step_texts = [st for _, st in steps]
+
+        sm = SequenceMatcher(autojunk=False, a=decorator_texts, b=feature_step_texts)
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag == "replace":
+                for k in range(i1, i2):
+                    dec_kw, dec_text = decorators[k]
+                    step_idx = j1 + (k - i1)
+                    mismatches.append(
+                        {
+                            "file": info["file"],
+                            "function_name": info["function_name"],
+                            "old_text": dec_text,
+                            "new_text": feature_step_texts[step_idx],
+                            "keyword": dec_kw,
+                            "operation": "replace",
+                        }
+                    )
+            elif tag == "delete":
+                for k in range(i1, i2):
+                    dec_kw, dec_text = decorators[k]
+                    mismatches.append(
+                        {
+                            "file": info["file"],
+                            "function_name": info["function_name"],
+                            "old_text": dec_text,
+                            "new_text": "",
+                            "keyword": dec_kw,
+                            "operation": "delete",
+                        }
+                    )
+            elif tag == "insert":
+                for j in range(j1, j2):
+                    kw, step_text = steps[j]
+                    placeholders = re.findall(r"<([^>]+)>", step_text)
+                    additions.append(
+                        {
+                            "file": info["file"],
+                            "function_name": info["function_name"],
+                            "keyword": kw,
+                            "step_text": step_text,
+                            "params": placeholders,
+                            "insert_at": i1,
+                        }
+                    )
+    return mismatches, additions
 
 
 def _find_orphan_tests(feature_path: str, test_dir: str) -> list[dict]:
