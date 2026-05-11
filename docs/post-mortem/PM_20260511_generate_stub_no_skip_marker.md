@@ -2,7 +2,7 @@
 
 ## Failed At
 
-CLI `generate()` — dogfood user: generated stubs use `...` (Ellipsis) as the function body with no `@pytest.mark.skip` decorator. When collected by pytest, these stubs execute silently (Ellipsis is a valid expression) and pass, giving false confidence that unimplemented behavior is tested.
+CLI `generate()` — self-validation tester: generated stubs use `...` (Ellipsis) as the function body with no `@pytest.mark.skip` decorator. When collected by pytest, these stubs execute silently (Ellipsis is a valid expression) and pass, giving false confidence that unimplemented behavior is tested.
 
 ## Root Cause
 

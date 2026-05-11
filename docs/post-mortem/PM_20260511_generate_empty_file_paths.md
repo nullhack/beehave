@@ -2,7 +2,7 @@
 
 ## Failed At
 
-CLI `generate()` command — dogfood user: "Created  for @a1b2c3d4" output shows empty string where file path should be.
+CLI `generate()` command — self-validation tester: "Created  for @a1b2c3d4" output shows empty string where file path should be.
 
 ## Root Cause
 

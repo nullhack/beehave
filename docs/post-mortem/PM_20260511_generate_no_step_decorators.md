@@ -2,7 +2,7 @@
 
 ## Failed At
 
-CLI `generate()` — dogfood user: generated stub `def test_adding_nectar_to_the_honey_store_a1b2c3d4()` has no `@Given`, `@When`, `@Then` decorators matching the feature's Gherkin steps. The stub is a bare function that doesn't use beehave's core decorator mechanism.
+CLI `generate()` — self-validation tester: generated stub `def test_adding_nectar_to_the_honey_store_a1b2c3d4()` has no `@Given`, `@When`, `@Then` decorators matching the feature's Gherkin steps. The stub is a bare function that doesn't use beehave's core decorator mechanism.
 
 ## Root Cause
 

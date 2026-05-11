@@ -2,7 +2,7 @@
 
 ## Failed At
 
-CLI `generate()` — dogfood user: appending a second/third scenario to `default_test.py` repeats the entire import block (`from beehave.decorators import ...`, `from hypothesis import strategies as st`, `# Strategy variables`, `default_strategy = st.integers()`) for each scenario.
+CLI `generate()` — self-validation tester: appending a second/third scenario to `default_test.py` repeats the entire import block (`from beehave.decorators import ...`, `from hypothesis import strategies as st`, `# Strategy variables`, `default_strategy = st.integers()`) for each scenario.
 
 ## Root Cause
 

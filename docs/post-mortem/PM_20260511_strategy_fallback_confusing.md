@@ -2,7 +2,7 @@
 
 ## Failed At
 
-Decorator strategy resolution — dogfood user: a test with `<parts>` placeholder where no `parts_strategy` variable exists silently falls back to `st.integers()`, which generates 0, negative numbers, and any integer. This produces `ZeroDivisionError` and confusing assertion failures that don't match the test's intent.
+Decorator strategy resolution — self-validation tester: a test with `<parts>` placeholder where no `parts_strategy` variable exists silently falls back to `st.integers()`, which generates 0, negative numbers, and any integer. This produces `ZeroDivisionError` and confusing assertion failures that don't match the test's intent.
 
 ## Root Cause
 

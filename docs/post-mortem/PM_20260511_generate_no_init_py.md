@@ -2,7 +2,7 @@
 
 ## Failed At
 
-CLI `generate()` — dogfood user: `tests/features/decorator_test/` directory is created with `default_test.py` but no `__init__.py`. Python requires `__init__.py` for proper test collection in some configurations.
+CLI `generate()` — self-validation tester: `tests/features/decorator_test/` directory is created with `default_test.py` but no `__init__.py`. Python requires `__init__.py` for proper test collection in some configurations.
 
 ## Root Cause
 

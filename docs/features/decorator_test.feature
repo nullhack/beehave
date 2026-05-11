@@ -1,5 +1,5 @@
 Feature: Decorator Test
-  A simple feature to dogfood beehave's own workflow — tracking honey production in the hive.
+  A simple feature for beehave's self-validation workflow — tracking honey production in the hive.
 
   Rule: Hive honey tracking
 

@@ -1,4 +1,4 @@
-# IN_20260511_dogfood_pain_points — Dogfood Exercise: 6 Pain Points in generate()
+# IN_20260511_self_validation_pain_points — Self-Validation Exercise: 6 Pain Points in generate()
 
 > **Status:** COMPLETE
 > **Interviewer:** PO
@@ -11,7 +11,7 @@
 
 | ID | Question | Answer |
 |----|----------|--------|
-| Q1 | What is this session about? | A dogfood exercise: using beehave's own `generate()` command to produce test stubs from `docs/features/decorator_test.feature`. Six pain points were discovered and documented as post-mortems (PM_20260511_*). This session extracts them into structured interview notes for prioritization and action. |
+| Q1 | What is this session about? | A self-validation exercise: using beehave's own `generate()` command to produce test stubs from `docs/features/decorator_test.feature`. Six pain points were discovered and documented as post-mortems (PM_20260511_*). This session extracts them into structured interview notes for prioritization and action. |
 | Q2 | What was the exercise? | (1) Write `docs/features/decorator_test.feature` with multiple scenarios. (2) Run `beehave sync` to assign @id tags. (3) Run `beehave generate` to create stubs. (4) Write test bodies using beehave's step decorators. (5) Run `pytest` to verify end-to-end. |
 | Q3 | What is the reference for expected behavior? | IN_20260510_cli_commands Q12 defines the stub template: imports, strategy variables, step decorators matching .feature steps, @Example decorators, function with `...` body. The project's own TDD convention (used in all existing tests) uses `@pytest.mark.skip(reason="not yet implemented")` and `raise NotImplementedError` for stubs. |
 
@@ -96,7 +96,7 @@
 ## Business Goals Identified
 
 - Make `generate()` produce stubs that are immediately useful — wired to .feature steps, clearly unimplemented, and structurally clean — so developers can start writing test bodies without manual setup
-- Ensure generated code reflects the project's own conventions (skip markers, `__init__.py`, clean imports) — beehave must dogfood its own best practices
+- Ensure generated code reflects the project's own conventions (skip markers, `__init__.py`, clean imports) — beehave must practice its own best practices
 - Make invisible behavior visible — strategy fallback warnings help developers catch footguns before they waste time debugging surprising values
 
 ## Terms to Define (for glossary)
