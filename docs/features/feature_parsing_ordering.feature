@@ -16,6 +16,7 @@ Feature: Step Ordering and Placeholder Validation
   | Session | Change |
   |---------|--------|
   | 2026-05-11 | Split from feature_parsing_validation per stakeholder approval |
+  | 2026-05-11 | Added @And/@But ordering examples, reconciled adoption levels |
 
   Rule: Step ordering validation ensures Given before When before Then
     As a developer
@@ -33,6 +34,12 @@ Feature: Step Ordering and Placeholder Validation
       Given a test with decorators @Then, @Given, @When (out of order)
       When beehave validates step ordering
       Then an ordering violation is reported
+
+    @id:b7e2f1a4
+    Example: @And/@But inherit preceding step type for ordering
+      Given a test with decorators @Given, @And, @When, @And, @Then, @But in order
+      When beehave validates step ordering
+      Then no ordering violation is reported
 
   Rule: Placeholder names must match function parameters
     As a developer

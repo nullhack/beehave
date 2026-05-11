@@ -76,7 +76,8 @@ beehave is a thin Python layer that adds Gherkin-style step decorators (@Given, 
 | TestModule | Value Object | A Python test file derived from a FeatureFile + Rule mapping; path follows tests/features/<feature_slug>/<rule_name>_test.py (or default_test.py when no Rule exists) | Feature Parsing | — |
 | TestDirectory | Value Object | A directory under tests/features/ named after the feature slug, containing one or more TestModules; one directory per FeatureFile (1:1) | Feature Parsing | — |
 | Scenario | Entity | A Gherkin scenario with @id tag, steps, and optional Examples table | Feature Parsing | No |
-| Step | Value Object | A Gherkin step with keyword (Given/When/Then/And/But), text, and placeholders | Feature Parsing | — |
+| Step | Value Object | A Gherkin step with keyword (Given/When/Then/And/But), text, and placeholders. @And/@But inherit their effective step type from the preceding Given/When/Then keyword for ordering validation | Feature Parsing | — |
+| AdoptionLevel | Value Object | A progressive opt-in level (1: decorators only, 2: add .feature traceability) determining which validations are active | Validation | — |
 | Placeholder | Value Object | A <placeholder> token in step text that maps to a strategy | Feature Parsing | — |
 | ExamplesTable | Value Object | A table of explicit test values from the .feature file | Feature Parsing | — |
 | IdTag | Value Object | An @id:<value> tag linking a scenario to a test function; value is a random 8-character ID, generated once by beehave sync and permanent | Traceability | — |
@@ -110,6 +111,8 @@ beehave is a thin Python layer that adds Gherkin-style step decorators (@Given, 
 | StepDecorator | resolved by | StrategyVariable | 0:1 | Placeholder names resolved from module scope |
 | StepDecorator | resolved by | TypeInference | 0:1 | Fallback: strategy inferred from @Example value types |
 | FailureReport | composed of | StepReport | 1:N | Each step in the scenario gets a report line |
+| ValidationReport | gated by | AdoptionLevel | 1:1 | The adoption level determines which validations are active |
+| StepDecorator | has effective keyword | Step | 1:1 | @And/@But decorators inherit their effective keyword from the preceding Given/When/Then |
 
 ---
 

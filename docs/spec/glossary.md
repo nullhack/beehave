@@ -67,11 +67,11 @@ Entries are sorted alphabetically.
 
 ## Adoption Level
 
-**Definition:** A progressive opt-in model with four levels: (1) decorators only, (2) add @id traceability, (3) add strategy variables, (4) add vocabulary validation.
+**Definition:** A progressive opt-in model with two levels: (1) decorators only — validates step ordering and placeholder-parameter matching, (2) add .feature traceability — adds step text matching, @id traceability, and orphan detection.
 
 **Aliases:** none
 
-**Example:** A team starts at level 1 with just @Given/@When/@Then decorators and no .feature files, then gradually adds traceability and validation.
+**Example:** A team starts at level 1 with just @Given/@When/@Then decorators and no .feature files, then adds .feature files for full traceability at level 2.
 
 **Source:** 2026-05-10
 
@@ -257,13 +257,23 @@ Entries are sorted alphabetically.
 
 ## Step
 
-**Definition:** A Gherkin step with keyword (Given/When/Then/And/But), text, and placeholders, represented as a Value Object in the Feature Parsing bounded context.
+**Definition:** A Gherkin step with keyword (Given/When/Then/And/But), text, and placeholders, represented as a Value Object in the Feature Parsing bounded context. @And/@But steps inherit their effective step type (Given/When/Then) from the preceding keyword for ordering validation.
 
 **Aliases:** none
 
-**Example:** `Given a user with balance <initial>` is a Step with keyword "Given", text, and one Placeholder.
+**Example:** `Given a user with balance <initial>` is a Step with keyword "Given", text, and one Placeholder. `And the balance is positive` following `Given` inherits effective keyword "Given".
 
 **Source:** 2026-05-10
+
+## Effective Keyword
+
+**Definition:** The resolved Given/When/Then keyword that an @And/@But step inherits from the most recent preceding Given/When/Then step for ordering validation purposes.
+
+**Aliases:** inherited keyword
+
+**Example:** In a sequence @Given, @And, @When, @And — the first @And inherits "Given", the second @And inherits "When".
+
+**Source:** 2026-05-11
 
 ## Step Decorator
 
