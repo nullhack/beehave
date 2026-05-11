@@ -329,6 +329,8 @@ def _parse_feature_steps(text: str) -> dict[str, list[tuple[str, str]]]:
         stripped = line.strip()
         if stripped.startswith("@id:"):
             current_id = stripped[4:]
+        elif stripped.startswith(("Feature:", "Rule:")):
+            current_id = None
         elif current_id:
             for kw in _STEP_KEYWORDS:
                 if stripped.startswith(kw) and (

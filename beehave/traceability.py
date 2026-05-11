@@ -136,17 +136,41 @@ def _extract_scenarios(lines: list[str]) -> list[Scenario]:
 def _try_append_scenario(lines, index, stripped, scenarios):
     if not _is_scenario_heading(stripped):
         return
-    scenarios.append(_build_scenario(lines, index, stripped))
-
-
-def _build_scenario(lines, index, stripped):
     name = _extract_scenario_name(stripped)
-    identifier = _find_preceding_identifier(lines, index)
-    return Scenario(name=ScenarioName(name), id_tag=identifier)
+    example_rows = _count_example_rows(lines, index)
+    if example_rows > 1:
+        for _ in range(example_rows):
+            scenarios.append(Scenario(name=ScenarioName(name), id_tag=generate_id()))
+    else:
+        identifier = _find_preceding_identifier(lines, index)
+        scenarios.append(Scenario(name=ScenarioName(name), id_tag=identifier))
+
+
+def _count_example_rows(lines, heading_index):
+    """Count data rows in Examples table after a scenario heading."""
+    for i in range(heading_index + 1, len(lines)):
+        stripped = lines[i].strip()
+        if stripped == "Examples:":
+            return _count_data_rows(lines, i + 1)
+        if _is_scenario_heading(stripped) or stripped.startswith(("Feature:", "Rule:")):
+            return 0
+    return 0
+
+
+def _count_data_rows(lines, start):
+    """Count pipe-delimited data rows (excluding header row)."""
+    pipe_rows = 0
+    for i in range(start, len(lines)):
+        stripped = lines[i].strip()
+        if stripped.startswith("|"):
+            pipe_rows += 1
+        elif stripped:
+            break
+    return max(0, pipe_rows - 1)
 
 
 def _is_scenario_heading(stripped: str) -> bool:
-    return stripped.startswith("Example:") or stripped.startswith("Scenario:")
+    return stripped.startswith("Example:") or stripped.startswith("Scenario")
 
 
 def _extract_scenario_name(stripped: str) -> str:
