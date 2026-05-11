@@ -37,7 +37,7 @@ Feature: Generate Messaging
       When the developer runs `beehave generate` for that feature
       Then test stubs are created for the 3 tagged scenarios
       And the output contains "2 scenarios found without @id tags"
-      And the output contains "Run 'beehave sync'"
+      And the output contains "Run 'beehave sync' first"
       And no .feature files are modified
 
   Rule: Empty feature file produces distinct message
