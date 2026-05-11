@@ -19,7 +19,7 @@ Feature: Traceability — @id Tags and Sync
   | Session | Change |
   |---------|--------|
   | 2026-05-10 | Created: split from traceability_cli_commands (Rules 1–2) |
-  | 2026-05-10 | Spec review: moved @id:3e9b1c6a to 2b feature (beehave generate out of scope); split @id:c7f2a8d5 into two Examples (single-observable-outcome); added @id:a1f4e8b7 (ID permanence); removed out-of-scope rules (step text matching, CLI principle) |
+  | 2026-05-10 | Spec review: moved test function naming example to 2b feature (beehave generate out of scope); split c7f2a8d5 into two Examples (single-observable-outcome); added a1f4e8b7 (ID permanence); removed out-of-scope rules (step text matching, CLI principle) |
 
   Rule: @id tags link .feature scenarios to test functions
     As a QA engineer

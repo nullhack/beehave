@@ -7,7 +7,7 @@ from beehave.traceability import (
 )
 
 
-def test_id_tag_c7f2a8d5() -> None:
+def test_traceability_id_sync_c7f2a8d5() -> None:
     """beehave sync generates an 8-character random ID for scenarios without one.
 
     Given a .feature scenario without an @id tag
@@ -19,7 +19,7 @@ def test_id_tag_c7f2a8d5() -> None:
     assert all(c in "0123456789abcdef" for c in id_value)
 
 
-def test_id_tag_a1f4e8b7() -> None:
+def test_traceability_id_sync_a1f4e8b7() -> None:
     """@id tags remain unchanged when scenario text is edited.
 
     Given a .feature scenario with @id:c7f2a8d5
@@ -40,7 +40,7 @@ def test_id_tag_a1f4e8b7() -> None:
     assert scenarios_before[0].id_tag == scenarios_after[0].id_tag
 
 
-def test_id_tag_6d4f8a2e() -> None:
+def test_traceability_id_sync_6d4f8a2e() -> None:
     """Scenarios with @id tags but no matching test function are reported as orphans.
 
     Given a .feature scenario with @id:m3n4o5p6 that has no matching test function
@@ -56,7 +56,7 @@ def test_id_tag_6d4f8a2e() -> None:
     assert result.orphan_scenarios[0].id_tag == "m3n4o5p6"
 
 
-def test_id_tag_f1c7d5b9() -> None:
+def test_traceability_id_sync_f1c7d5b9() -> None:
     """Test functions with @id suffixes that have no matching .feature scenario are reported as orphans.
 
     Given a test function with @id suffix that has no matching .feature scenario

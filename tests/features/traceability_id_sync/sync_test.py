@@ -3,7 +3,7 @@ import re
 from beehave.traceability import sync
 
 
-def test_sync_2b8e4a7d(tmp_path) -> None:
+def test_traceability_id_sync_2b8e4a7d(tmp_path) -> None:
     """Sync assigns unique random 8-character @id tags to all scenarios lacking them.
 
     Given a .feature file with three scenarios, none having @id tags
@@ -35,7 +35,7 @@ def test_sync_2b8e4a7d(tmp_path) -> None:
         assert all(c in "0123456789abcdef" for c in v)
 
 
-def test_sync_9c3f6e1a(tmp_path) -> None:
+def test_traceability_id_sync_9c3f6e1a(tmp_path) -> None:
     """Sync replaces malformed or manual @id tags with beehave-generated random IDs.
 
     Given a .feature scenario with @id:my_custom_name
@@ -57,7 +57,7 @@ def test_sync_9c3f6e1a(tmp_path) -> None:
     assert len(new_ids) == 1
 
 
-def test_sync_5a7d2b8f(tmp_path) -> None:
+def test_traceability_id_sync_5a7d2b8f(tmp_path) -> None:
     """Running sync on an already-synced file produces no changes.
 
     Given a .feature file where all scenarios already have beehave-generated @id tags
