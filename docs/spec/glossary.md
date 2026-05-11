@@ -107,13 +107,23 @@ Entries are sorted alphabetically.
 
 ## FeatureFile
 
-**Definition:** A parsed .feature file containing Feature, Rule, Scenario, and Steps, serving as the Aggregate root in the Feature Parsing bounded context and the source of truth for traceability.
+**Definition:** A parsed .feature file containing Feature, Rule, Scenario, and Steps, serving as the Aggregate root in the Feature Parsing bounded context and the source of truth for traceability. Maps 1:1 to a TestDirectory containing one TestModule per Rule (or default_test.py if no Rules).
 
 **Aliases:** none
 
 **Example:** `balance_accounting.feature` is parsed into a FeatureFile containing all scenarios and their steps for traceability validation.
 
 **Source:** 2026-05-10
+
+## Gherkin Rule
+
+**Definition:** A Gherkin Rule block that groups related scenarios within a FeatureFile, represented as a Value Object in the Feature Parsing bounded context; normalized to snake_case for test module naming.
+
+**Aliases:** Rule block
+
+**Example:** Rule "Total calculation" in balance_accounting.feature maps to test module total_calculation_test.py.
+
+**Source:** 2026-05-11
 
 ## Gherkin-Decorated Test
 
@@ -147,11 +157,11 @@ Entries are sorted alphabetically.
 
 ## Mismatch
 
-**Definition:** A difference between decorator step text and .feature step text, represented as a Value Object in the Validation bounded context.
+**Definition:** A difference between decorator step text and .feature step text, represented as a Value Object in the Validation bounded context, carrying the expected text and actual text for precise error reporting.
 
 **Aliases:** none
 
-**Example:** A decorator says `@Given("a user with an balance")` while the .feature says `Given a user with balance` — the difference is a Mismatch.
+**Example:** A decorator says `@Given("a user with an balance")` while the .feature says `Given a user with balance` — the Mismatch carries expected "a user with balance <initial>" and actual "a user with an balance <initial>".
 
 **Source:** 2026-05-10
 
@@ -284,6 +294,26 @@ Entries are sorted alphabetically.
 **Example:** "Write a test function for that scenario" means write a Gherkin-Decorated Test.
 
 **Source:** 2026-05-10
+
+## Test Directory
+
+**Definition:** A directory under tests/features/ named after the feature slug (snake_case), containing one or more test modules; one directory per FeatureFile (1:1 mapping).
+
+**Aliases:** none
+
+**Example:** tests/features/balance_accounting/ is the test directory for balance_accounting.feature.
+
+**Source:** 2026-05-11
+
+## Test Module
+
+**Definition:** A Python test file derived from a FeatureFile + Rule mapping, following the naming convention tests/features/<feature_slug>/<rule_name>_test.py (or default_test.py when no Gherkin Rule exists).
+
+**Aliases:** none
+
+**Example:** total_calculation_test.py is the test module for the "Total calculation" Rule in balance_accounting.feature.
+
+**Source:** 2026-05-11
 
 ## Test stub
 

@@ -62,14 +62,15 @@ Existing BDD frameworks (pytest-bdd, behave) force splitting one scenario across
 
 ## Delivery Order
 
-1 → 2a → 2b → 2c → 2d → 3 → 4 (each level depends on the previous)
+1 → 2a → 2b → 2c → 2d → 3a → 3b → 4 (each level depends on the previous)
 
 1. **Step Decorators + Strategy Resolution** — @Given, @When, @Then, @And, @But decorators that attach metadata and apply @given at import time; @Example decorator for explicit test values; @Background decorator for shared setup; strategy resolution from module-level variables and @Example type inference
 2a. **Traceability — @id Tags and Sync** — @id linking between .feature scenarios and test functions; beehave sync command; orphan detection
 2b. **Traceability — Generate Core** — beehave generate command for test stub creation; test function naming convention; idempotency; conflict handling
 2c. **Traceability — Generate Modes** — beehave generate output modes (--json, non-TTY); scope selection; edge case handling (empty features, malformed files)
 2d. **Traceability — Fix and Clean** — beehave fix (decorator alignment) and beehave clean (orphan removal); escalate in risk
-3. **Feature File Parsing + Validation** — .feature file parser; exact step text matching; step ordering validation; placeholder validation; collection-time validation via CLI
+3a. **Feature Parsing — File Mapping + Step Text** — .feature file to test module mapping (Rule-based); exact step text matching between .feature and decorators
+3b. **Feature Parsing — Ordering + Placeholders + Adoption** — step ordering validation (Given→When→Then); placeholder-parameter matching; progressive adoption levels
 4. **Failure Reporting** — Gherkin-readable failure reports via Hypothesis report_example callback; step rendering with counterexample values; Then-failed and line-number heuristics
 
 ---

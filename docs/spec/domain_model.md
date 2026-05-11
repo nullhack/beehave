@@ -72,13 +72,16 @@ beehave is a thin Python layer that adds Gherkin-style step decorators (@Given, 
 | StrategyVariable | Value Object | A module-level variable mapping a placeholder name to a Hypothesis strategy | Strategy Resolution | — |
 | TypeInference | Value Object | Strategy inference from @Example value types (int → st.integers(), str → st.text(), bool → st.booleans()) | Strategy Resolution | — |
 | FeatureFile | Entity | A parsed .feature file containing Feature, Rule, Scenario, and Steps | Feature Parsing | Yes |
+| Rule | Value Object | A Gherkin Rule block that groups scenarios within a FeatureFile; normalized to snake_case for test module naming (e.g. "Total calculation" → total_calculation_test.py) | Feature Parsing | — |
+| TestModule | Value Object | A Python test file derived from a FeatureFile + Rule mapping; path follows tests/features/<feature_slug>/<rule_name>_test.py (or default_test.py when no Rule exists) | Feature Parsing | — |
+| TestDirectory | Value Object | A directory under tests/features/ named after the feature slug, containing one or more TestModules; one directory per FeatureFile (1:1) | Feature Parsing | — |
 | Scenario | Entity | A Gherkin scenario with @id tag, steps, and optional Examples table | Feature Parsing | No |
 | Step | Value Object | A Gherkin step with keyword (Given/When/Then/And/But), text, and placeholders | Feature Parsing | — |
 | Placeholder | Value Object | A <placeholder> token in step text that maps to a strategy | Feature Parsing | — |
 | ExamplesTable | Value Object | A table of explicit test values from the .feature file | Feature Parsing | — |
 | IdTag | Value Object | An @id:<value> tag linking a scenario to a test function; value is a random 8-character ID, generated once by beehave sync and permanent | Traceability | — |
 | ValidationReport | Entity | A report of mismatches, orphans, and ordering violations | Validation | No |
-| Mismatch | Value Object | A difference between decorator step text and .feature step text | Validation | — |
+| Mismatch | Value Object | A difference between decorator step text and .feature step text, carrying the expected text and actual text for reporting | Validation | — |
 | OrphanTest | Value Object | A test function with no matching .feature scenario | Traceability | — |
 | OrphanScenario | Value Object | A .feature scenario with no matching test function | Traceability | — |
 | StepReport | Value Object | A rendered step with ✓/✗/(not reached) and placeholder values | Reporting | — |
@@ -95,6 +98,10 @@ beehave is a thin Python layer that adds Gherkin-style step decorators (@Given, 
 | Scenario | has | IdTag | 1:1 | Every scenario has exactly one @id tag (auto-generated if missing) |
 | Scenario | has | ExamplesTable | 1:1 | Every scenario has an ExamplesTable (unified parameterization; a simple scenario has a single-row table) |
 | FeatureFile | has | Scenario | 1:N | A feature file contains one or more scenarios |
+| FeatureFile | has | Rule | 0:N | A feature file may contain Rule blocks that group scenarios |
+| FeatureFile | maps to | TestDirectory | 1:1 | Each feature file has exactly one corresponding test directory |
+| Rule | maps to | TestModule | 1:1 | Each Rule produces one test module; no-Rule features produce default_test.py |
+| TestDirectory | contains | TestModule | 1:N | A test directory contains one or more test modules |
 | FeatureFile | has | Background | 0:1 | Optional shared Given steps |
 | TestFunction | has | StepDecorator | 1:N | A test function has one or more step decorators |
 | TestFunction | has | ExampleDecorator | 0:N | Optional explicit test values |
