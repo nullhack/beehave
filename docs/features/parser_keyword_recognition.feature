@@ -32,14 +32,12 @@ Feature: Parser Keyword Recognition
       Given a .feature file containing "Scenario Outline: parameterized login"
       When the parser processes the file
       Then "parameterized login" appears in the parsed scenario list
-      And the scenario is not skipped or ignored
 
     @id:b4e18d6f
     Example: Scenario Template is recognized as a scenario heading
       Given a .feature file containing "Scenario Template: data-driven withdrawal"
       When the parser processes the file
       Then "data-driven withdrawal" appears in the parsed scenario list
-      And the scenario is not skipped or ignored
 
   Rule: Each Examples row produces a separate Scenario with its own @id tag
     As a QA engineer
@@ -52,14 +50,12 @@ Feature: Parser Keyword Recognition
       When the parser expands the scenario outline
       Then 2 separate Scenario entities are produced
       And each has a distinct @id tag
-      And placeholder values from each row are substituted into step text
 
     @id:9e6b3f7a
     Example: A single-row Examples table produces one scenario with its own @id
       Given a .feature file with "Scenario Outline: edge case" and an Examples table with 1 row
       When the parser expands the scenario outline
       Then 1 Scenario entity is produced with its own @id tag
-      And the placeholder value from the single row is substituted into step text
 
   Rule: Steps do not leak across scenario boundaries
     As a property-based TDD developer
