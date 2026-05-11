@@ -1,7 +1,6 @@
-import pytest
+from beehave.reporting import render_failure_report
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_failure_reporting_8e4a2c7f() -> None:
     """Passing test produces no beehave failure report.
 
@@ -10,4 +9,9 @@ def test_failure_reporting_8e4a2c7f() -> None:
     Then no beehave failure report is generated
     And the test runs at full Hypothesis speed with no beehave interception
     """
-    raise NotImplementedError
+    result = render_failure_report(
+        steps=[{"keyword": "Given", "text": "a passing step"}],
+        exception=None,
+        counterexample={},
+    )
+    assert result is None
