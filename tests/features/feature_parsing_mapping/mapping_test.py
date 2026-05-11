@@ -1,9 +1,12 @@
-import pytest
+from beehave.parsing import (
+    FeatureFile,
+    Rule,
+    TestModule,
+    resolve_all_test_modules,
+    resolve_test_module_path,
+)
 
-from beehave.parsing import FeatureFile, Rule, TestModule, resolve_test_module_path
 
-
-@pytest.mark.skip(reason="not yet implemented")
 def test_feature_parsing_mapping_2a8f5c1e():
     """Feature with no Rule maps to default_test.py
 
@@ -15,10 +18,8 @@ def test_feature_parsing_mapping_2a8f5c1e():
     module = resolve_test_module_path(feature.name, None)
     assert isinstance(module, TestModule)
     assert str(module.path) == "tests/features/balance_accounting/default_test.py"
-    raise NotImplementedError
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_feature_parsing_mapping_7d3b9e6a():
     """Feature with one Rule maps to <rule_name>_test.py
 
@@ -32,11 +33,12 @@ def test_feature_parsing_mapping_7d3b9e6a():
     )
     module = resolve_test_module_path(feature.name, feature.rules[0])
     assert isinstance(module, TestModule)
-    assert str(module.path) == "tests/features/balance_accounting/total_calculation_test.py"
-    raise NotImplementedError
+    assert (
+        str(module.path)
+        == "tests/features/balance_accounting/total_calculation_test.py"
+    )
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_feature_parsing_mapping_cbac8dae():
     """Feature with multiple Rules maps to multiple test modules
 
@@ -54,4 +56,3 @@ def test_feature_parsing_mapping_cbac8dae():
     paths = {str(m.path) for m in modules}
     assert "tests/features/balance_accounting/total_calculation_test.py" in paths
     assert "tests/features/balance_accounting/balance_check_test.py" in paths
-    raise NotImplementedError

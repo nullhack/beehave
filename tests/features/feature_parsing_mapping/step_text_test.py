@@ -1,9 +1,6 @@
-import pytest
-
 from beehave.validation import Mismatch, validate_step_text
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_feature_parsing_mapping_4c1f8d3b():
     """Exact step text match passes validation
 
@@ -17,10 +14,8 @@ def test_feature_parsing_mapping_4c1f8d3b():
         "a user with balance <initial>",
     )
     assert result is None
-    raise NotImplementedError
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_feature_parsing_mapping_e6a2c7f9():
     """Step text mismatch fails validation
 
@@ -36,4 +31,3 @@ def test_feature_parsing_mapping_e6a2c7f9():
     assert isinstance(result, Mismatch)
     assert result.expected == "a user with balance <initial>"
     assert result.actual == "a user with an balance <initial>"
-    raise NotImplementedError
