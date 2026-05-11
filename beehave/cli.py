@@ -253,14 +253,173 @@ def _ensure_test_directory(feature_name: str) -> str:
     return feature_name
 
 
-def fix(feature_name: str | None = None, dry_run: bool = False) -> None:
+_STEP_KEYWORDS = ("Given", "When", "Then", "And", "But")
+_DECORATOR_RE = re.compile(r'@(Given|When|Then|And|But)\("(.*)"\)')
+_FUNC_DEF_RE = re.compile(r"def (test_\w+)\s*\(([^)]*)\)")
+
+
+def _parse_feature_steps(text: str) -> dict[str, list[tuple[str, str]]]:
+    """Parse .feature text, return {id_tag: [(keyword, step_text), ...]}."""
+    lines = text.split("\n")
+    result: dict[str, list[tuple[str, str]]] = {}
+    current_id: str | None = None
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("@id:"):
+            current_id = stripped[4:]
+        elif current_id:
+            for kw in _STEP_KEYWORDS:
+                if stripped.startswith(kw) and (
+                    len(stripped) == len(kw) or stripped[len(kw)] == " "
+                ):
+                    step_text = stripped[len(kw) :].strip()
+                    if current_id not in result:
+                        result[current_id] = []
+                    result[current_id].append((kw, step_text))
+                    break
+    return result
+
+
+def _parse_test_decorators(test_dir: str) -> dict[str, dict]:
+    """Parse test files, return {id_tag: {file, function_name, decorators, params}}."""
+    result: dict[str, dict] = {}
+    test_path = Path(test_dir)
+    if not test_path.exists():
+        return result
+    for py_file in test_path.glob("**/*_test.py"):
+        content = py_file.read_text()
+        lines = content.split("\n")
+        pending_decorators: list[tuple[str, str]] = []
+        for line in lines:
+            stripped = line.strip()
+            dec_match = _DECORATOR_RE.search(stripped)
+            if dec_match:
+                pending_decorators.append((dec_match.group(1), dec_match.group(2)))
+                continue
+            func_match = _FUNC_DEF_RE.search(stripped)
+            if func_match:
+                func_name = func_match.group(1)
+                params_str = func_match.group(2)
+                parts = func_name.rsplit("_", 1)
+                if len(parts) == 2 and len(parts[1]) == 8:
+                    id_tag = parts[1]
+                    result[id_tag] = {
+                        "file": str(py_file),
+                        "function_name": func_name,
+                        "decorators": pending_decorators[:],
+                        "params": params_str,
+                    }
+                pending_decorators = []
+                continue
+            if stripped and not stripped.startswith("@"):
+                pending_decorators = []
+    return result
+
+
+def fix(feature_name: str | None = None, dry_run: bool = False) -> str | None:
     """Correct decorator text and add missing step decorators.
 
     Aligns test decorator strings with .feature step text, and adds
     missing decorators for steps that have no corresponding decorator.
     In dry-run mode, shows a diff of proposed changes without modifying files.
     """
-    raise NotImplementedError
+    feature_files = _discover_feature_files(feature_name)
+    diffs: list[str] = []
+    for fpath in feature_files:
+        stem = Path(fpath).stem
+        test_dir = str(Path("tests") / "features" / stem)
+
+        # Fix text mismatches
+        mismatches = _find_text_mismatches(fpath, test_dir)
+        for m in mismatches:
+            file_path = m["file"]
+            with open(file_path) as f:
+                content = f.read()
+            old_dec = f'@{m["keyword"]}("{m["old_text"]}")'
+            new_dec = f'@{m["keyword"]}("{m["new_text"]}")'
+            if dry_run:
+                diffs.append(f"--- {file_path}\n+++ {file_path}")
+                diffs.append(f"-{old_dec}")
+                diffs.append(f"+{new_dec}")
+            else:
+                updated = content.replace(old_dec, new_dec)
+                with open(file_path, "w") as f:
+                    f.write(updated)
+
+        # Add missing decorators
+        additions = _add_missing_decorators(fpath, test_dir)
+        for a in additions:
+            file_path = a["file"]
+            if dry_run:
+                dec_line = f'@{a["keyword"]}("{a["step_text"]}")'
+                diffs.append(f"--- {file_path}\n+++ {file_path}")
+                diffs.append(f"+{dec_line}")
+            else:
+                with open(file_path) as f:
+                    content = f.read()
+                _insert_decorator_before_function(
+                    file_path,
+                    content,
+                    a["function_name"],
+                    a["keyword"],
+                    a["step_text"],
+                    a["params"],
+                )
+
+    if dry_run and diffs:
+        return "\n".join(diffs)
+    return None
+
+
+def _insert_decorator_before_function(
+    file_path: str,
+    content: str,
+    func_name: str,
+    keyword: str,
+    step_text: str,
+    new_params: list[str],
+) -> None:
+    """Insert a decorator line before a function definition and add params."""
+    lines = content.split("\n")
+    result_lines: list[str] = []
+    inserted = False
+    for line in lines:
+        if (
+            not inserted
+            and _FUNC_DEF_RE.search(line.strip())
+            and func_name in _FUNC_DEF_RE.search(line.strip()).group(1)
+        ):
+            # Insert decorator before this function
+            indent = line[: len(line) - len(line.lstrip())]
+            result_lines.append(f'{indent}@{keyword}("{step_text}")')
+            # Add new params to function signature
+            new_line = _add_params_to_func(line, new_params)
+            result_lines.append(new_line)
+            inserted = True
+            continue
+        result_lines.append(line)
+    with open(file_path, "w") as f:
+        f.write("\n".join(result_lines))
+
+
+def _add_params_to_func(func_line: str, new_params: list[str]) -> str:
+    """Add new parameter names to a function definition line."""
+    match = _FUNC_DEF_RE.search(func_line)
+    if not match:
+        return func_line
+    existing_params_str = match.group(2).strip()
+    existing_params = (
+        [p.strip() for p in existing_params_str.split(",") if p.strip()]
+        if existing_params_str
+        else []
+    )
+    existing_set = set(existing_params)
+    for p in new_params:
+        if p not in existing_set:
+            existing_params.append(p)
+            existing_set.add(p)
+    new_params_str = ", ".join(existing_params)
+    return func_line.replace(f"({match.group(2)})", f"({new_params_str})")
 
 
 def clean(feature_name: str | None = None, force: bool = False) -> None:
@@ -268,27 +427,150 @@ def clean(feature_name: str | None = None, force: bool = False) -> None:
 
     Prompts for interactive confirmation unless --force is given.
     """
-    raise NotImplementedError
+    feature_files = _discover_feature_files(feature_name)
+    for fpath in feature_files:
+        stem = Path(fpath).stem
+        test_dir = str(Path("tests") / "features" / stem)
+
+        orphans = _find_orphan_tests(fpath, test_dir)
+        if not orphans:
+            continue
+
+        # Group by file
+        by_file: dict[str, list[str]] = {}
+        for o in orphans:
+            by_file.setdefault(o["file"], []).append(o["function_name"])
+
+        total = len(orphans)
+        if not force:
+            if _is_interactive():
+                response = input(f"Remove {total} orphan tests? [y/N] ")
+                if response.lower() != "y":
+                    return
+            else:
+                print(f"Found {total} orphan tests. Use --force to remove.")
+                return
+
+        for test_file, func_names in by_file.items():
+            _remove_functions(test_file, func_names)
 
 
 def _find_text_mismatches(feature_path: str, test_dir: str) -> list[dict]:
     """Find decorators whose text diverges from .feature step text."""
-    raise NotImplementedError
+    with open(feature_path) as f:
+        text = f.read()
+    feature_steps = _parse_feature_steps(text)
+    test_info = _parse_test_decorators(test_dir)
+
+    mismatches: list[dict] = []
+    for id_tag, steps in feature_steps.items():
+        if id_tag not in test_info:
+            continue
+        info = test_info[id_tag]
+        decorators = info["decorators"]
+        for i, (_kw, step_text) in enumerate(steps):
+            if i < len(decorators):
+                dec_kw, dec_text = decorators[i]
+                if dec_text != step_text:
+                    mismatches.append(
+                        {
+                            "file": info["file"],
+                            "function_name": info["function_name"],
+                            "old_text": dec_text,
+                            "new_text": step_text,
+                            "keyword": dec_kw,
+                        }
+                    )
+    return mismatches
 
 
 def _add_missing_decorators(feature_path: str, test_dir: str) -> list[dict]:
     """Add step decorators for .feature steps missing from test code."""
-    raise NotImplementedError
+    with open(feature_path) as f:
+        text = f.read()
+    feature_steps = _parse_feature_steps(text)
+    test_info = _parse_test_decorators(test_dir)
+
+    additions: list[dict] = []
+    for id_tag, steps in feature_steps.items():
+        if id_tag not in test_info:
+            continue
+        info = test_info[id_tag]
+        decorators = info["decorators"]
+        if len(steps) <= len(decorators):
+            continue
+        for i in range(len(decorators), len(steps)):
+            kw, step_text = steps[i]
+            placeholders = re.findall(r"<([^>]+)>", step_text)
+            additions.append(
+                {
+                    "file": info["file"],
+                    "function_name": info["function_name"],
+                    "keyword": kw,
+                    "step_text": step_text,
+                    "params": placeholders,
+                }
+            )
+    return additions
 
 
 def _find_orphan_tests(feature_path: str, test_dir: str) -> list[dict]:
     """Find test functions whose @id has no match in .feature files."""
-    raise NotImplementedError
+    with open(feature_path) as f:
+        text = f.read()
+    scenarios = parse_feature(text)
+    feature_ids = {str(s.id_tag) for s in scenarios if s.id_tag is not None}
+    test_info = _parse_test_decorators(test_dir)
+
+    orphans: list[dict] = []
+    for id_tag, info in test_info.items():
+        if id_tag not in feature_ids:
+            orphans.append(
+                {
+                    "file": info["file"],
+                    "function_name": info["function_name"],
+                    "id_tag": id_tag,
+                }
+            )
+    return orphans
 
 
 def _remove_functions(test_file: str, function_names: list[str]) -> None:
     """Remove named functions from a test file."""
-    raise NotImplementedError
+    with open(test_file) as f:
+        content = f.read()
+    lines = content.split("\n")
+    name_set = set(function_names)
+    result_lines: list[str] = []
+    skip_until_next_def = False
+
+    for line in lines:
+        stripped = line.strip()
+        func_match = _FUNC_DEF_RE.search(stripped)
+        if func_match:
+            fname = func_match.group(1)
+            if fname in name_set:
+                skip_until_next_def = True
+                # Remove preceding blank lines
+                while result_lines and not result_lines[-1].strip():
+                    result_lines.pop()
+                continue
+            skip_until_next_def = False
+            result_lines.append(line)
+        elif skip_until_next_def:
+            if line and not line[0].isspace():
+                skip_until_next_def = False
+                result_lines.append(line)
+        else:
+            result_lines.append(line)
+
+    # Clean trailing blank lines
+    while result_lines and not result_lines[-1].strip():
+        result_lines.pop()
+    result_lines.append("")
+
+    with open(test_file, "w") as f:
+        f.write("\n".join(result_lines))
 
 
 def _is_interactive() -> bool:
