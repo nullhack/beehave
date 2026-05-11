@@ -11,7 +11,19 @@ def sync(feature_path):
     raise NotImplementedError
 
 
-def generate(feature_name: str | None = None) -> None:
+def generate(feature_name: str | None = None, json_output: bool = False) -> None:
+    raise NotImplementedError
+
+
+def _discover_feature_files(feature_name: str | None = None) -> list:
+    raise NotImplementedError
+
+
+def _format_json_output(results: list) -> str:
+    raise NotImplementedError
+
+
+def _format_text_output(results: list) -> str:
     raise NotImplementedError
 
 
