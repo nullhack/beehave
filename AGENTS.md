@@ -1,305 +1,211 @@
-# Python Project Template
+## Golden Rules
 
-A Python template to quickstart any project with a production-ready workflow, quality tooling, and AI-assisted development.
+Post-mortem analysis shows these practices prevent most project failures. Violating them triggers costly rework. Defects caught later cost 10–100× more to fix (Boehm, 1981).
 
-## Workflow Overview
+1. **Never skip a flow state.** Every state boundary goes through flowr check → dispatch to owner → flowr transition. No shortcuts, no manual session edits, no jumping ahead.
+2. **Never bypass owner dispatch.** Each state has an owner agent. The orchestrator dispatches to that agent with skills loaded. It never does the work itself. One agent, one hat at a time.
+3. **Never collapse progressive gates.** Multi-step gates (review: design → structure → conventions) are separate for a reason. Each one can fail independently and send work back.
+4. **Never decompose a feature without stakeholder approval.** If a feature is too large for INVEST, propose the split to the stakeholder with rationale. They decide what's core vs. deferred.
+5. **Verify inputs exist before entering a state.** Every state's `in` artifacts must be readable on disk. If they're missing, stop and reconstruct them. Don't proceed with assumed knowledge.
+6. **A feature is not done until every interview requirement is traced.** Every stakeholder Q&A must map to either a passing @id test or an explicit stakeholder deferral. Untraced requirements = incomplete delivery.
+7. **Respect git branch discipline.** Every state declares `git: main` or `git: feature` in its attrs. Work on `main` when the state says `main`, work on the feature branch when it says `feature`. Never switch branches mid-state. Before exiting a project-phase flow (discovery, architecture, branding, setup), set `committed-to-main-locally: ==verified` evidence. Changes must be committed to main before advancing.
 
-Features flow through 5 steps with a WIP limit of 1 feature at a time. The filesystem enforces WIP:
-- `docs/features/backlog/<feature-stem>.feature` — features waiting to be worked on
-- `docs/features/in-progress/<feature-stem>.feature` — exactly one feature being built right now
-- `docs/features/completed/<feature-stem>.feature` — accepted and shipped features
+## Project Structure
+- `.flowr/flows/`: YAML state machine definitions (source of truth for routing)
+- `.flowr/sessions/`: runtime session state
+- `.templates/`: artifact templates (strip `.templates/` prefix and `.template` suffix → destination path)
+- `.opencode/`: agents, skills, and knowledge
 
-```
-STEP 1: SCOPE          (product-owner)     → discovery + Gherkin stories + criteria
-STEP 2: ARCH           (system-architect)  → branch from main; read system.md + glossary.md + in-progress feature + targeted package files; write domain stubs; create/update domain-model.md; significant decisions as docs/adr/ADR-YYYY-MM-DD-<slug>.md; system.md rewritten
-STEP 3: TDD LOOP       (software-engineer) → RED → GREEN → REFACTOR, one @id at a time
-STEP 4: VERIFY         (system-architect)  → run all commands, review code against architecture
-STEP 5: ACCEPT         (product-owner)     → demo, validate, SE merges branch to main with --no-ff, move .feature to completed/ (PO only)
-```
+## Artifact Templates
 
-### Branch Model
+When creating a document, use the template in `.templates/` that matches the artifact type. Strip the `.templates/` prefix and `.template` suffix to determine the destination path. For example:
+- `.templates/docs/adr/ADR_YYYYMMDD_<adr_id>.md.template` → `docs/adr/ADR_20260430_my_decision.md`
+- `.templates/docs/features/<feature_name>.feature.template` → `docs/features/my_feature.feature`
+- `.templates/docs/interview-notes/IN_YYYYMMDD_<session_id>.md.template` → `docs/interview-notes/IN_20260430_session_management.md`
 
-All feature work happens on branches. `main` is the single source of truth and receives code only via `--no-ff` merge from an approved feature branch.
+If no template exists for an artifact type, create the document without one.
 
-**Normal flow**:
-1. SE creates `feat/<stem>` from latest `main` at Step 2 start
-2. All commits live on `feat/<stem>` through Steps 2–4
-3. After PO acceptance (Step 5), SE merges `feat/<stem>` to `main` with `--no-ff`
-4. SE deletes the feature branch
+## Knowledge Resolution
+`[[domain/concept]]` → `.opencode/knowledge/{domain}/{concept}.md`
 
-**Post-mortem flow** (failed feature restart):
-1. Find the feature's original start commit
-2. SE creates `fix/<stem>` from that commit
-3. Post-mortem is committed as the first commit on `fix/<stem>`
-4. Steps 2–5 rerun on `fix/<stem>`, then merge to `main` with `--no-ff`
+### Progressive Knowledge Loading
 
-**Git Safety Protocol** (absolute — never violate):
-- No force push (`git push --force` forbidden)
-- No history rewrite on pushed branches (no `rebase -i`, `commit --amend`, `reset --hard` after push)
-- Use `git revert` to undo changes on shared history
-- No commits directly to `main`
+Knowledge files use 4-section progressive disclosure. Choose the level that matches the task depth:
 
-**Closed loop**: SA designs → SE builds → SA reviews. The same mind that designed the architecture verifies it. No context loss.
+| Fragment | Loads | When to Use |
+|----------|-------|-------------|
+| `#key-takeaways` | Frontmatter + Key Takeaways | Quick reference or reminders when knowledge is already familiar |
+| `#concepts` | Frontmatter + Key Takeaways + Concepts | Understanding concepts without detailed examples or procedures |
+| (no fragment) | Entire file | Performing evaluation, review, or implementation that needs detection heuristics, examples, tables, and procedures |
 
-**PO picks the next feature from backlog. No agent self-selects.**
+**Rule of thumb:** If the agent needs to **find violations, detect patterns, or apply detailed criteria**, load the full document. If it only needs to **recall a principle or definition**, `#key-takeaways` is sufficient.
 
-**Verification is adversarial.** The system-architect's job is to try to break the feature, not to confirm it works. The default hypothesis is "it might be broken despite green checks; prove otherwise."
-
-## Roles
-
-- **Product Owner (PO)** — AI agent. Interviews the stakeholder, writes discovery docs, Gherkin features, and acceptance criteria. Accepts or rejects deliveries. **Sole owner of all `.feature` file moves** (backlog → in-progress before Step 2; in-progress → completed after Step 5 acceptance).
-- **Stakeholder** — Human. Answers PO's questions, provides domain knowledge, approves PO syntheses to confirm discovery is complete.
-- **System Architect (SA)** — AI agent. Designs architecture, writes domain stubs, records decisions in ADRs, and verifies implementation respects those decisions. Owns `docs/domain-model.md`, `docs/system.md`, and `docs/adr/ADR-*.md`. Never edits or moves `.feature` files. Escalates spec gaps to PO.
-- **Software Engineer (SE)** — AI agent. Implements everything: test bodies, production code, releases. Owns all `.py` files under the package. Never edits or moves `.feature` files. Escalates spec gaps to PO. If no `.feature` file is in `in-progress/`, stops and escalates to PO.
-
-## Feature File Chain of Responsibility
-
-`.feature` files are owned exclusively by the PO. **No other agent ever moves, creates, or edits them.**
-
-| Transition | Who | When |
-|---|---|---|
-| `backlog/` → `in-progress/` | PO only | Before Step 2 begins; only if `Status: BASELINED` |
-| `in-progress/` → `completed/` | PO only | After Step 5 acceptance |
-
-**If an agent (SE or SA) finds no `.feature` in `in-progress/`**: update `WORK.md` with the correct `Next:` escalation line and stop. Never self-select a backlog feature.
-
-## Agents
-
-- **product-owner** — defines scope (Stage 1 Discovery + Stage 2 Specification), picks features, accepts deliveries
-- **system-architect** — architecture and domain design (Step 2), adversarial technical review (Step 4)
-- **software-engineer** — TDD loop, implementation, tests, code, git, releases (Step 3 + release)
-- **designer** — creates and updates visual assets (SVG banners, logos) and maintains `docs/branding.md`
-- **setup-project** — one-time setup to initialize a new project from this template
-
-## Skills
-
-| Skill | Used By | Step |
-|---|---|---|
-| `run-session` | all agents | every session |
-| `select-feature` | product-owner | between features (idle state) |
-| `define-scope` | product-owner | 1 |
-| `architect` | system-architect | 2 |
-| `implement` | software-engineer | 3 |
-| `apply-patterns` | system-architect, software-engineer | 2, 3 (on-demand, when GoF pattern needed) |
-| `refactor` | software-engineer | 3 (REFACTOR phase + preparatory refactoring) |
-| `verify` | system-architect | 4 |
-| `check-quality` | software-engineer | pre-handoff (redirects to `verify`) |
-| `version-control` | software-engineer | Step 2 (branch creation), Step 5 (merge to main), post-mortem branches |
-| `create-pr` | system-architect | post-acceptance |
-| `git-release` | stakeholder | post-acceptance |
-| `update-docs` | product-owner | post-acceptance + on stakeholder demand |
-| `design-colors` | designer | branding, color, WCAG compliance |
-| `design-assets` | designer | SVG asset creation and updates |
-| `flow` | all agents | every session — flow protocol, state machine design, FLOW/WORK templates |
-| `create-skill` | software-engineer | meta |
-| `create-agent` | human-user | meta |
-
-**Branding**: Agents that generate docs, diagrams, release names, or visual assets read `docs/branding.md` if present. Absent or blank fields fall back to defaults (adjective-animal release names, Mermaid default colors, no wording constraints). `docs/branding.md` and `docs/assets/` are owned by the designer agent.
-
-**Session protocol**: Every agent loads `skill run-session` at session start. Load additional skills as needed for the current step.
-
-## Step 1 — SCOPE
-
-Step 1 has two stages:
-
-### Stage 1 — Discovery (PO + stakeholder, iterative)
-
-Discovery follows a block structure per session. See `skill define-scope` for the full protocol.
-
-**Block A — Session Start**: Resume check (if `IN-PROGRESS`), read `domain-model.md` (existing entities), declare scope.
-
-**Block B — General & Cross-cutting**: 5Ws, behavioral groups, bounded contexts. Active listening + reconciliation against `glossary.md` and `domain-model.md`.
-
-**Block C — Feature Discovery (per feature)**: Detailed questions, pre-mortem, create/update `.feature` files.
-
-**Block D — Session Close**: Append Q&A to `scope_journal.md`, update `glossary.md`, append synthesis to `discovery.md`, regression check on completed features, mark `COMPLETE`.
-
-**Key rules**:
-- PO owns `scope_journal.md`, `discovery.md`, `glossary.md`, and `.feature` files
-- PO reads `domain-model.md` but never writes to it — entity suggestions go in `discovery.md` for SA formalization at Step 2
-- Real-time split rule: >2 concerns or >8 candidate Examples → split immediately
-- Completed feature touched and changed → move to `backlog/`
-
-**Baselining**: PO writes `Status: BASELINED (YYYY-MM-DD)` in the `.feature` file when the stakeholder approves that feature's discovery and the decomposition check passes.
-
-Commit per session: `feat(discovery): <session summary>`
-
-### Stage 2 — Specification (PO alone, per feature)
-
-Only runs on features with `Status: BASELINED`. No stakeholder involvement. If a gap requires stakeholder input, open a new Stage 1 session first.
-
-**Step A — Stories**: derive one `Rule:` block per user story from the baselined feature description. INVEST gate: all 6 letters must pass.
-Commit: `feat(stories): write user stories for <name>`
-
-**Step B — Criteria**: PO writes `Example:` blocks with `@id` tags under each `Rule:`. Pre-mortem per Rule before writing any Examples. MoSCoW triage per Example. Examples are frozen after commit.
-Commit: `feat(criteria): write acceptance criteria for <name>`
-
-**Criteria are frozen**: no `Example:` changes after commit. Adding a new Example with a new `@id` replaces old.
-
-### Bug Handling
-
-When a defect is reported:
-1. **PO** adds a `@bug` Example to the relevant `Rule:` in the `.feature` file and moves (or keeps) the feature in `backlog/` for normal scheduling.
-2. **SA** handles Step 2 (architecture) and **SE** handles Step 3 (TDD loop) when the feature is selected for development. The SE implements the specific `@bug`-tagged test in `tests/features/<feature_slug>/` and also writes a `@given` Hypothesis property test in `tests/unit/` covering the whole class of inputs.
-3. Both tests are required. SE follows the normal TDD loop (Step 3).
-
-### Acceptance Failure & Restart
-
-If the stakeholder reports failure **after the PO has attempted Step 5 acceptance**:
-1. **PO does not move the `.feature` file to `completed/`**. Ensure it remains in `in-progress/`.
-2. **Team compiles a compact post-mortem** (`docs/post-mortem/YYYY-MM-DD-<feature-stem>-<keyword>.md`, max 15 lines, process-level root cause).
-3. **SE creates a fix branch** from the feature's original start commit: `git checkout -b fix/<stem> <start-sha>`. The post-mortem is committed as the first commit on this branch.
-4. **PO scans `docs/post-mortem/`** and selects relevant files by matching `<feature-stem>` or `<failure-keyword>`.
-5. **PO reads selected post-mortems**, then updates `WORK.md` to set `@state: STEP-2-ARCH` and `@branch: fix/<stem>` with context.
-6. **SA restarts Step 2** on `fix/<stem>`, reading relevant post-mortems as input. The same feature re-enters the ARCH step.
-7. After acceptance, SE merges `fix/<stem>` to `main` with `--no-ff`.
-
-Post-mortems are append-only, never edited. If a failure mode recurs, write a new file referencing the old one.
-
-## Filesystem Structure
-
-```
-docs/
-  scope_journal.md                    ← raw Q&A, PO appends after every session
-  discovery.md                        ← session synthesis changelog, PO appends after every session
-  domain-model.md                     ← living domain model, SA creates/updates at Step 2, PO reads only
-  adr/                                ← one file per decision: ADR-YYYY-MM-DD-<slug>.md, SA creates at Step 2
-  system.md                           ← current-state overview (completed features only), SA rewrites at Step 2, PO reviews at Step 5
-  glossary.md                         ← living glossary, PO updates after each session
-  branding.md                         ← project identity, colors, release naming, wording (designer owns)
-  assets/                             ← logo.svg, banner.svg, and other visual assets (designer owns)
-  context.md                          ← C4 Level 1 diagram, PO updates via update-docs skill
-  container.md                        ← C4 Level 2 diagram, PO updates via update-docs skill (if multi-container)
-  post-mortem/                         ← compact post-mortems, PO-owned, append-only
-  features/
-    backlog/<feature-stem>.feature    ← narrative + Rules + Examples
-    in-progress/<feature-stem>.feature
-    completed/<feature-stem>.feature
-
-tests/
-  features/<feature_slug>/
-    <rule_slug>_test.py               ← one per Rule: block, software-engineer-written
-  unit/
-    <anything>_test.py                ← software-engineer-authored extras (no @id traceability)
-
-FLOW.md                               ← static workflow state machine (roles, prerequisites, states, transitions)
-WORK.md                               ← dynamic work tracker (active items with @id, @state, @branch + session log)
-```
-
-Tests in `tests/unit/` are software-engineer-authored extras not covered by any `@id` criterion. Any test style is valid — plain `assert` or Hypothesis `@given`. Use Hypothesis when the test covers a **property** that holds across many inputs (mathematical invariants, parsing contracts, value object constraints). Use plain pytest for specific behaviors or single edge cases discovered during refactoring.
-
-- `@pytest.mark.slow` is mandatory on every `@given`-decorated test (Hypothesis is genuinely slow)
-- `@example(...)` is optional but encouraged when using `@given` to document known corner cases
-- No `@id` tags — tests with `@id` belong in `tests/features/`, written by software-engineer
-
-## Test File Layout
-
-```
-tests/features/<feature_slug>/<rule_slug>_test.py
-```
-
-### Stub Format
-
-Stubs are auto-generated by pytest-beehave. The SA triggers generation at Step 2 end by running `uv run task test-fast`. pytest-beehave reads the in-progress `.feature` file and creates one skipped function per `@id`:
-
-```python
-@pytest.mark.skip(reason="not yet implemented")
-def test_<feature_slug>_<@id>() -> None:
-    """
-    <@id steps raw text including new lines>
-    """
-```
-
-### Markers
-- `@pytest.mark.slow` — takes > 50ms; applied to Hypothesis tests and any test with I/O, network, or DB
-- `@pytest.mark.deprecated` — auto-skipped by pytest-beehave; used for superseded Examples
-
-## Development Commands
+### Extraction Commands
 
 ```bash
-# Install dependencies
-uv sync --all-extras
-
-# Run the application (for humans)
-uv run task run
-
-# Run the application with timeout (for agents — prevents hanging)
-timeout 10s uv run task run
-
-# Run tests (fast, no coverage)
-uv run task test-fast
-
-# Run full test suite with coverage
-uv run task test
-
-# Run tests with coverage report generation
-uv run task test-build
-
-# Lint and format
-uv run task lint
-
-# Type checking
-uv run task static-check
-
-# Build documentation
-uv run task doc-build
+sed '/^## Concepts/Q' file.md    # Frontmatter + Key Takeaways only
+sed '/^## Content/Q' file.md     # Frontmatter + Key Takeaways + Concepts
+cat file.md                       # Full document
 ```
 
-## Code Quality Standards
+Examples:
+- `[[requirements/invest#key-takeaways]]`: quick reference for INVEST criteria
+- `[[requirements/invest#concepts]]`: understanding what each letter means with context
+- `[[software-craft/smell-catalogue]]`: full catalogue needed to detect code smells during review
 
-- **Principles (in priority order)**: YAGNI > KISS > DRY > SOLID > Object Calisthenics > appropriate design patterns > complex code > complicate code > failing code > no code
-- **Linting**: ruff format, ruff check, Google docstring convention, `noqa` forbidden
-- **Type checking**: pyright, 0 errors required
-- **Coverage**: 100% (measured against your actual package)
-- **Function length**: ≤ 20 lines (code lines only, excluding docstrings)
-- **Class length**: ≤ 50 lines (code lines only, excluding docstrings)
-- **Max nesting**: 2 levels
-- **Instance variables**: ≤ 2 per class *(exception: dataclasses, Pydantic models, value objects, and TypedDicts are exempt — they may carry as many fields as the domain requires)*
-- **Semantic alignment**: tests must operate at the same abstraction level as the acceptance criteria they cover
+## Discovery
+Do not enumerate files, as they go stale. Discover what exists at runtime:
 
-### Software-Engineer Quality Gate Priority Order
-
-During Step 3 (TDD Loop) and before handoff to Step 4:
-
-1. **Design correctness** — YAGNI > KISS > DRY > SOLID > Object Calisthenics > appropriate design patterns > complex code > complicated code > failing code > no code
-2. **One test green** — the specific test under work passes, plus `test-fast` still passes
-3. **Quality tooling** — `lint`, `static-check`, full `test` with coverage run at handoff to SA
-
-Design correctness is far more important than lint/pyright/coverage compliance. A well-designed codebase with minor lint issues is better than a lint-clean codebase with poor design.
-
-## Verification Philosophy
-
-- **Automated checks** (lint, typecheck, coverage) verify **syntax-level** correctness — the code is well-formed.
-- **Human review** (semantic alignment, code review, manual testing) verifies **semantic-level** correctness — the code does what the user needs.
-- Both are required. All-green automated checks are necessary but not sufficient for APPROVED.
-- System-architect defaults to REJECTED unless correctness is proven.
-
-## Release Management
-
-Version format: `v{major}.{minor}.{YYYYMMDD}`
-
-- Minor bump for new features; major bump for breaking changes
-- Same-day second release: increment minor, keep same date
-- Release name: defined by `docs/branding.md > Release Naming > Convention`; absent or blank defaults to version string only (no name)
-
-**Releases happen from `main` only.** The SE ensures `main` is up to date with `origin/main` before creating a release. No releases from feature branches.
-
-The stakeholder initiates the release process. When the stakeholder requests a release, the system-architect or software-engineer loads `skill git-release` to execute it.
-
-## Session Management
-
-Every session: load `skill run-session`. Read `FLOW.md` and `WORK.md` at session start; update `WORK.md` at the end.
-
-- `FLOW.md` — static state machine: roles, prerequisites, states, transitions, detection rules. **Agents never modify this file.** Only the stakeholder (human) may change it, using `skill flow` as the design protocol.
-- `WORK.md` — dynamic tracker: active `@id` items with `@state` and `@branch`. Updated by the state owner at every transition. Session Log is append-only.
-
-See `.opencode/skills/flow/SKILL.md` for the generic flow protocol, state machine design principles, and templates for creating new workflows.
-
-## Setup
-
-To initialize a new project from this template:
 ```bash
-@setup-project
+ls .opencode/agents/                    # agent identity definitions
+ls .opencode/skills/                    # skill directories (each has SKILL.md)
+find .opencode/knowledge -name '*.md'   # knowledge files
+find .templates -name '*.template'   # artifact templates
+find docs/research -name '*.md'          # research source notes (cited by knowledge files)
 ```
 
-The setup agent will ask for your project name, GitHub username, author info, and configure all template placeholders.
+## File Naming Conventions
+
+### Artifact Names in Flow Attrs
+
+Artifact names in `in` and `out` lists use these conventions:
+
+| Pattern | Meaning | Example |
+|---------|---------|---------|
+| `filename.md` | A specific document | `domain_model.md`, `product_definition.md` |
+| `dir/<param>.ext` | A specific instance identified by parameter | `features/<feature_id>.feature`, `interview-notes/<session_id>.md`, `adr/<adr_id>.md` |
+| `dir/*.ext` | Multiple documents of that type available in `in` | `interview-notes/*.md`, `adr/*.md` |
+| `conceptual_name` | A runtime artifact that passes between states within a flow | `typed-source-stubs`, `test-implementations` |
+
+Placeholders in template filenames and flow artifact paths use the `<type_id>` pattern where **type** identifies the document kind and **_id** signals snake_case formatting. See template filenames for the canonical placeholder names.
+
+**File naming rule:** All filenames use **snake_case** (e.g., `domain_value_objects.feature`, `ADR_20260504_protocol_adapters.md`). **Doc folders** use kebab-case for multi-word names (e.g., `interview-notes/`, `post-mortem/`). **Python/test folders** use snake_case (e.g., `tests/features/`).
+
+**Wildcards (`*`)** in `in` indicate that multiple documents of that type are available. List the directory contents first, then read selectively based on the task. When a state creates a single instance, use a `<parameter>` name instead.
+
+**Runtime artifacts** (not backed by files) use descriptive names that make their purpose clear: `typed-source-stubs` (source files with type signatures only), `test-skeletons` (test files with structure only), `test-implementations` (tests with bodies), `source-implementations` (production code with behavior), `refactored-source` (code after refactoring pass), `feature-commits` (git commits for one feature), `merged-commits` (commits merged to local main), `root-cause-analysis` (analysis findings).
+
+**Environment artifacts** are produced by tooling rather than flow states: `coverage-reports` (test coverage output), `test-output` (test runner output), `linter-output` (linter output). These exist on disk after running the relevant tool and are referenced in `in` but not in any state's `out`.
+
+## Flowr Commands
+
+All commands output **JSON by default**. Use `--text` for human-readable output. All commands require the virtual environment: `source .venv/bin/activate`. See [[workflow/flowr-operations]] for full command reference, output formats, and workflow pattern.
+
+Commands accept short flow names (e.g., `planning-flow`) or full file paths. Use `--session <name>` to resolve flow/state from a session instead of specifying them explicitly.
+
+| Command | Purpose |
+|---------|---------|
+| `python -m flowr check <flow> <state>` | Show state attrs, owner, skills, and transitions |
+| `python -m flowr check <flow> <state> <target>` | Show conditions for a specific transition |
+| `python -m flowr check --session` | Show current session state (read-only) |
+| `python -m flowr check --session <trigger>` | Show conditions for a transition via session |
+| `python -m flowr next <flow> <state> [--evidence key=value]` | Show all transitions with status markers (`open`/`blocked`) |
+| `python -m flowr next --session [--evidence key=value]` | Show transitions from session state with status |
+| `python -m flowr transition <flow> <state> <trigger> [--evidence key=value]` | Advance to the next state |
+| `python -m flowr transition <trigger> --session [--evidence key=value]` | Advance using session (auto-updates session) |
+| `python -m flowr validate [<flow>]` | Validate flow definition(s) |
+| `python -m flowr validate --session` | Validate the current (sub)flow from session |
+| `python -m flowr states <flow>` | List all states in a flow |
+| `python -m flowr states --session` | List states in the current (sub)flow from session |
+| `python -m flowr mermaid <flow>` | Export flow as Mermaid diagram |
+| `python -m flowr config` | Show resolved configuration with sources |
+| `python -m flowr session init <flow> [--name <name>]` | Create a session at the flow's initial state |
+| `python -m flowr session show [--name <name>]` | Display current session state and call stack |
+| `python -m flowr session set-state <state> [--name <name>]` | Manually update session state |
+| `python -m flowr session list` | List all sessions |
+| `task regenerate-flowviz` | Regenerate interactive D3.js visualization |
+
+## Project Commands
+
+Check `pyproject.toml` for taskipy tasks and tool configuration. Common commands:
+
+| Command | Purpose |
+|---------|---------|
+| `task test` | Run tests with short tracebacks |
+| `task test-fast` | Run fast tests only (excludes slow marker) |
+| `task test-coverage` | Run tests with coverage report |
+| `task test-build` | Run full test suite with coverage, hypothesis stats, and HTML report |
+| `task run` | Run the application |
+
+Linting and formatting:
+
+| Command | Purpose |
+|---------|---------|
+| `ruff check .` | Lint check |
+| `ruff format .` | Auto-format |
+| `ruff check --fix .` | Auto-fix lint issues |
+
+## Session Protocol
+
+Every state transition must go through flowr. Do not skip steps or guess transitions. See [[workflow/flowr-operations]] for the full command reference.
+
+1. **State entry:** Run `python -m flowr check --session` to see current state, owner, skills, and available transitions (JSON output: parse `attrs.owner`, `attrs.skills`, `attrs.in`, `attrs.out`, `transitions`). Verify all `in` artifacts exist on disk. If any are missing, stop and flag rather than proceeding with assumed knowledge. Announce the state in one line, e.g. `→ specify-feature`. No preamble, no recap of how you got here.
+2. **Dispatch to owner agent:** The state's `owner` field names the responsible agent. Call that agent as a subagent with the state's `skills` loaded, passing the state attrs as context. Owner mapping: `PO` → product-owner, `DE` → domain-expert, `SE` → software-engineer, `SA` → system-architect, `R` → reviewer, `Design Agent` → design-agent, `Setup Agent` → setup-agent.
+3. **Do the work:** Load and execute the skill(s) listed in the state's `skills` field. Read all `in` artifacts before starting work — they are mandatory context. Write only to `out` artifacts. Commit changes to the branch indicated by the state's `git` attribute (`main` or `feature`). Never switch branches mid-state.
+4. **State exit:** The anchor item in the todo handles this (see [[workflow/todo-anchor-protocol#key-takeaways]]).
+
+### Convention Boundary
+
+Convention checks (ruff, pyright, lint, format, docstring, import sorting, type checking) are **prohibited** during design-phase states (create-py-stubs, write-test, implement-minimum, refactor). Only `test-fast` is permitted. Design changes invalidate convention work. Enforce this boundary during dispatch.
+
+When dispatching an agent during design phase:
+- Do NOT include any convention tool commands in the prompt
+- Only include verification steps that the skill explicitly defines
+- The skill's verification steps are the ceiling, not the floor
+
+Exception: When the reviewer agent explicitly requests convention fixes during review-conventions state, those specific convention commands may be included in the dispatch.
+
+### Procedural Contract
+
+**One state = one dispatch.** Every state transition produces exactly one agent dispatch with exactly the skills listed in the state's `skills` field. Never combine multiple states into a single dispatch. The orchestrator's job is routing, not doing. See [[workflow/todo-anchor-protocol#concepts]] for the full protocol.
+
+### Todo-Driven State Execution
+
+At state entry, generate a procedural todo list from the state's metadata using the todowrite tool. Format: `[X]` completed, `[ ]` pending, `[~]` anchor (always last).
+
+1. **Preparation** (`[ ]`): list available `in` artifacts
+2. **Dispatch** (`[ ]`): call the state's owner agent with skills loaded
+3. **Output** (`[ ]`): one per `out` artifact
+4. **Verification** (`[ ]`): check constraints, run tests/lint if applicable
+5. **Anchor** (`[~]`, always last): flowr next → pick transition → flowr transition → rewrite todo
+
+The todo is the execution contract. Every item must be marked `[X]` before the anchor fires. One state per todo; never span multiple states or collapse loop iterations. Full protocol: [[workflow/todo-anchor-protocol]].
+
+### Session Init
+
+Before starting a flow, create a session to track progress:
+
+```bash
+python -m flowr session init <flow> --name <name>
+```
+
+For project-level flows (discovery, architecture, branding, setup), use a descriptive name like `project`. For feature flows, use the feature name. The session tracks the current flow, state, call stack (for subflows), and params (including `feature-id`). When the first state has a `flow:` field, `session init` auto-enters the subflow.
+
+### Branch Discipline
+
+States declare their git context in `attrs.git`:
+- `git: main`: all changes are committed to the local main branch
+- `git: feature`: all changes are committed to the current feature branch
+
+Before exiting a project-phase flow (discovery, architecture, branding, setup), the exit transition requires `committed-to-main-locally: ==verified` evidence. This guarantees project artifacts are persisted before advancing to the next phase.
+
+### Within a State
+
+Announce the state once at the top, then go quiet:
+
+- **Respect the artifact contract:** The state's attrs define what the owner agent may read and write:
+  - `in`: Mandatory context. All `in` artifacts must be read in full before starting work. For wildcard patterns (`*.md`), list the directory first, then read all discovered files. The `in` list defines what you *must* read — no skipping, no selective reading.
+  - `out`: May create or edit. Section sub-lists indicate which sections the state should produce or update. Follow the **out artifact protocol** (see below).
+  - Files not in `out` must not be written to. If findings affect an artifact outside the output contract, flag them in output notes and defer the change to the step that owns that artifact.
+  - The flow contract must always be followed unless the stakeholder explicitly asks to break it.
+  - **Cumulative editing:** When a flow loops back to a state that was previously executed (e.g., `needs-reinterview` → `stakeholder-interview` → `domain-discovery`), the `out` artifact is **edited**, not recreated. The agent reads the existing file, incorporates new information, and adjusts existing content. This is especially important for `domain_model.md` and `glossary.md` which accumulate knowledge across multiple discovery iterations.
+- **Out artifact protocol:** Before writing to any `out` artifact:
+  1. Check if the file exists on disk.
+  2. **If it exists** → read it, then edit only the sections declared in the flow's `out` section sub-lists. Preserve existing content outside those sections.
+  3. **If it does not exist** → resolve the template path: take the destination path, prepend `.templates/`, append `.template` (e.g., `docs/spec/domain_model.md` → `.templates/docs/spec/domain_model.md.template`). Copy the template to the destination path, then edit the declared sections. Strip any template placeholders during editing.
+  4. **If no template exists** for a non-Python file referenced in `in`/`out`, raise an error for the stakeholder to decide.
+  5. **Environment artifacts** (e.g., `coverage-reports`, `test-output`, `linter-output`) are produced by tooling rather than flow states. They exist on disk after running the relevant tool and are referenced in `in` but not in any state's `out`.
+- **Specification documents are read-only during development.** During TDD and review cycles, the SE and reviewer may ONLY modify production code and test code. Spec document inconsistencies must be FLAGGED in output notes, not fixed directly. Spec docs are owned by other flow states and can only be changed through the appropriate flow step, after code is reviewed and approved.
+- **Flag issues with precise citations.** When flagging a problem during review or adversarial analysis, include file:line references (e.g., "domain_model.md:23 conflicts with login.feature:15"). Vague findings create rework.
+- **Do the work with the fewest, quietest commands.** Suppress verbose output. If a command can be scoped with a flag, pipe, or limit, use it. Don't dump full files or directory listings when a targeted query answers the question.
+- **No narration between steps.** The command and its output are the conversation. Don't echo what you're about to do or what you just did.
