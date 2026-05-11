@@ -62,7 +62,7 @@ Existing BDD frameworks (pytest-bdd, behave) force splitting one scenario across
 
 ## Delivery Order
 
-1 → 2a → 2b → 2c → 2d → 3a → 3b → 4 (each level depends on the previous)
+1 → 2a → 2b → 2c → 2d → 3a → 3b → 4 → 5 → 6a → 6b → 6c → 6d (each level depends on the previous)
 
 1. **Step Decorators + Strategy Resolution** — @Given, @When, @Then, @And, @But decorators that attach metadata and apply @given at import time; @Example decorator for explicit test values; @Background decorator for shared setup; strategy resolution from module-level variables and @Example type inference
 2a. **Traceability — @id Tags and Sync** — @id linking between .feature scenarios and test functions; beehave sync command; orphan detection
@@ -73,6 +73,10 @@ Existing BDD frameworks (pytest-bdd, behave) force splitting one scenario across
 3b. **Feature Parsing — Ordering + Placeholders + Adoption** — step ordering validation (Given→When→Then); placeholder-parameter matching; progressive adoption levels
 4. **Failure Reporting** — Gherkin-readable failure reports via Hypothesis report_example callback; step rendering with counterexample values; Then-failed and line-number heuristics
 5. **Self-Validation Fixes** — generate() output observability (file paths); clean import blocks on append; __init__.py creation; skip markers on stubs; step decorators in stubs; strategy fallback warnings
+6a. **Parser Keyword Recognition** — Fix Scenario Outline/Template keyword recognition in `_is_scenario_heading()` and `_SECTION_BREAK_KEYWORDS`; fix section-break reset in `_parse_feature_steps()` to prevent step leakage across scenario boundaries (PP7 + PP9, shared root cause)
+6b. **Quote Escaping in Stubs** — Escape quotes in generated decorator strings in `_generate_stub_content()` so that step text containing quotes produces valid Python (PP8)
+6c. **Fix Command Alignment** — Replace positional diff with `difflib.SequenceMatcher` in fix command for accurate decorator-to-step alignment (PP10)
+6d. **Generate Messaging** — Improve `generate()` output to inform users when scenarios exist without @id tags, instead of silently skipping (PP11)
 
 ---
 
@@ -153,3 +157,4 @@ All criteria must be met before a feature is considered done.
 | 2026-05-10 | IN_20260510_design | Initial product definition | Core product design decisions |
 | 2026-05-10 | IN_20260510_architecture | Core library is runner-agnostic | Founder identified that tying to pytest would limit beehave |
 | 2026-05-10 | IN_20260510_integration | Failure reporting via Hypothesis callback | Uses Hypothesis's own extension points, not pytest hooks |
+| 2026-05-11 | dogfood-reexercise | Added items 6a–6d to delivery order (PP7–PP11) | Dogfood re-exercise discovered five new pain points: parser keyword gaps (PP7+PP9), quote escaping (PP8), fix alignment (PP10), generate messaging (PP11) |
