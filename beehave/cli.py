@@ -253,6 +253,44 @@ def _ensure_test_directory(feature_name: str) -> str:
     return feature_name
 
 
+def fix(feature_name: str | None = None, dry_run: bool = False) -> None:
+    """Correct decorator text and add missing step decorators.
+
+    Aligns test decorator strings with .feature step text, and adds
+    missing decorators for steps that have no corresponding decorator.
+    In dry-run mode, shows a diff of proposed changes without modifying files.
+    """
+    raise NotImplementedError
+
+
+def clean(feature_name: str | None = None, force: bool = False) -> None:
+    """Remove orphan test functions that no longer match .feature scenarios.
+
+    Prompts for interactive confirmation unless --force is given.
+    """
+    raise NotImplementedError
+
+
+def _find_text_mismatches(feature_path: str, test_dir: str) -> list[dict]:
+    """Find decorators whose text diverges from .feature step text."""
+    raise NotImplementedError
+
+
+def _add_missing_decorators(feature_path: str, test_dir: str) -> list[dict]:
+    """Add step decorators for .feature steps missing from test code."""
+    raise NotImplementedError
+
+
+def _find_orphan_tests(feature_path: str, test_dir: str) -> list[dict]:
+    """Find test functions whose @id has no match in .feature files."""
+    raise NotImplementedError
+
+
+def _remove_functions(test_file: str, function_names: list[str]) -> None:
+    """Remove named functions from a test file."""
+    raise NotImplementedError
+
+
 def _is_interactive() -> bool:
     return sys.stdin.isatty()
 
