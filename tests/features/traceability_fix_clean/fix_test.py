@@ -73,8 +73,8 @@ def test_traceability_fix_clean_4a9c3e5f(tmp_path, monkeypatch) -> None:
         "from beehave.decorators import Given, When, Then\n"
         "\n"
         "\n"
-        '@Given("a user with balance <initial>")\n'
-        '@When("the user deposits <amount>")\n'
+        "@Given('a user with balance <initial>')\n"
+        "@When('the user deposits <amount>')\n"
         "def test_missing_decorator_4a9c3e5f(initial, amount):\n"
         "    ...\n"
     )
@@ -84,7 +84,7 @@ def test_traceability_fix_clean_4a9c3e5f(tmp_path, monkeypatch) -> None:
 
     content = test_file.read_text()
     # Missing decorator should be added
-    assert '@Then("the balance is <expected>")' in content
+    assert "@Then('the balance is <expected>')" in content
     # Placeholder params should be added to function signature
     assert "expected" in content
 

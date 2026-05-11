@@ -268,7 +268,8 @@ def _generate_stub_content(
 
     # Add step decorators
     for keyword, step_text in normalized_steps:
-        lines.append(f'@{keyword}("{step_text}")')
+        escaped = step_text.replace("'", "\\'")
+        lines.append(f"@{keyword}('{escaped}')")
 
     # Build function name and params
     func_name = _build_function_name(scenario_name, scenario_id)
@@ -316,7 +317,7 @@ def _ensure_test_directory(feature_name: str) -> str:
 
 
 _STEP_KEYWORDS = ("Given", "When", "Then", "And", "But")
-_DECORATOR_RE = re.compile(r'@(Given|When|Then|And|But)\("(.*)"\)')
+_DECORATOR_RE = re.compile(r"""@(Given|When|Then|And|But)\(["'](.*)["']\)""")
 _FUNC_DEF_RE = re.compile(r"def (test_\w+)\s*\(([^)]*)\)")
 
 
@@ -455,7 +456,8 @@ def _insert_decorator_before_function(
         ):
             # Insert decorator before this function
             indent = line[: len(line) - len(line.lstrip())]
-            result_lines.append(f'{indent}@{keyword}("{step_text}")')
+            escaped = step_text.replace("'", "\\'")
+            result_lines.append(f"{indent}@{keyword}('{escaped}')")
             # Add new params to function signature
             new_line = _add_params_to_func(line, new_params)
             result_lines.append(new_line)
