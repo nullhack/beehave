@@ -6,7 +6,7 @@ Feature: Quote Escaping in Stubs
   - Generated code validity (QA8): when step text contains quotes, the generated decorator is valid Python; all generated files pass py_compile.compile()
   - Idempotency: generating the same stub multiple times produces identical, syntactically valid output
   - Safety: generate is additive-only — it never modifies existing function bodies
-  - Recommended escaping strategy: always use single quotes for the outer decorator string; escape any single quotes within the step text with backslash
+  - Escaping strategy: always use single quotes for the outer decorator string; escape any single quotes within the step text with backslash
   - MoSCoW: Must
 
   ## Changes
@@ -16,7 +16,7 @@ Feature: Quote Escaping in Stubs
   | 2026-05-11 | Created: PP8 — unescaped quotes in generated decorator strings produce SyntaxError |
   | 2026-05-11 | Break-down: 1 Rule (quote escaping produces valid Python), 6 Must Examples covering double quotes, single quotes, both, baseline, multi-step, idempotency |
 
-  Rule: Step decorators with quoted text produce syntactically valid Python
+  Rule: Step decorators produce syntactically valid Python for all step text regardless of quote content
     As a Property-Based TDD Developer using `beehave generate`
     I want step decorators in generated stubs to properly escape quote characters found in step text
     So that I can import and run the generated file without encountering SyntaxError
