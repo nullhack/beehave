@@ -8,6 +8,7 @@ from beehave.parsing import (
     resolve_test_directory,
     resolve_test_module_path,
 )
+from beehave.reporting import FailureReport, StepReport, StepStatus
 from beehave.strategies import resolve_strategy
 from beehave.traceability import (
     IdTag,
@@ -26,6 +27,7 @@ __all__ = [
     "Background",
     "But",
     "Example",
+    "FailureReport",
     "FeatureFile",
     "Given",
     "IdTag",
@@ -33,6 +35,8 @@ __all__ = [
     "OrphanScenario",
     "OrphanTest",
     "Rule",
+    "StepReport",
+    "StepStatus",
     "TestDirectory",
     "TestModule",
     "Then",
