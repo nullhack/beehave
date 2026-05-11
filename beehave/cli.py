@@ -44,28 +44,53 @@ def generate(feature_name: str | None = None, json_output: bool = False) -> str 
         test_dir = str(Path("tests") / "features" / stem)
         test_file = str(Path(test_dir) / "default_test.py")
 
-        orphans = [s for s in scenarios if s.id_tag is not None]
+        total = len(scenarios)
+        tagged = [s for s in scenarios if s.id_tag is not None]
+        untagged = total - len(tagged)
 
-        if not orphans:
-            results.append(
-                {
-                    "file": fpath,
-                    "action": "skipped",
-                    "reason": "no scenarios found",
-                }
-            )
+        if not tagged:
+            if untagged > 0:
+                results.append(
+                    {
+                        "file": fpath,
+                        "action": "skipped",
+                        "reason": (
+                            f"{untagged} scenarios found without @id tags."
+                            " Run 'beehave sync' first."
+                        ),
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "file": fpath,
+                        "action": "skipped",
+                        "reason": "no scenarios found",
+                    }
+                )
             continue
 
         # Parse steps from the feature text for each scenario
         feature_steps = _parse_feature_steps(text)
 
-        for scenario in orphans:
+        for scenario in tagged:
             sid = str(scenario.id_tag)
             steps = feature_steps.get(sid, [])
             results.append(
                 _process_scenario(
                     scenario, test_dir, test_file, json_output, steps=steps
                 )
+            )
+
+        if untagged > 0:
+            results.append(
+                {
+                    "action": "advisory",
+                    "message": (
+                        f"{untagged} scenarios found without @id tags."
+                        " Run 'beehave sync' first."
+                    ),
+                }
             )
 
     if json_output:
@@ -112,6 +137,8 @@ def _format_text_output(results: list) -> str:
             file_order.append(("skipped", r))
         elif action == "error":
             file_order.append(("error", r))
+        elif action == "advisory":
+            file_order.append(("advisory", r))
         elif action == "skipped_existing":
             file_order.append(("skipped_existing", r))
 
@@ -132,6 +159,8 @@ def _format_text_output(results: list) -> str:
                 lines.append(
                     f"Skipped @{item.get('id', '')} (exists in {item.get('file', '')})"
                 )
+            elif item_type == "advisory":
+                lines.append(item.get("message", ""))
     return "\n".join(lines)
 
 
