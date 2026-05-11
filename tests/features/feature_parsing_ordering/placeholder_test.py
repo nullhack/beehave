@@ -1,9 +1,6 @@
-import pytest
-
 from beehave.validation import validate_placeholders
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_placeholder_5b7f2d9e():
     """All placeholders match function parameters
 
@@ -11,10 +8,10 @@ def test_placeholder_5b7f2d9e():
     When beehave validates placeholders
     Then no mismatch is reported
     """
-    raise NotImplementedError
+    result = validate_placeholders("a user with balance <initial>", ["initial"])
+    assert result == []
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_placeholder_d3a6c1b8():
     """Missing function parameter for placeholder
 
@@ -22,4 +19,6 @@ def test_placeholder_d3a6c1b8():
     When beehave validates placeholders
     Then a mismatch is reported: "<initial> not found in function parameters"
     """
-    raise NotImplementedError
+    result = validate_placeholders("a user with balance <initial>", [])
+    assert len(result) >= 1
+    assert result[0].expected == "<initial> not found in function parameters"
