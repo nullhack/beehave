@@ -1,0 +1,123 @@
+flow: planning-flow
+version: 11.0.0
+params: [feature_id]
+exits:
+  - complete
+  - needs-architecture
+  - no-features
+
+states:
+  - id: feature-selection
+    attrs:
+      description: "PO selects the next feature — by delivery order for first feature, by WSJF for subsequent features"
+      owner: PO
+      git: dev
+      skills:
+        - select-feature
+      in:
+        - product_definition.md
+        - domain_model.md
+        - "features/<feature_id>.feature"  # optional — discover available features
+      out: []
+    next:
+      selected: feature-breakdown
+      needs-architecture: needs-architecture
+      no-features: no-features
+
+  - id: feature-breakdown
+    attrs:
+      description: "PO refines coarse Rules from discovery into full Rule blocks with INVEST validation, adding detail through targeted clarification"
+      owner: PO
+      git: dev
+      skills:
+        - break-down-feature
+      in:
+        - features/<feature_id>.feature
+        - product_definition.md
+        - domain_model.md
+        - glossary.md
+      out:
+        - features/<feature_id>.feature:
+            - rules
+    conditions:
+      invest-passed:
+        invest-passed: ==verified
+    next:
+      done:
+        to: feature-examples
+        when: invest-passed
+
+  - id: feature-examples
+    attrs:
+      description: "PO writes concrete Given/When/Then Example blocks for each Rule in the feature file using ubiquitous language from the glossary"
+      owner: PO
+      git: dev
+      skills:
+        - write-bdd-features
+      in:
+        - features/<feature_id>.feature
+        - product_definition.md
+        - domain_model.md
+        - glossary.md
+      out:
+        - features/<feature_id>.feature:
+            - examples
+    conditions:
+      examples-complete:
+        examples-complete: ==verified
+    next:
+      done:
+        to: spec-review
+        when: examples-complete
+
+  - id: spec-review
+    attrs:
+      description: "R independently verifies the feature spec for cross-document consistency, domain alignment, BDD quality, and pre-mortem coverage"
+      owner: R
+      git: dev
+      skills:
+        - review-spec
+      in:
+        - features/<feature_id>.feature
+        - product_definition.md
+        - domain_model.md
+        - glossary.md
+      out: []
+    conditions:
+      spec-verified:
+        spec-verified: ==verified
+    next:
+      done:
+        to: create-py-stubs
+        when: spec-verified
+      fail: feature-breakdown
+
+  - id: create-py-stubs
+    attrs:
+      description: "SA creates typed stubs and test stubs from the feature file and verifies all planning artifacts are complete before baseline"
+      owner: SA
+      git: dev
+      skills:
+        - create-py-stubs
+      in:
+        - features/<feature_id>.feature
+        - product_definition.md
+        - domain_model.md
+        - glossary.md
+      out:
+        - typed-source-stubs
+        - test-skeletons
+    conditions:
+      stubs-traceable:
+        all-ids-have-stubs: ==verified
+      baseline-confirmed:
+        baseline-confirmed: ==verified
+      committed-to-dev-locally:
+        committed-to-dev-locally: ==verified
+    next:
+      done:
+        to: complete
+        when:
+          - stubs-traceable
+          - baseline-confirmed
+          - committed-to-dev-locally

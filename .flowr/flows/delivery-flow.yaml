@@ -1,0 +1,87 @@
+flow: delivery-flow
+version: 5.0.0
+params: [feature_id]
+
+exits:
+  - next-feature
+  - rejected
+  - needs-development
+  - cancelled
+
+states:
+  - id: acceptance
+    attrs:
+      description: "PO validates business behavior against BDD scenarios and quality attributes"
+      owner: PO
+      git: feature
+      skills:
+        - accept-feature
+        - verify-traceability
+      in:
+        - features/<feature_id>.feature
+        - product_definition.md
+        - glossary.md
+      out:
+        - acceptance_evidence
+        - approval_record
+    conditions:
+      feature-accepted:
+        acceptance-verified: ==verified
+    next:
+      approved:
+        to: local-merge
+        when: feature-accepted
+      rejected: rejected
+
+  - id: local-merge
+    attrs:
+      description: "SE squash-merges feature commits into local dev and resolves any conflicts"
+      owner: SE
+      git: dev
+      skills:
+        - merge-local
+      in:
+        - feature-commits
+        - approval_record
+        - features/<feature_id>.feature
+      out:
+        - merged-commits
+    next:
+      merged: publish-decision
+      conflict: needs-development
+
+  - id: publish-decision
+    attrs:
+      description: "PO decides whether to publish the accumulated batch as a PR or continue accumulating features on local dev"
+      owner: PO
+      git: dev
+      skills:
+        - decide-batch-action
+      in:
+        - merged-commits
+      out: []
+    next:
+      accumulate: next-feature
+      publish: pr-creation
+
+  - id: pr-creation
+    attrs:
+      description: "SE pushes local dev to remote dev branch for stakeholder review"
+      owner: SE
+      git: dev
+      skills:
+        - create-pr
+      in:
+        - merged-commits
+        - features/<feature_id>.feature
+      out: []
+    conditions:
+      merged:
+        ci-passes: ==verified
+        no-changes-requested: ==verified
+    next:
+      approved:
+        to: next-feature
+        when: merged
+      changes-requested: needs-development
+      cancelled: cancelled

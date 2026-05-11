@@ -8,7 +8,7 @@ Post-mortem analysis shows these practices prevent most project failures. Violat
 4. **Never decompose a feature without stakeholder approval.** If a feature is too large for INVEST, propose the split to the stakeholder with rationale. They decide what's core vs. deferred.
 5. **Verify inputs exist before entering a state.** Every state's `in` artifacts must be readable on disk. If they're missing, stop and reconstruct them. Don't proceed with assumed knowledge.
 6. **A feature is not done until every interview requirement is traced.** Every stakeholder Q&A must map to either a passing @id test or an explicit stakeholder deferral. Untraced requirements = incomplete delivery.
-7. **Respect git branch discipline.** Every state declares `git: main` or `git: feature` in its attrs. Work on `main` when the state says `main`, work on the feature branch when it says `feature`. Never switch branches mid-state. Before exiting a project-phase flow (discovery, architecture, branding, setup), set `committed-to-main-locally: ==verified` evidence. Changes must be committed to main before advancing.
+7. **Respect git branch discipline.** Every state declares `git: dev` or `git: feature` in its attrs. Work on `dev` when the state says `dev`, work on the feature branch when it says `feature`. Never switch branches mid-state. Before exiting a project-phase flow (discovery, architecture, branding, setup), set `committed-to-dev-locally: ==verified` evidence. Changes must be committed to local dev before advancing.
 
 ## Project Structure
 - `.flowr/flows/`: YAML state machine definitions (source of truth for routing)
@@ -184,10 +184,10 @@ For project-level flows (discovery, architecture, branding, setup), use a descri
 ### Branch Discipline
 
 States declare their git context in `attrs.git`:
-- `git: main`: all changes are committed to the local main branch
+- `git: dev`: all changes are committed to the local dev branch
 - `git: feature`: all changes are committed to the current feature branch
 
-Before exiting a project-phase flow (discovery, architecture, branding, setup), the exit transition requires `committed-to-main-locally: ==verified` evidence. This guarantees project artifacts are persisted before advancing to the next phase.
+Before exiting a project-phase flow (discovery, architecture, branding, setup), the exit transition requires `committed-to-dev-locally: ==verified` evidence. This guarantees project artifacts are persisted before advancing to the next phase. Only stakeholders may merge dev into main via PR.
 
 ### Within a State
 
