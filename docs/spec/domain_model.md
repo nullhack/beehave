@@ -122,7 +122,7 @@ beehave is a thin Python layer that adds Gherkin-style step decorators (@Given, 
 |-----------|-------------|------------|-------------|----------------|
 | TestFunction | TestFunction (Python function) | All <placeholder> names must appear as function parameters; step ordering must be Given → When → Then; @Example values must match placeholder count | A test function is the unit of composition for Gherkin + Hypothesis | Step Decoration |
 | FeatureScenario | Scenario | Every scenario must have exactly one @id (random, permanent, owned by beehave); step text must be consistent between .feature and test; every scenario has an ExamplesTable (unified parameterization) | A scenario is the atomic unit of traceability between .feature and test | Feature Parsing |
-| FailureReport | FailureReport | At most one step can fail (✗); subsequent steps are "(not reached)"; assertion failures always attributed to @Then | A failure report is the atomic unit of stakeholder-readable output | Reporting |
+| FailureReport | FailureReport | At most one step can fail (✗); subsequent steps are "(not reached)"; assertion failures always attributed to @Then or @But; non-assertion exceptions attributed to @Given/@When/@Then by body line order | A failure report is the atomic unit of stakeholder-readable output | Reporting |
 
 ---
 

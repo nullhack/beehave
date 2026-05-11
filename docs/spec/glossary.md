@@ -217,7 +217,7 @@ Entries are sorted alphabetically.
 
 ## Report Template
 
-**Definition:** A step decorator's text string with <placeholder> tokens that gets rendered with actual values on test failure, producing a Gherkin-readable failure scenario. Assertion failures are attributed to @Then (Then-failed heuristic); non-assertion exceptions are attributed by line-number proximity to Given/When/Then sections.
+**Definition:** A step decorator's text string with <placeholder> tokens that gets rendered with actual values on test failure, producing a Gherkin-readable failure scenario. Assertion failures are attributed to @Then or @But (Then-failed heuristic); non-assertion exceptions are attributed to the step region by body line order (line-number heuristic).
 
 **Aliases:** none
 
@@ -364,3 +364,43 @@ Entries are sorted alphabetically.
 **Example:** If the .feature says "Given a user with balance" and the test says "Given a user with an balance", beehave flags the mismatch.
 
 **Source:** 2026-05-10
+
+## FailureReport
+
+**Definition:** A Gherkin-readable failure scenario rendered from a Hypothesis counterexample, represented as an Entity and Aggregate root in the Reporting bounded context, composed of StepReport lines with one failing step and subsequent steps marked "(not reached)."
+
+**Aliases:** none
+
+**Example:** When a test fails with initial=5, amount=10, the FailureReport shows "Given a user with balance 5 ✓ / When the user spends 10 ✓ / Then the balance should equal -5 ✗ (AssertionError)".
+
+**Source:** 2026-05-11
+
+## StepReport
+
+**Definition:** A rendered step in a FailureReport showing ✓ (passed), ✗ (failed with exception), or "(not reached)" (after a failure), with placeholder values filled from the Hypothesis counterexample.
+
+**Aliases:** none
+
+**Example:** "Then the balance should equal -5 ✗ (AssertionError)" is a StepReport showing a failed assertion.
+
+**Source:** 2026-05-11
+
+## Then-failed Heuristic
+
+**Definition:** A failure attribution rule where AssertionError exceptions are always attributed to @Then (or @But), regardless of where in the test body the assert statement actually resides. Known limitation: assertion failures in @Given/@When bodies are also attributed to @Then.
+
+**Aliases:** none
+
+**Example:** An assert statement in a When step body still produces a report showing the Then step as ✗.
+
+**Source:** 2026-05-11
+
+## Line-number Heuristic
+
+**Definition:** A failure attribution rule where non-assertion exceptions are attributed to the step region (@Given, @When, or @Then) where the exception occurs by body line order.
+
+**Aliases:** none
+
+**Example:** A ValueError raised on line 12 of a test body, where lines 10-15 correspond to the Given step region, is attributed to @Given.
+
+**Source:** 2026-05-11

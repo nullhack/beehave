@@ -4,15 +4,15 @@ Feature: Failure Reporting
 
   Rules (Business):
   - Failure reporting activates only on test failure — zero overhead on passing tests
-  - The Then-failed heuristic: assertion failures are always attributed to @Then or @But
-  - The line-number heuristic: non-assertion exceptions are attributed to @Given or @When by body line order
+  - The Then-failed heuristic: assertion failures are always attributed to @Then or @But (a known limitation: assertion failures in @Given/@When bodies are also attributed to @Then)
+  - The line-number heuristic: non-assertion exceptions are attributed to the step region (@Given, @When, or @Then) where the exception occurs by body line order
   - Step text with <placeholder> tokens is rendered with actual values from the counterexample
-  - The Gherkin report is supplementary — the Python traceback always shows the exact failing line
 
   Constraints:
   - Reporting uses Hypothesis's report_example callback (runner-agnostic)
   - Core library must not import pytest for reporting
   - Future pytest plugin can enhance output formatting
+  - The Gherkin report is supplementary — the Python traceback always shows the exact failing line
 
   ## Changes
 
