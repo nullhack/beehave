@@ -192,7 +192,7 @@ Warnings exit 0. Errors exit 1. Stubs (bodies with only `pass` or `...`) skip bo
 
 ## How it maps
 
-- **Scenario title → function name:** `Honey Production From Nectar` → `test_honey_production_from_nectar`. Globally unique across all features.
+- **Scenario title → function name:** `Honey Production From Nectar` → `test_honey_production_from_nectar`. Lowercased. Globally unique across all features.
 - **Rule → test file:** Top-level scenarios go to `default_test.py`. Scenarios inside a Rule go to `<rule>_test.py`.
 - **Feature title → directory:** `Hive Activity` → `tests/features/hive_activity/`.
 - **Strategy inference:** Examples table column values are typed — all integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, else → `st.text()`.

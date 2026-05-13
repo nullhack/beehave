@@ -66,12 +66,14 @@ Every `Scenario` and `Scenario Outline` maps to exactly one test function. The f
 1. **Trim** leading and trailing whitespace.
 2. **Collapse** consecutive internal spaces to a single space.
 3. **Replace** each space with an underscore (`_`).
-4. **Prepend** `test_`.
-5. **Validate** that the result is a valid Python identifier (`str.isidentifier()` returns `True`). If not, raise a parse error.
+4. **Lowercase** the result.
+5. **Prepend** `test_`.
+6. **Validate** that the result is a valid Python identifier (`str.isidentifier()` returns `True`). If not, raise a parse error.
 
 ```
 Scenario: deposit increases balance       →  test_deposit_increases_balance
 Scenario:  extra   spaces   here          →  test_extra_spaces_here
+Scenario: Add Single Item                 →  test_add_single_item
 ```
 
 No `@scenario` decorator. No `@id` tags. No cache file. At collection time, beehave re-parses all `.feature` files and AST-parses all test files, then joins on function name.
@@ -80,7 +82,7 @@ No `@scenario` decorator. No `@id` tags. No cache file. At collection time, beeh
 
 - **Characters:** Unicode letters, digits, and spaces only. Applies to Scenario, Scenario Outline, Feature, and Rule titles equally. Special characters would break generated file paths or Python identifiers.
 - **Non-empty:** The title must be non-empty after trimming.
-- **Scenario titles:** Globally unique across all features. Two scenario titles that collapse to the same function name produce a parse error.
+- **Scenario titles:** Globally unique across all features. Two scenario titles that collapse to the same function name (case-insensitive) produce a parse error.
 - **Rule titles:** Unique within their parent Feature. Rule titles are used internally as keys for background lookup and in error messages — duplicate rule titles within a Feature produce a parse error. Per the Gherkin specification, rule names must be unique within their parent feature.
 - **Feature titles:** Globally unique across all features. Feature titles determine the generated folder structure — `Feature: Bank` generates `tests/features/bank/`. Duplicate or special-character feature titles would create path collisions or invalid directories.
 

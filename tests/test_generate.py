@@ -252,3 +252,36 @@ class TestGenerateStubs:
     def test_nonexistent_feature_exits(self, tmp_project: Path, config: Config) -> None:
         with pytest.raises(SystemExit):
             generate_stubs("nonexistent", config)
+
+    def test_creates_init_py(self, tmp_project: Path, config: Config) -> None:
+        write_feature(
+            tmp_project,
+            "initcheck",
+            """\
+            Feature: Initcheck
+              Scenario: hello
+                Given stuff
+            """,
+        )
+        generate_stubs("initcheck", config)
+        init_file = tmp_project / "tests" / "features" / "initcheck" / "__init__.py"
+        assert init_file.exists()
+
+    def test_does_not_overwrite_existing_init_py(
+        self, tmp_project: Path, config: Config
+    ) -> None:
+        write_feature(
+            tmp_project,
+            "initexist",
+            """\
+            Feature: Initexist
+              Scenario: hello
+                Given stuff
+            """,
+        )
+        test_dir = tmp_project / "tests" / "features" / "initexist"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        init_file = test_dir / "__init__.py"
+        init_file.write_text("# custom init\n", encoding="utf-8")
+        generate_stubs("initexist", config)
+        assert init_file.read_text() == "# custom init\n"

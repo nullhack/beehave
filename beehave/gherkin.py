@@ -43,7 +43,7 @@ def _derive_path_slug(title: str) -> str:
 
 def _derive_function_name(title: str) -> str:
     trimmed = title.strip()
-    collapsed = re.sub(r"\s+", "_", trimmed)
+    collapsed = re.sub(r"\s+", "_", trimmed).lower()
     name = f"test_{collapsed}"
     if not name.isidentifier():
         raise GherkinError(
@@ -192,7 +192,7 @@ def _build_scenario(
     return ScenarioInfo(
         title=title,
         function_name=function_name,
-        steps=tuple(steps),
+        steps=tuple(merged),
         placeholders=_collect_placeholders(merged),
         literals=_collect_literals(
             steps, feature_bg + rule_bg, check_numeric, check_string
