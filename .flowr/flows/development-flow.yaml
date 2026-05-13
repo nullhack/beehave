@@ -1,0 +1,65 @@
+flow: development-flow
+version: 9.0.0
+params: [feature_id]
+exits:
+  - done
+
+states:
+  - id: feature-structuring
+    attrs:
+      description: "SA creates the feature branch and feature-level structure — package directories, port interfaces, aggregate root signatures — before TDD cycles begin"
+      owner: SA
+      git: feature
+      skills:
+        - structure-feature
+      in:
+        - features/<feature_id>.feature
+        - domain_model.md
+        - glossary.md
+        - product_definition.md
+      out:
+        - git_branch
+    next:
+      ready: tdd-cycle
+
+  - id: tdd-cycle
+    attrs:
+      description: "SE implements the feature through repeated RED-GREEN-REFACTOR cycles until all BDD examples pass"
+      git: feature
+    flow: tdd-cycle-flow
+    flow-version: "^5"
+    conditions:
+      design-declared:
+        yagni: ==no-premature-abstractions
+        kiss: ==simplest-solution
+        dry: ==no-duplicated-logic
+        objcal: ==calisthenics-followed
+        smells: ==all-smells-addressed
+        solid: ==principles-applied
+        patterns: ==patterns-justified
+    next:
+      all-green:
+        to: review-gate
+        when: design-declared
+
+  - id: review-gate
+    attrs:
+      description: "R independently verifies implementation across three tiers — design, structure, conventions — then commits the passing implementation with @id traceability"
+      owner: R
+      git: feature
+      skills:
+        - review-gate
+      in:
+        - test-implementations
+        - source-implementations
+        - features/<feature_id>.feature
+      out:
+        - feature-commits
+    conditions:
+      commit-gate:
+        committed: ==verified
+    next:
+      pass:
+        to: done
+        when: commit-gate
+      fail: tdd-cycle
