@@ -14,11 +14,9 @@
 
 ---
 
-You write `.feature` files. Your test runner imports `hypothesis`. Somehow they need to stay in sync — every scenario maps to a test function, every placeholder to a parameter, every literal to a body assertion. Do it by hand and it drifts. Add a BDD framework and now your tests depend on it forever.
+You write `.feature` files. Your tests use `hypothesis`. They need to stay in sync — every scenario maps to a function, every `<placeholder>` to a parameter, every `"literal"` to a body assertion. Do it by hand and it drifts. Add a BDD framework and your tests depend on it forever.
 
-**beehave generates pure Hypothesis test stubs from Gherkin and checks they stay consistent — without ever appearing in your test code.**
-
-Generated tests import only `hypothesis`. There is no `import beehave` anywhere at runtime. Change a feature title, add a placeholder, remove an example row — `beehave check` tells you exactly what broke and where.
+**beehave generates pure Hypothesis test stubs from Gherkin and checks they stay consistent. No `import beehave` in your test code. Ever.**
 
 ---
 
@@ -28,104 +26,154 @@ Generated tests import only `hypothesis`. There is no `import beehave` anywhere 
 pip install beehave
 ```
 
-Write a feature file:
+### Write a feature
 
 ```gherkin
-# docs/features/bank_account.feature
-Feature: Bank Account
+# docs/features/hive_activity.feature
+Feature: Hive Activity
 
-  Scenario: deposit increases balance
-    Given an account with "USD" currency
-    And a balance of 100
-    When the depositor deposits 50
-    Then the balance is 150
+  Background:
+    Given the hive is active
+
+  Scenario Outline: honey production from nectar
+    Given the hive has <nectar> grams of nectar
+    And the evaporation rate is <rate> percent
+    When the bees fan their wings for <hours> hours
+    Then the hive produces <honey> grams of honey
+
+    Examples:
+      | nectar | rate | hours | honey |
+      | 100    | 20   | 8     | 80    |
+      | 200    | 25   | 12    | 150   |
+
+  Rule: Hive defense
+
+    Background:
+      Given the entrance has 2 guards
+
+    Scenario: guard bee inspects visitor
+      Given a visitor bee with <scent> colony odor
+      When the guard inspects the visitor for "floral" scent
+      Then the visitor is <outcome>
 ```
 
-Generate the test stub:
+### Generate
 
 ```bash
-beehave generate bank_account
+beehave generate hive_activity
 ```
 
+Produces `tests/features/hive_activity/default_test.py`:
+
 ```python
-# tests/features/bank_account/default_test.py
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, example, settings, strategies as st
 
 settings.register_profile("beehave", max_examples=1)
 settings.load_profile("beehave")
 
-@given(currency=st.text(), balance=st.integers(), amount=st.integers(), total=st.integers())
-def test_deposit_increases_balance(currency, balance, amount, total):
+@example(nectar=100, rate=20, hours=8, honey=80)
+@example(nectar=200, rate=25, hours=12, honey=150)
+@given(nectar=st.integers(), rate=st.integers(), hours=st.integers(), honey=st.integers())
+def test_honey_production_from_nectar(nectar, rate, hours, honey):
+    ...
+
+@given(scent=st.text(), outcome=st.text())
+def test_guard_bee_inspects_visitor(scent, outcome):
     ...
 ```
 
-Fill in the body. Now change the feature — rename the scenario, add a `<fee>` placeholder, swap `"USD"` for `"EUR"`. Run:
+Note what beehave extracted:
+
+| Source | Extracted | Where it ends up |
+|--------|-----------|-----------------|
+| `<nectar>`, `<rate>` … | Placeholders | `@given()` parameters, inferred `st.integers()` from Examples |
+| `100`, `20` … | Numeric literals (from Examples) | `@example()` rows |
+| `"floral"` | String literal (from step text) | Enforced as `Constant` in body |
+| `2` (from Rule Background) | Numeric literal (from Background) | Enforced as `Constant` in body |
+
+### Check
+
+You implement the guard test:
+
+```python
+@given(scent=st.text(), outcome=st.text())
+def test_guard_bee_inspects_visitor(scent, outcome):
+    assert "floral" in known_scents()
+    assert 2 == guard_count()
+    assert outcome in ("admitted", "rejected")
+```
 
 ```bash
-beehave check bank_account
+beehave check hive_activity
+```
+
+Clean. Now remove the `"floral"` check:
+
+```bash
+beehave check hive_activity
 ```
 
 ```
-docs/features/bank_account.feature:4: unmapped-scenario: scenario 'deposit increases balance' has no test function
-tests/features/bank_account/default_test.py:7: unmapped-test: 'test_deposit_increases_balance' has no matching scenario
+tests/features/hive_activity/default_test.py:9: missing-literal: literal '"floral"' not found in function body
 ```
 
-Fix the drift. Re-check. Clean slate.
+Rename the scenario title? `check` reports both sides:
+
+```
+docs/features/hive_activity.feature:20: unmapped-scenario: scenario 'guard checks visitor' has no test function
+tests/features/hive_activity/default_test.py:9: unmapped-test: 'test_guard_bee_inspects_visitor' has no matching scenario
+```
+
+### Clean
+
+```bash
+beehave clean hive_activity           # remove unmapped stubs
+beehave clean hive_activity --force   # remove any unmapped function
+```
+
+---
 
 ## Commands
 
 ```
-beehave generate <feature>            # stub out test functions for a feature
-beehave check [<feature>]             # verify scenarios ↔ tests are in sync
+beehave generate <feature>            # generate stubs for one feature
+beehave check [<feature>]             # check consistency (all or one)
 beehave clean <feature> [--force]     # remove unmapped test functions
 ```
 
-| Command | What it does |
-|---------|-------------|
-| `generate` | Parses `.feature` → emits Hypothesis stubs. Infers `st.integers()` etc. from Examples table types. Appends only missing functions to existing files. |
-| `check` | Dict-joins parsed scenarios with AST-discovered test functions. Reports mismatches in `<path>:<line>: <error_type>: <message>` format. Exit `1` if any violations. |
-| `clean` | Removes unmapped test functions. Safe by default (stubs only). `--force` removes any. |
-
-## Scenario Outline with Examples
-
-```gherkin
-Scenario Outline: transfer between accounts
-  Given a source balance of <source>
-  And a target balance of <target>
-  When the sender transfers <amount>
-  Then the source balance is <source_remain>
-  And the target balance is <target_remain>
-
-  Examples:
-    | source | target | amount | source_remain | target_remain |
-    | 100    | 50     | 30     | 70            | 80            |
-    | 0      | 200    | 0      | 0             | 200           |
-```
-
-```bash
-beehave generate transfer
-```
-
-```python
-@example(source=100, target=50, amount=30, source_remain=70, target_remain=80)
-@example(source=0, target=200, amount=0, source_remain=0, target_remain=200)
-@given(source=st.integers(), target=st.integers(), amount=st.integers(),
-       source_remain=st.integers(), target_remain=st.integers())
-def test_transfer_between_accounts(source, target, amount, source_remain, target_remain):
-    ...
-```
-
-`@example` rows run deterministically. `@given` adds random Hypothesis cases on top.
-
-## What check catches
+## What check enforces
 
 | Error type | Trigger |
 |------------|---------|
 | `unmapped-scenario` | Scenario has no matching `test_` function |
 | `unmapped-test` | Test function has no matching scenario |
 | `missing-placeholder` | `<placeholder>` not in function signature |
-| `missing-literal` | String or numeric literal not in function body |
+| `missing-literal` | String `"…"` or numeric literal not in function body |
 | `example-mismatch` | Examples row has no matching `@example()` (or vice versa) |
+
+Stubs (bodies containing only `pass` or `...`) skip body enforcement — they pass `check` until you implement them.
+
+## How it works
+
+**Scenario → function name:** trim → collapse spaces → underscores → prepend `test_`. Titles must be globally unique across all features.
+
+**Strategy inference:** Scenario Outline Examples table values are typed. All integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, mixed → `st.text()`. Plain scenarios default to `st.text()`.
+
+**Background merging:** Feature Background → all scenarios. Rule Background → only scenarios in that Rule. Background literals are enforced on every scenario in scope.
+
+**Literal extraction:** `"quoted strings"` and bare numeric tokens (`100`, `3`) in step text become literals that `check` verifies exist as `Constant` AST nodes in the function body.
+
+**Pipeline:**
+
+```
+.feature → gherkin parse → ScenarioInfo dict
+                              ↘
+                               check → violations
+                              ↗
+.py → AST discover → TestInfo dict
+```
+
+No cache. No state. No runtime coupling.
 
 ## Configuration
 
@@ -149,21 +197,6 @@ background_check_string = true
 | `max_examples` | `1` | Hypothesis `max_examples` for `@given()` functions |
 | `background_check_numeric` | `true` | Enforce numeric literals from Background steps |
 | `background_check_string` | `true` | Enforce string literals from Background steps |
-
-## How it works
-
-```
-.feature → gherkin parse → ScenarioInfo dict
-                              ↘
-                               check → violations
-                              ↗
-.py → AST discover → TestInfo dict
-```
-
-- Scenario titles map to function names: trim → collapse spaces → underscores → prepend `test_`
-- Scenario titles must be **globally unique** across all features
-- One `.feature` file → one test directory → one `default_test.py`
-- No cache, no state, no runtime coupling — beehave is a build-time tool
 
 ## License
 
