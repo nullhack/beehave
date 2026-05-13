@@ -40,7 +40,7 @@ beehave reports errors immediately and exits non-zero. No partial output on fail
 
 - `<path>`: relative file path (feature or test file)
 - `<line>`: line number in the file (`0` if not applicable)
-- `<error_type>`: `missing-placeholder` · `missing-literal` · `example-mismatch` · `orphan-test` · `orphan-scenario`
+- `<error_type>`: `missing-placeholder` · `missing-literal` · `example-mismatch` · `orphan-test` · `orphan-scenario` · `misplaced-test`
 - `<message>`: human-readable description
 
 Example output:
@@ -219,7 +219,7 @@ Background steps are transparently merged into every scenario in their scope. be
 | # | Rule |
 |---|------|
 | 1 | **No placeholders in Background.** Background steps must contain **no `<placeholders>`** — literal text only. If a `<placeholder>` token is found in a Background step, beehave raises a parse error naming the offending placeholder. |
-| 2 | **Literal contribution.** Only **quoted string** literals from background steps are added to the scenario's literal enforcement set. Numeric literals in background steps are informational and NOT enforced on scenarios — this avoids requiring incidental numbers (like version numbers or retry counts) in every test body. Quoted strings in background (e.g., `Given the currency is "USD"`) are enforced as `Constant` nodes in every scenario's test function. |
+| 2 | **Literal contribution.** Both numeric and quoted-string literals from background steps are added to the scenario's literal enforcement set. Enforcement of each type is configurable via `background_check_numeric` (default: `true`) and `background_check_string` (default: `true`) in pyproject.toml. When disabled, that literal type from background steps is informational only. |
 | 3 | **Scoping.** Feature-level background → all scenarios in the feature. Rule-level background → only scenarios within that rule. |
 | 4 | **Ordering.** Step texts are concatenated in this order: feature background steps → rule background steps → scenario steps. Placeholders and literals are extracted from the concatenated sequence. |
 | 5 | **Uniqueness.** At most one `Background:` block per Feature and at most one per Rule. Multiple `Background:` blocks at the same scope level produce a parse error. |
@@ -416,6 +416,10 @@ for f in bank_account transfer_ledger; do beehave generate "$f"; done
 
 **Discovery scope:** When run without a feature argument, `check` scans ALL `.py` files in `tests_dir` (not only those matched by features). This ensures test functions from deleted `.feature` files are still discovered and reported as `orphan-test`. Test functions with no matching scenario from any feature are reported as orphans.
 
+When run with a specific feature argument, `check` performs a strict pair check (that feature ↔ its test file). If a test function is not found in the feature's scenarios, `check` performs a global lookup across all features:
+- If the function matches a scenario in another feature → emit a `misplaced-test` warning naming both the current file and the matching feature's expected test file.
+- If the function matches no scenario in any feature → report as `orphan-test` (error).
+
 **Output:** see [Check Output Format](#check-output-format). Exit 0 if clean, exit 1 if any violations.
 
 ### `beehave clean <feature>`
@@ -434,7 +438,7 @@ tests/features/<path>/<name>/default_test.py # Test files
 pyproject.toml                                # [tool.beehave] config
 ```
 
-Feature path mirrors between `features_dir` and `tests_dir`. `bank_account` → `docs/features/bank_account.feature` + `tests/features/bank_account/default_test.py`.
+Feature path mirrors between `features_dir` and `tests_dir`. `bank_account` → `docs/features/bank_account.feature` + `tests/features/bank_account/default_test.py`. The feature path is derived from the feature title by: trim whitespace → collapse consecutive spaces → replace spaces with underscores → lowercase.
 
 One `.feature` file per feature, one test directory per feature (1:1 mapping). A feature may contain `Rule:` blocks — all scenarios within a feature (whether at top level or inside rules) map to test functions in the same test file. Rules do not create separate directories or files.
 
@@ -481,6 +485,8 @@ features_dir = "docs/features"
 tests_dir = "tests/features"
 default_strategy = "text"          # text → st.text() | integers → st.integers() | floats → st.floats() | booleans → st.booleans()
 max_examples = 1                   # 0 = @example() rows only, N = N random Hypothesis cases beyond @example()
+background_check_numeric = true    # enforce numeric literals from background steps
+background_check_string = true     # enforce quoted-string literals from background steps
 ```
 
 | Setting | Default | Description |
@@ -489,6 +495,8 @@ max_examples = 1                   # 0 = @example() rows only, N = N random Hypo
 | `tests_dir` | `"tests/features"` | Where generated test files live |
 | `default_strategy` | `"text"` | Fallback strategy for placeholders without a user override or Examples-table inference: `text` → `st.text()`, `integers` → `st.integers()`, `floats` → `st.floats()`, `booleans` → `st.booleans()` |
 | `max_examples` | `1` | Controls `hypothesis.settings(max_examples)` for any test with `@given()`. `generate` emits `@settings(max_examples=N)` as the outermost decorator on every function with `@given()`, where N is the configured value. For Scenario Outline, `@example()` rows always run and this adds N random cases beyond them. For plain scenarios with placeholders, N random cases total. `0` disables random exploration — only `@example()` rows run (Scenario Outline) or no random cases at all (plain scenario). If the user adds their own `@settings()`, the innermost one wins per Hypothesis behavior. `settings` is added to the Hypothesis import block when any function has `@given()`. |
+| `background_check_numeric` | `true` | Whether numeric literals extracted from background steps are enforced as `Constant` nodes in scenario test functions. When `false`, numeric literals in background steps are informational only. |
+| `background_check_string` | `true` | Whether quoted-string literals extracted from background steps are enforced as `Constant` nodes in scenario test functions. When `false`, quoted-string literals in background steps are informational only. |
 
 No other configuration settings. No `--dry-run` flag in v3 (future scope).
 
