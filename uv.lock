@@ -17,7 +17,7 @@ wheels = [
 [[package]]
 name = "beehave"
 version = "0.3.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "gherkin-official" },
 ]
