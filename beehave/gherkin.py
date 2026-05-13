@@ -18,7 +18,7 @@ from beehave.models import (
 
 _TITLE_RE = re.compile(r"^[\w\s]+$")
 _PLACEHOLDER_RE = re.compile(r"<([^>]+)>")
-_NUMERIC_LITERAL_RE = re.compile(r"^\d+$")
+_NUMERIC_LITERAL_RE = re.compile(r"^-?\d+$")
 _QUOTED_STRING_RE = re.compile(r"""(?:"([^"]*)"|'([^']*)')""")
 
 
@@ -37,6 +37,10 @@ def _validate_title(title: str, kind: str, context: str = "") -> None:
         )
 
 
+def _derive_path_slug(title: str) -> str:
+    return re.sub(r"\s+", "_", title.strip()).lower()
+
+
 def _derive_function_name(title: str) -> str:
     trimmed = title.strip()
     collapsed = re.sub(r"\s+", "_", trimmed)
@@ -49,10 +53,7 @@ def _derive_function_name(title: str) -> str:
     return name
 
 
-def _derive_feature_path(title: str) -> str:
-    trimmed = title.strip()
-    collapsed = re.sub(r"\s+", "_", trimmed)
-    return collapsed.lower()
+_derive_feature_path = _derive_rule_path = _derive_path_slug
 
 
 def _extract_placeholders(text: str) -> tuple[Placeholder, ...]:
@@ -157,6 +158,7 @@ def _build_scenario(
     sc: dict,
     feature_title: str,
     feature_path: str,
+    rule_path: str,
     feature_bg: list[ParsedStep],
     rule_bg: list[ParsedStep],
     check_numeric: bool,
@@ -199,6 +201,7 @@ def _build_scenario(
         is_outline=is_outline,
         feature_title=feature_title,
         feature_path=feature_path,
+        rule_path=rule_path,
         line=sc["location"]["line"],
     )
 
@@ -222,6 +225,7 @@ def _collect_scenarios_from_children(
                 sc=child["scenario"],
                 feature_title=feature_title,
                 feature_path=feature_path,
+                rule_path="default_test",
                 feature_bg=feature_bg,
                 rule_bg=[],
                 check_numeric=check_numeric,
@@ -234,6 +238,7 @@ def _collect_scenarios_from_children(
             rule = child["rule"]
             rule_title = rule["name"]
             _validate_title(rule_title, "Rule", f"Feature: {feature_title}")
+            rp = _derive_rule_path(rule_title) + "_test"
 
             rule_bg: list[ParsedStep] = []
             for rc in rule.get("children", []):
@@ -251,6 +256,7 @@ def _collect_scenarios_from_children(
                         sc=rc["scenario"],
                         feature_title=feature_title,
                         feature_path=feature_path,
+                        rule_path=rp,
                         feature_bg=feature_bg,
                         rule_bg=rule_bg,
                         check_numeric=check_numeric,

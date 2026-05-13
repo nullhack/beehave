@@ -1,6 +1,6 @@
 [project]
 name = "beehave"
-version = "0.1.0"
+version = "0.2.0"
 description = "A thin layer on Hypothesis for Gherkin-style BDD testing with vocabulary enforcement"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -10,7 +10,6 @@ authors = [
 ]
 dependencies = [
     "gherkin-official>=39.0",
-    "hypothesis>=6.0",
 ]
 
 [project.scripts]
@@ -19,6 +18,7 @@ beehave = "beehave.cli:main"
 [dependency-groups]
 dev = [
     "agents-smith>=1.0.0",
+    "hypothesis>=6.152.7",
     "pytest>=8.0",
     "ruff>=0.11",
 ]
@@ -32,5 +32,5 @@ preview = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["*_test.py"]
+python_files = ["test_*.py", "*_test.py"]
 python_functions = ["test_*"]

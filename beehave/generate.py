@@ -3,34 +3,19 @@ from __future__ import annotations
 import ast
 import contextlib
 import re
+import sys
 from pathlib import Path
 
 from beehave.config import Config
 from beehave.discover import discover_tests
 from beehave.gherkin import GherkinError, parse_feature
-from beehave.models import ScenarioInfo
-
-
-def coerce_example_value(cell: str) -> object:
-    if re.match(r"^-?\d+$", cell):
-        return int(cell)
-    if re.match(r"^-?\d+\.\d+$", cell):
-        return float(cell)
-    if cell.lower() == "true":
-        return True
-    if cell.lower() == "false":
-        return False
-    if cell.startswith('"') and cell.endswith('"'):
-        return cell[1:-1]
-    return cell
+from beehave.models import ExamplesTable, ScenarioInfo, coerce_example_value
 
 
 def _infer_strategy_from_examples(
     header: str,
     examples: object,
 ) -> str:
-    from beehave.models import ExamplesTable
-
     table: ExamplesTable = examples
     col_idx = table.headers.index(header)
     values = [row[col_idx] for row in table.rows]
@@ -116,7 +101,6 @@ def _generate_function(
 
 def _build_import_block(
     scenarios: dict[str, ScenarioInfo],
-    config: Config,
 ) -> list[str]:
     needs_given = any(s.placeholders for s in scenarios.values())
     needs_example = any(s.is_outline for s in scenarios.values())
@@ -128,7 +112,6 @@ def _build_import_block(
     if needs_example:
         parts.append("example")
     if needs_st:
-        parts.append("settings")
         parts.append("strategies as st")
 
     if not parts:
@@ -137,13 +120,6 @@ def _build_import_block(
     lines: list[str] = []
     lines.append(f"from hypothesis import {', '.join(parts)}")
     lines.append("")
-    if needs_st and config.max_examples >= 0:
-        lines.append(
-            f'settings.register_profile("beehave", '
-            f"max_examples={config.max_examples})"
-        )
-        lines.append('settings.load_profile("beehave")')
-        lines.append("")
     return lines
 
 
@@ -191,26 +167,11 @@ def _update_import_line(
     return "\n".join(lines)
 
 
-def generate_stubs(
-    feature_path: str,
+def _write_file(
+    test_file: Path,
+    scenarios: dict[str, ScenarioInfo],
     config: Config,
 ) -> None:
-    fpath = Path(config.features_dir) / f"{feature_path}.feature"
-    if not fpath.exists():
-        print(f"Error: Feature file not found: {fpath}")
-        raise SystemExit(1) from None
-
-    try:
-        scenarios = parse_feature(fpath, config)
-    except GherkinError as e:
-        print(f"Error: {e}")
-        raise SystemExit(1) from None
-
-    if not scenarios:
-        return
-
-    feature_dir = next(iter(scenarios.values())).feature_path
-    test_file = Path(config.tests_dir) / feature_dir / "default_test.py"
     test_file.parent.mkdir(parents=True, exist_ok=True)
 
     existing_functions: set[str] = set()
@@ -248,7 +209,6 @@ def generate_stubs(
     needed: set[str] = set()
     if any(s.placeholders for s in scenarios.values()):
         needed.add("given")
-        needed.add("settings")
         needed.add("strategies as st")
     if any(s.is_outline for s in scenarios.values()):
         needed.add("example")
@@ -259,40 +219,46 @@ def generate_stubs(
         if missing:
             source = _update_import_line(source, missing)
 
-        if (
-            "settings" in needed
-            and 'settings.load_profile("beehave")' not in source
-            and config.max_examples >= 0
-        ):
-            lines_list = source.split("\n")
-            insert_idx = 0
-            for i, line in enumerate(lines_list):
-                if line.startswith("from hypothesis import"):
-                    insert_idx = i + 1
-                    break
-            lines_list.insert(
-                insert_idx,
-                "",
-            )
-            lines_list.insert(
-                insert_idx + 1,
-                f'settings.register_profile("beehave", '
-                f"max_examples={config.max_examples})",
-            )
-            lines_list.insert(
-                insert_idx + 2,
-                'settings.load_profile("beehave")',
-            )
-            source = "\n".join(lines_list)
-
         with open(test_file, "w", encoding="utf-8") as f:
             f.write(source.rstrip("\n") + "\n\n")
             for func in new_functions:
                 f.write(func + "\n")
     else:
-        import_block = _build_import_block(scenarios, config)
+        import_block = _build_import_block(scenarios)
         with open(test_file, "w", encoding="utf-8") as f:
             for line in import_block:
                 f.write(line + "\n")
             for func in new_functions:
                 f.write(func + "\n")
+
+
+def generate_stubs(
+    feature_path: str,
+    config: Config,
+) -> None:
+    fpath = Path(config.features_dir) / f"{feature_path}.feature"
+    if not fpath.exists():
+        print(f"Error: Feature file not found: {fpath}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    try:
+        scenarios = parse_feature(fpath, config)
+    except GherkinError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    if not scenarios:
+        return
+
+    feature_dir = next(iter(scenarios.values())).feature_path
+
+    rule_groups: dict[str, dict[str, ScenarioInfo]] = {}
+    for fn, si in scenarios.items():
+        rp = si.rule_path
+        if rp not in rule_groups:
+            rule_groups[rp] = {}
+        rule_groups[rp][fn] = si
+
+    for rp, group in rule_groups.items():
+        test_file = Path(config.tests_dir) / feature_dir / f"{rp}.py"
+        _write_file(test_file, group, config)

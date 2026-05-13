@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -40,6 +41,7 @@ class ScenarioInfo:
     is_outline: bool
     feature_title: str
     feature_path: str
+    rule_path: str
     line: int = 0
 
 
@@ -60,6 +62,22 @@ class Violation:
     line: int
     error_type: str
     message: str
+    is_warning: bool = False
 
     def __str__(self) -> str:
-        return f"{self.path}:{self.line}: {self.error_type}: {self.message}"
+        prefix = "warning" if self.is_warning else "error"
+        return f"{self.path}:{self.line}: {self.error_type}: {self.message} ({prefix})"
+
+
+def coerce_example_value(cell: str) -> object:
+    if re.match(r"^-?\d+$", cell):
+        return int(cell)
+    if re.match(r"^-?\d+\.\d+$", cell):
+        return float(cell)
+    if cell.lower() == "true":
+        return True
+    if cell.lower() == "false":
+        return False
+    if cell.startswith('"') and cell.endswith('"'):
+        return cell[1:-1]
+    return cell

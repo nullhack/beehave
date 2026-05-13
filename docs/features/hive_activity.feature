@@ -15,13 +15,6 @@ Feature: Hive Activity
       | 200    | 25   | 12    | 150   |
       | 50     | 30   | 6     | 35    |
 
-  Rule: Foraging
-
-    Scenario: forager returns with nectar
-      Given a forager bee named <name>
-      When the forager returns with <volume> milliliters of nectar
-      Then the hive stores <volume> milliliters of nectar
-
   Rule: Hive defense
 
     Background:
@@ -31,3 +24,10 @@ Feature: Hive Activity
       Given a visitor bee with <scent> colony odor
       When the guard inspects the visitor for "floral" scent
       Then the visitor is <outcome>
+
+  Rule: Foraging
+
+    Scenario: forager returns with nectar
+      Given a forager bee named <name>
+      When the forager returns with <volume> milliliters of nectar
+      Then the hive stores <volume> milliliters of nectar
