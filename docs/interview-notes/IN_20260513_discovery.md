@@ -12,7 +12,7 @@
 | ID | Question | Answer |
 |----|----------|--------|
 | Q1 | Who are the users? | Python developers writing property-based tests who want Gherkin as the spec source of truth. |
-| Q2 | What does the product do at a high level? | A CLI tool with three commands: `generate` (produces Hypothesis test stubs from Gherkin), `check` (verifies test bodies match feature specs via AST), and `clean` (removes orphan test functions). |
+| Q2 | What does the product do at a high level? | A CLI tool with three commands: `generate` (produces Hypothesis test stubs from Gherkin), `check` (verifies test bodies match feature specs via AST), and `clean` (removes unmapped test functions). |
 | Q3 | Why does it exist — what problem does it solve? | Developers need Gherkin specifications to stay synchronized with test code without runtime coupling. Existing BDD tools inject frameworks into test code; beehave generates plain Hypothesis tests with zero imports from beehave itself. |
 | Q4 | When and where is it used? | During development, at the command line. Developers run `generate` when writing features, `check` to verify consistency, and `clean` to remove stale tests. |
 | Q5 | Success — what does "done" look like? | Generated stubs are valid Hypothesis tests. `check` reports zero violations. Orphan functions are cleanly removed. No beehave imports appear in test code. |
@@ -59,7 +59,7 @@
 ## Terms to Define (for glossary)
 
 - stub — generated test function with commented steps and placeholder body
-- orphan — test function with no matching scenario in any feature file
+- unmapped — test function with no matching scenario in any feature file
 - traceability — 1:1 mapping between scenario names and test function names
 - body enforcement — AST-based check that test bodies are not placeholders
 - idempotent — re-running `generate` produces identical output for unchanged input

@@ -99,7 +99,7 @@ Entries are sorted alphabetically.
 
 ## Import Block
 
-**Definition:** The section of a Python test file containing import statements that must be preserved when orphan functions are cleaned from the file.
+**Definition:** The section of a Python test file containing import statements that must be preserved when unmapped functions are cleaned from the file.
 
 **Aliases:** imports, import section
 
@@ -133,11 +133,11 @@ Entries are sorted alphabetically.
 
 ---
 
-## Orphan
+## Unmapped
 
 **Definition:** A test function with no matching scenario in any feature file, or a scenario with no matching test function in the expected test file.
 
-**Aliases:** orphan function, orphan scenario
+**Aliases:** unmapped function, unmapped scenario
 
 **Example:** A function `test_old_behavior` remaining after the corresponding scenario was deleted from the feature file.
 

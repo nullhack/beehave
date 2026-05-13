@@ -2,29 +2,44 @@
 
 <img src="docs/assets/banner.svg" alt="beehave" width="100%"/>
 
-<br/><br/>
-
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.14-blue?style=for-the-badge)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/beehave?style=for-the-badge)](https://pypi.org/project/beehave/)
 
-**Gherkin features in, Hypothesis tests out. Zero coupling.**
+**Keep your living documentation and test code in sync — without the step-definition boilerplate.**
 
 </div>
 
 ---
 
-You write `.feature` files. Your tests use `hypothesis`. They need to stay in sync — every scenario maps to a function, every `<placeholder>` to a parameter, every `"literal"` to a body assertion. Do it by hand and it drifts. Add a BDD framework and your tests depend on it forever.
-
-**beehave generates pure Hypothesis test stubs from Gherkin and checks they stay consistent. No `import beehave` in your test code. Ever.**
-
----
-
-## Quick start
+**beehave** is a simpler alternative to **behave** and **pytest-bdd**. Instead of writing step definitions that match Gherkin step text to Python functions with `@given`/`@when`/`@then` decorators, beehave links scenarios to tests by **function name** alone. It generates pure [Hypothesis](https://hypothesis.readthedocs.io/) property-based test stubs from your `.feature` files and checks that your test code stays consistent with your spec. Your tests never import beehave — they just use hypothesis.
 
 ```bash
 pip install beehave
 ```
+
+---
+
+## How it differs from standard Gherkin tools
+
+Traditional BDD frameworks (behave, pytest-bdd) require **step definitions** — separate Python functions decorated with `@given`/`@when`/`@then` whose text must match the Gherkin step text exactly. This creates fragile coupling, boilerplate, and framework lock-in. beehave eliminates all of that:
+
+- **No step definitions.** The function name **is** the link. `Scenario: guard bee inspects visitor` → `test_guard_bee_inspects_visitor`.
+- **No runtime imports.** Your tests import only `hypothesis`. beehave is a dev-time CLI.
+- **Property-based by default.** Hypothesis `@given()` strategies are inferred from Examples table types. behave and pytest-bdd are example-only.
+
+To make this work, beehave applies a few constraints beyond standard Gherkin:
+
+| Constraint | Why |
+|-----------|-----|
+| Titles contain only **letters, digits, and spaces** | They become Python identifiers (`test_...`) and file paths |
+| `<placeholder>` names must be valid Python identifiers, not keywords or builtins | They become function parameters |
+| `"quoted strings"` and bare numbers in step text are **enforced literals** | `check` verifies they appear as `Constant` nodes in the function body |
+| Scenario titles are **globally unique** across all features | One function name = one scenario, everywhere |
+
+---
+
+## Usage
 
 ### Write a feature
 
@@ -45,6 +60,7 @@ Feature: Hive Activity
       | nectar | rate | hours | honey |
       | 100    | 20   | 8     | 80    |
       | 200    | 25   | 12    | 150   |
+      | 50     | 30   | 6     | 35    |
 
   Rule: Hive defense
 
@@ -55,43 +71,58 @@ Feature: Hive Activity
       Given a visitor bee with <scent> colony odor
       When the guard inspects the visitor for "floral" scent
       Then the visitor is <outcome>
+
+  Rule: Foraging
+
+    Scenario: forager returns with nectar
+      Given a forager bee named <name>
+      When the forager returns with <volume> milliliters of nectar
+      Then the hive stores <volume> milliliters of nectar
 ```
 
-### Generate
+### Generate stubs
 
 ```bash
 beehave generate hive_activity
 ```
 
-Produces `tests/features/hive_activity/default_test.py`:
+```
+tests/features/hive_activity/
+├── default_test.py        # top-level scenarios (honey production outline)
+├── hive_defense_test.py   # Rule: Hive defense (guard bee)
+└── foraging_test.py       # Rule: Foraging (forager returns)
+```
 
 ```python
-from hypothesis import given, example, settings, strategies as st
-
-settings.register_profile("beehave", max_examples=1)
-settings.load_profile("beehave")
+# tests/features/hive_activity/default_test.py
+from hypothesis import given, example, strategies as st
 
 @example(nectar=100, rate=20, hours=8, honey=80)
 @example(nectar=200, rate=25, hours=12, honey=150)
+@example(nectar=50, rate=30, hours=6, honey=35)
 @given(nectar=st.integers(), rate=st.integers(), hours=st.integers(), honey=st.integers())
 def test_honey_production_from_nectar(nectar, rate, hours, honey):
     ...
+```
+
+```python
+# tests/features/hive_activity/hive_defense_test.py
+from hypothesis import given, strategies as st
 
 @given(scent=st.text(), outcome=st.text())
 def test_guard_bee_inspects_visitor(scent, outcome):
     ...
 ```
 
-Note what beehave extracted:
+Note what beehave extracted automatically:
 
-| Source | Extracted | Where it ends up |
-|--------|-----------|-----------------|
-| `<nectar>`, `<rate>` … | Placeholders | `@given()` parameters, inferred `st.integers()` from Examples |
-| `100`, `20` … | Numeric literals (from Examples) | `@example()` rows |
-| `"floral"` | String literal (from step text) | Enforced as `Constant` in body |
-| `2` (from Rule Background) | Numeric literal (from Background) | Enforced as `Constant` in body |
+- **`<nectar>`, `<rate>` …** → `@given()` parameters. Strategies inferred from Examples table types (all integers → `st.integers()`).
+- **`100`, `20` …** → `@example()` rows from the Examples table.
+- **`"floral"`** → enforced literal from step text. `check` verifies it appears in the function body.
+- **`2`** (from Rule Background `2 guards`) → enforced literal, inherited by all scenarios in that Rule.
+- **`<scent>`, `<outcome>`** → `@given()` parameters. No Examples table, so strategy falls back to `st.text()`.
 
-### Check
+### Check consistency
 
 You implement the guard test:
 
@@ -100,91 +131,84 @@ You implement the guard test:
 def test_guard_bee_inspects_visitor(scent, outcome):
     assert "floral" in known_scents()
     assert 2 == guard_count()
+    assert scent in ("floral", "citrus")
     assert outcome in ("admitted", "rejected")
 ```
 
 ```bash
-beehave check hive_activity
+beehave check hive_activity    # check one feature
+beehave check                  # check all features
 ```
 
-Clean. Now remove the `"floral"` check:
+Remove the `"floral"` assertion and `check` catches it:
+
+```
+tests/features/hive_activity/hive_defense_test.py:4: missing-literal: literal '"floral"' not found in function body
+```
+
+Remove `<scent>` from the body but keep it as a `@given()` parameter? Still caught — beehave checks the **body only**:
+
+```
+tests/features/hive_activity/hive_defense_test.py:4: missing-placeholder: 'scent' not found in function body
+```
+
+Rename the scenario? Both sides are reported:
+
+```
+docs/features/hive_activity.feature:22: unmapped-scenario: scenario 'guard checks visitor' has no test function
+tests/features/hive_activity/hive_defense_test.py:4: unmapped-test: 'test_guard_bee_inspects_visitor' has no matching scenario
+```
+
+### Clean up stale functions
 
 ```bash
-beehave check hive_activity
-```
-
-```
-tests/features/hive_activity/default_test.py:9: missing-literal: literal '"floral"' not found in function body
-```
-
-Rename the scenario title? `check` reports both sides:
-
-```
-docs/features/hive_activity.feature:20: unmapped-scenario: scenario 'guard checks visitor' has no test function
-tests/features/hive_activity/default_test.py:9: unmapped-test: 'test_guard_bee_inspects_visitor' has no matching scenario
-```
-
-### Clean
-
-```bash
-beehave clean hive_activity           # remove unmapped stubs
+beehave clean hive_activity           # remove unmapped stubs only (safe)
 beehave clean hive_activity --force   # remove any unmapped function
+```
+
+### List features
+
+```bash
+beehave list          # paths and titles
+beehave list -v       # include scenario counts, rules, stub status
 ```
 
 ---
 
-## Commands
+## What `check` enforces
 
-```
-beehave generate <feature>            # generate stubs for one feature
-beehave check [<feature>]             # check consistency (all or one)
-beehave clean <feature> [--force]     # remove unmapped test functions
-```
+| Check | Severity | What it catches |
+|-------|----------|-----------------|
+| `unmapped-scenario` | error | Scenario has no matching test function |
+| `unmapped-test` | error | Test function has no matching scenario |
+| `missing-placeholder` | error | `<placeholder>` not referenced in function body |
+| `missing-literal` | error | `"string"` or numeric literal not in function body |
+| `example-mismatch` | error | Examples row has no matching `@example()` or vice versa |
+| `misplaced-test` | warning | Function in wrong file (e.g., after Rule removal) |
 
-## What check enforces
+Warnings exit 0. Errors exit 1. Stubs (bodies with only `pass` or `...`) skip body enforcement until you implement them.
 
-| Error type | Trigger |
-|------------|---------|
-| `unmapped-scenario` | Scenario has no matching `test_` function |
-| `unmapped-test` | Test function has no matching scenario |
-| `missing-placeholder` | `<placeholder>` not in function signature |
-| `missing-literal` | String `"…"` or numeric literal not in function body |
-| `example-mismatch` | Examples row has no matching `@example()` (or vice versa) |
+---
 
-Stubs (bodies containing only `pass` or `...`) skip body enforcement — they pass `check` until you implement them.
+## How it maps
 
-## How it works
+- **Scenario title → function name:** `Honey Production From Nectar` → `test_honey_production_from_nectar`. Globally unique across all features.
+- **Rule → test file:** Top-level scenarios go to `default_test.py`. Scenarios inside a Rule go to `<rule>_test.py`.
+- **Feature title → directory:** `Hive Activity` → `tests/features/hive_activity/`.
+- **Strategy inference:** Examples table column values are typed — all integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, else → `st.text()`.
+- **Background merging:** Feature Background applies to all scenarios. Rule Background applies to that Rule's scenarios only. Background steps cannot contain `<placeholders>`.
+- **Literal extraction:** `"quoted strings"` and numeric tokens in step text are enforced as `Constant` AST nodes in the function body.
 
-**Scenario → function name:** trim → collapse spaces → underscores → prepend `test_`. Titles must be globally unique across all features.
-
-**Strategy inference:** Scenario Outline Examples table values are typed. All integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, mixed → `st.text()`. Plain scenarios default to `st.text()`.
-
-**Background merging:** Feature Background → all scenarios. Rule Background → only scenarios in that Rule. Background literals are enforced on every scenario in scope.
-
-**Literal extraction:** `"quoted strings"` and bare numeric tokens (`100`, `3`) in step text become literals that `check` verifies exist as `Constant` AST nodes in the function body.
-
-**Pipeline:**
-
-```
-.feature → gherkin parse → ScenarioInfo dict
-                              ↘
-                               check → violations
-                              ↗
-.py → AST discover → TestInfo dict
-```
-
-No cache. No state. No runtime coupling.
+---
 
 ## Configuration
 
-`pyproject.toml`:
-
 ```toml
+# pyproject.toml
 [tool.beehave]
 features_dir = "docs/features"
 tests_dir = "tests/features"
 default_strategy = "text"
-max_examples = 1
 background_check_numeric = true
 background_check_string = true
 ```
@@ -194,7 +218,6 @@ background_check_string = true
 | `features_dir` | `docs/features` | Where `.feature` files live |
 | `tests_dir` | `tests/features` | Where generated tests go |
 | `default_strategy` | `text` | Fallback strategy for unknown placeholders |
-| `max_examples` | `1` | Hypothesis `max_examples` for `@given()` functions |
 | `background_check_numeric` | `true` | Enforce numeric literals from Background steps |
 | `background_check_string` | `true` | Enforce string literals from Background steps |
 

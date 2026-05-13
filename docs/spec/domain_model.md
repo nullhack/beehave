@@ -10,7 +10,7 @@
 
 ## Summary
 
-beehave is a CLI tool that bridges Gherkin `.feature` files and Python test files. It parses feature files into structured scenario data, generates Hypothesis-based test stubs, checks consistency between feature files and existing test code using AST analysis, and cleans up orphan test functions. The domain is a single pipeline: parse Gherkin → compare against test code → generate/check/clean. There is no runtime coupling between generated tests and beehave itself — tests import only Hypothesis.
+beehave is a CLI tool that bridges Gherkin `.feature` files and Python test files. It parses feature files into structured scenario data, generates Hypothesis-based test stubs, checks consistency between feature files and existing test code using AST analysis, and cleans up unmapped test functions. The domain is a single pipeline: parse Gherkin → compare against test code → generate/check/clean. There is no runtime coupling between generated tests and beehave itself — tests import only Hypothesis.
 
 ---
 
@@ -20,7 +20,7 @@ beehave is a CLI tool that bridges Gherkin `.feature` files and Python test file
 |---------|----------------|--------------|---------------------|-------------|-------------------|
 | `Gherkin Parsing` | Parse `.feature` files, extract scenarios, steps, placeholders, literals, merge backgrounds | `Feature`, `Scenario`, `ScenarioOutline`, `Step`, `Placeholder`, `Literal`, `Background`, `ExamplesTable`, `Rule` | Transform Gherkin text into structured domain objects | Distinct input format with its own parsing rules, title validation, and background merging logic | Produces structured scenario data consumed by downstream contexts |
 | `Test Discovery` | AST-parse Python test files, extract function names, decorators, body nodes, module-level strategies | `TestFunction`, `ModuleStrategy` | Represent existing test code as comparable domain objects | Different input format (Python AST) with its own extraction rules | Produces test function data consumed by consistency checking |
-| `Consistency Checking` | Compare parsed Gherkin against discovered tests, enforce body rules, detect orphans, generate stubs, clean orphans | `Stub`, `Orphan`, `ConsistencyReport` | Ensure feature files and test files stay in sync | Pure coordination logic that depends on both upstream contexts but owns the reconciliation semantics | Consumes data from Gherkin Parsing and Test Discovery |
+| `Consistency Checking` | Compare parsed Gherkin against discovered tests, enforce body rules, detect unmapped, generate stubs, clean unmapped | `Stub`, `Unmapped`, `ConsistencyReport` | Ensure feature files and test files stay in sync | Pure coordination logic that depends on both upstream contexts but owns the reconciliation semantics | Consumes data from Gherkin Parsing and Test Discovery |
 
 ---
 
@@ -31,8 +31,8 @@ beehave is a CLI tool that bridges Gherkin `.feature` files and Python test file
 | Event | Bounded Context | Description | Trigger Command |
 |-------|-----------------|-------------|-----------------|
 | `StubsGenerated` | `Consistency Checking` | New test stub files created for scenarios without matching test functions | `generate` |
-| `ConsistencyChecked` | `Consistency Checking` | Full consistency report produced: body enforcement violations, example bijection failures, orphans listed | `check` |
-| `OrphansCleaned` | `Consistency Checking` | Orphan test functions removed from test files | `clean` |
+| `ConsistencyChecked` | `Consistency Checking` | Full consistency report produced: body enforcement violations, example bijection failures, unmapped listed | `check` |
+| `UnmappedCleaned` | `Consistency Checking` | Unmapped test functions removed from test files | `clean` |
 | `FeatureParsed` | `Gherkin Parsing` | A `.feature` file successfully parsed into structured domain objects | Internal |
 | `TestFileDiscovered` | `Test Discovery` | A Python test file successfully AST-parsed into test function data | Internal |
 

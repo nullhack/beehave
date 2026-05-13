@@ -9,7 +9,7 @@
 **IS:**
 - A code generator (`beehave generate`) producing pure Hypothesis `@given()`/`@example()` stubs — processes one feature per invocation; users script loops for bulk processing
 - A consistency checker (`beehave check`) that re-parses features, AST-parses tests, joins by function name, and reports violations in machine-parseable format
-- A cleanup tool (`beehave clean`) that removes orphan test functions — if all functions are removed, the file retains its import block (the file is never deleted)
+- A cleanup tool (`beehave clean`) that removes unmapped test functions — if all functions are removed, the file retains its import block (the file is never deleted)
 - Function-name-based traceability: `test_deposit_increases_balance` ↔ `Scenario: deposit increases balance`
 - Background transparency: background steps merge into every scenario in scope — no background functions, no special syntax, just more commented steps in the generated stub
 
@@ -40,18 +40,20 @@ beehave reports errors immediately and exits non-zero. No partial output on fail
 
 - `<path>`: relative file path (feature or test file)
 - `<line>`: line number in the file (`0` if not applicable)
-- `<error_type>`: `missing-placeholder` · `missing-literal` · `example-mismatch` · `orphan-test` · `orphan-scenario` · `misplaced-test`
+- `<error_type>`: `missing-placeholder` · `missing-literal` · `example-mismatch` · `unmapped-test` · `unmapped-scenario` · `misplaced-test`
 - `<message>`: human-readable description
 
 Example output:
 
 ```
 tests/features/bank_account/default_test.py:42: missing-placeholder: 'amount' not found in function body
-tests/features/bank_account/default_test.py:55: orphan-test: 'test_withdrawal' has no matching scenario
-docs/features/bank_account.feature:18: orphan-scenario: scenario 'overdraft rejected' has no test function
+tests/features/bank_account/default_test.py:55: unmapped-test: 'test_withdrawal' has no matching scenario
+docs/features/bank_account.feature:18: unmapped-scenario: scenario 'overdraft rejected' has no test function
 ```
 
-**Exit codes:** 0 if clean (no output). 1 if any violations found.
+**Severity:** Each violation has a severity — `error` or `warning`. `misplaced-test` is a warning; all other types are errors.
+
+**Exit codes:** 0 if no errors (warnings alone do not cause exit 1). 1 if any error-level violations found.
 
 ---
 
@@ -167,12 +169,12 @@ If the function body consists of a **single** `Expr(Constant(value=Ellipsis))` (
 
 ### Check 1: Placeholder Presence
 
-Every `<name>` from the feature's steps must appear as a `Name` node in the function's AST. A `Name` node counts whether it appears in the **parameter list** or the **body** — a parameter binding in the function signature IS a `Name` reference and satisfies this check on its own, even if the name is never referenced in the body.
+Every `<name>` from the feature's steps must appear as a `Name` node in the function's body AST. Only the function body is examined — parameters and `@given()` kwargs do not satisfy this check. The rationale: a placeholder in `@given()` provides the value, but body enforcement verifies the test *uses* it.
 
 | Condition | Result |
 |-----------|--------|
-| `<name>` found as `Name` in parameters or body | Pass |
-| `<name>` absent from both parameters and body | Fail — report the missing name(s) |
+| `<name>` found as `Name` in function body | Pass |
+| `<name>` absent from function body | Fail — report the missing name(s) |
 
 ### Check 2: Literal Presence
 
@@ -374,9 +376,9 @@ def test_spending_reduces_balance(initial, amount):
 |--------|---------|
 | `beehave.gherkin` | Parse `.feature` files. Extract scenarios, placeholders, literals, examples. Enforce title rules (globally unique, Unicode letters/digits/spaces only). Merge background steps into scenarios. Return `dict[str, ScenarioInfo]` keyed by function name. |
 | `beehave.discover` | AST-parse test files. Extract function names, `@given()` kwargs, `@example()` rows, body AST nodes (`Name`, `Constant`). Discover module-level strategy overrides by walking top-level `Assign` nodes where the target is a single `Name`. Return `dict[str, TestInfo]` keyed by function name. |
-| `beehave.check` | Dict-join `ScenarioInfo` ↔ `TestInfo` on function name. Verify body enforcement (placeholder presence, literal presence), examples bijection, orphan detection. |
+| `beehave.check` | Dict-join `ScenarioInfo` ↔ `TestInfo` on function name. Verify body enforcement (placeholder presence, literal presence), examples bijection, unmapped detection, misplaced detection. |
 | `beehave.generate` | Produce stub `.py` files from `ScenarioInfo`. Emit `@given()` with inferred strategies, `@example()` rows, commented step text. **Skip existing functions** — only append truly new functions. Background steps appear as commented step text prepended to the scenario's steps. Create target directories as needed. |
-| `beehave.clean` | Remove orphan test functions. If all functions are removed and only import statements remain, leave the file with those imports — do not delete the file. |
+| `beehave.clean` | Remove unmapped test functions. If all functions are removed and only import statements remain, leave the file with those imports — do not delete the file. |
 | `beehave.cli` | Entry point. `generate`, `check`, `clean` subcommands. No `fix` command, no `--dry-run` flag in v3. |
 
 All modules expose stable, composable function APIs (`parse_feature()`, `discover_tests()`, `check_pair()`) suitable for consumption by external tools. A future `pytest-beehave` plugin (not v3 scope) would call these functions from pytest collection hooks, using the file path convention to derive feature↔test mappings.
@@ -395,16 +397,17 @@ No bulk mode — `generate` accepts one feature path per invocation. To generate
 for f in bank_account transfer_ledger; do beehave generate "$f"; done
 ```
 
-**Output:** test file at `tests/features/<path>/default_test.py`. Creates the full directory path if it does not exist.
+**Output:** test files in `tests/features/<path>/`. One file per Rule (named `<rule_name>_test.py`), plus `default_test.py` for top-level scenarios. Creates the full directory path if it does not exist.
 
 **Behavior:**
 
 1. Parse the feature file. On parse error: report path and line number, exit 1.
-2. For each scenario, derive the function name from the scenario title.
-3. **Skip existing functions** — if a test function with the same name already exists in the target file, do not overwrite. Only append truly new functions. Generate is idempotent.
-4. For new functions, emit a stub containing: commented step text (background steps first, then scenario steps), `@given()` with inferred strategies, `@example()` from Examples table, `...` body.
+2. Group scenarios by Rule membership. Top-level scenarios → `default_test.py`, scenarios inside a Rule → `<rule_name>_test.py`.
+3. For each scenario, derive the function name from the scenario title.
+4. **Skip existing functions** — if a test function with the same name already exists in the target file, do not overwrite. Only append truly new functions. Generate is idempotent.
+5. For new functions, emit a stub containing: `@given()` with inferred strategies, `@example()` from Examples table, `...` body.
 
-**Import block:** The file begins with `from hypothesis import ...` including only the names needed: `given` if any function has `@given()`, `example` if any function has `@example()`, `strategies as st` if any `@given()` uses strategy inference. When appending to an existing file, `generate` updates the import block to include any newly needed names.
+**Import block:** Each file begins with `from hypothesis import ...` including only the names needed: `given` if any function has `@given()`, `example` if any function has `@example()`, `strategies as st` if any `@given()` uses strategy inference. When appending to an existing file, `generate` updates the import block to include any newly needed names. No `settings` import — hypothesis configuration is the user's responsibility.
 
 **Exit codes:** 0 on success. 1 on any error.
 
@@ -414,33 +417,42 @@ for f in bank_account transfer_ledger; do beehave generate "$f"; done
 
 **Behavior:** parse features → AST-parse tests → dict join by function name → verify all invariants. Does not auto-fix — the user resolves drift manually.
 
-**Discovery scope:** When run without a feature argument, `check` scans ALL `.py` files in `tests_dir` (not only those matched by features). This ensures test functions from deleted `.feature` files are still discovered and reported as `orphan-test`. Test functions with no matching scenario from any feature are reported as orphans.
+**Discovery scope:** When run without a feature argument, `check` scans ALL `*_test.py` files in `tests_dir` (not only those matched by features). This ensures test functions from deleted `.feature` files are still discovered and reported as `unmapped-test`.
 
-When run with a specific feature argument, `check` performs a strict pair check (that feature ↔ its test file). If a test function is not found in the feature's scenarios, `check` performs a global lookup across all features:
-- If the function matches a scenario in another feature → emit a `misplaced-test` warning naming both the current file and the matching feature's expected test file.
-- If the function matches no scenario in any feature → report as `orphan-test` (error).
+When run with a specific feature argument, `check` scans ALL `*_test.py` files in that feature's test directory (not only files matching surviving Rule paths). For each test function not matching a scenario in its file's rule_path:
+- If the function matches a scenario in a different rule_path (same feature or another feature) → emit a `misplaced-test` warning naming both the current file and the expected file.
+- If the function matches no scenario in any feature → report as `unmapped-test` (error).
 
-**Output:** see [Check Output Format](#check-output-format). Exit 0 if clean, exit 1 if any violations.
+**Misplaced detection:** `check` also detects Rule-level structural changes. If a Rule is removed or renamed, its test file remains on disk. Functions in that file will be reported as `misplaced-test` (warning) if their matching scenario now maps to a different file (e.g., moved to `default_test.py`), or `unmapped-test` (error) if the scenario was deleted entirely.
+
+**Output:** see [Check Output Format](#check-output-format). Exit 0 if no errors (warnings alone do not cause exit 1). Exit 1 if any error-level violations found.
 
 ### `beehave clean <feature>`
 
 **Input:** exactly one feature path.
 
-**Behavior:** remove test functions that have no matching scenario from the feature's test file. If all functions are removed, the file retains its import block — it is never deleted. **Warning:** before removing any non-stub function (body is not `...` or `pass`), print a warning to stderr naming the function and requiring `--force` to proceed. Stub orphans are removed without warning.
+**Behavior:** remove test functions that have no matching scenario from the feature's test files (grouped by `rule_path`). If all functions are removed from a file, the file retains its import block — it is never deleted. **Warning:** before removing any non-stub function (body is not `...` or `pass`), print a warning to stderr naming the function and requiring `--force` to proceed. Stub unmapped functions are removed without warning.
 
 ---
 
 ## File Conventions
 
 ```
-docs/features/<path>/<name>.feature          # Gherkin feature files
-tests/features/<path>/<name>/default_test.py # Test files
-pyproject.toml                                # [tool.beehave] config
+docs/features/<path>/<name>.feature                  # Gherkin feature files
+tests/features/<path>/<name>/default_test.py         # Top-level scenarios (no Rule)
+tests/features/<path>/<name>/<rule_name>_test.py     # Scenarios inside a Rule
+pyproject.toml                                        # [tool.beehave] config
 ```
 
-Feature path mirrors between `features_dir` and `tests_dir`. `bank_account` → `docs/features/bank_account.feature` + `tests/features/bank_account/default_test.py`. The feature path is derived from the feature title by: trim whitespace → collapse consecutive spaces → replace spaces with underscores → lowercase.
+Feature path mirrors between `features_dir` and `tests_dir`. `bank_account` → `docs/features/bank_account.feature` + `tests/features/bank_account/` directory. The feature path is derived from the feature title by: trim whitespace → collapse consecutive spaces → replace spaces with underscores → lowercase.
 
-One `.feature` file per feature, one test directory per feature (1:1 mapping). A feature may contain `Rule:` blocks — all scenarios within a feature (whether at top level or inside rules) map to test functions in the same test file. Rules do not create separate directories or files.
+Within a feature directory, scenarios map to test files based on their Rule membership:
+- **Top-level scenarios** (outside any Rule) → `default_test.py`
+- **Scenarios inside a Rule** → `<rule_name>_test.py`, where `rule_name` is derived from the Rule title by the same algorithm: trim → collapse spaces → underscores → lowercase → append `_test`.
+
+Rule titles must be unique within their parent Feature. Rule title uniqueness ensures no filename collisions within a feature's test directory.
+
+One `.feature` file per feature, one test directory per feature (1:1 mapping).
 
 Example with rules:
 
@@ -469,7 +481,12 @@ Feature: Bank
       ...
 ```
 
-All five scenarios (top-level + domestic rule + international rule) generate test functions in `tests/features/bank/default_test.py`. Backgrounds compose transparently — each scenario's commented steps include the applicable background chain.
+Produces three test files:
+- `tests/features/bank/default_test.py` — `test_new_account_starts_at_zero`
+- `tests/features/bank/domestic_transfers_test.py` — `test_local_transfer`, `test_local_transfer_fee`
+- `tests/features/bank/international_transfers_test.py` — `test_wire_transfer`
+
+Backgrounds compose transparently — each scenario's enforcement includes the applicable background chain.
 
 **Title restrictions apply to all levels:** Feature, Rule, and Scenario titles must all contain only Unicode letters, digits, and spaces. Feature and Rule titles are used in folder structure, error messages, and internal keying — special characters would break generated paths or identifiers.
 
@@ -484,7 +501,6 @@ If a feature grows too large, split it into separate features.
 features_dir = "docs/features"
 tests_dir = "tests/features"
 default_strategy = "text"          # text → st.text() | integers → st.integers() | floats → st.floats() | booleans → st.booleans()
-max_examples = 1                   # 0 = @example() rows only, N = N random Hypothesis cases beyond @example()
 background_check_numeric = true    # enforce numeric literals from background steps
 background_check_string = true     # enforce quoted-string literals from background steps
 ```
@@ -494,7 +510,6 @@ background_check_string = true     # enforce quoted-string literals from backgro
 | `features_dir` | `"docs/features"` | Where `.feature` files live |
 | `tests_dir` | `"tests/features"` | Where generated test files live |
 | `default_strategy` | `"text"` | Fallback strategy for placeholders without a user override or Examples-table inference: `text` → `st.text()`, `integers` → `st.integers()`, `floats` → `st.floats()`, `booleans` → `st.booleans()` |
-| `max_examples` | `1` | Controls `hypothesis.settings(max_examples)` for any test with `@given()`. `generate` emits `@settings(max_examples=N)` as the outermost decorator on every function with `@given()`, where N is the configured value. For Scenario Outline, `@example()` rows always run and this adds N random cases beyond them. For plain scenarios with placeholders, N random cases total. `0` disables random exploration — only `@example()` rows run (Scenario Outline) or no random cases at all (plain scenario). If the user adds their own `@settings()`, the innermost one wins per Hypothesis behavior. `settings` is added to the Hypothesis import block when any function has `@given()`. |
 | `background_check_numeric` | `true` | Whether numeric literals extracted from background steps are enforced as `Constant` nodes in scenario test functions. When `false`, numeric literals in background steps are informational only. |
 | `background_check_string` | `true` | Whether quoted-string literals extracted from background steps are enforced as `Constant` nodes in scenario test functions. When `false`, quoted-string literals in background steps are informational only. |
 

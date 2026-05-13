@@ -55,11 +55,12 @@ def _extract_given_kwargs(
 ) -> tuple[str, ...]:
     kwargs: list[str] = []
     for dec in decorators:
-        if (
-            isinstance(dec, ast.Call)
-            and isinstance(dec.func, ast.Attribute)
-            and dec.func.attr == "given"
-        ):
+        if not isinstance(dec, ast.Call):
+            continue
+        is_given = (
+            isinstance(dec.func, ast.Attribute) and dec.func.attr == "given"
+        ) or (isinstance(dec.func, ast.Name) and dec.func.id == "given")
+        if is_given:
             for kw in dec.keywords:
                 if kw.arg:
                     kwargs.append(kw.arg)
@@ -84,18 +85,6 @@ def _extract_example_rows(
     return tuple(rows)
 
 
-def _discover_module_strategies(tree: ast.Module) -> set[str]:
-    strategies: set[str] = set()
-    for node in tree.body:
-        if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-        ):
-            strategies.add(node.targets[0].id)
-    return strategies
-
-
 def discover_tests(test_file: Path) -> dict[str, TestInfo]:
     if not test_file.exists():
         return {}
@@ -105,8 +94,6 @@ def discover_tests(test_file: Path) -> dict[str, TestInfo]:
         tree = ast.parse(source, filename=str(test_file))
     except SyntaxError as e:
         raise DiscoverError(f"{test_file}:{e.lineno}: {e.msg}") from e
-
-    _discover_module_strategies(tree)
 
     result: dict[str, TestInfo] = {}
 
@@ -135,14 +122,17 @@ def discover_tests(test_file: Path) -> dict[str, TestInfo]:
     return result
 
 
-def discover_tests_dir(tests_dir: Path) -> dict[str, TestInfo]:
-    all_tests: dict[str, TestInfo] = {}
+def discover_tests_dir_with_paths(
+    tests_dir: Path,
+) -> dict[str, tuple[TestInfo, Path]]:
+    all_tests: dict[str, tuple[TestInfo, Path]] = {}
     if not tests_dir.exists():
         return all_tests
-    for py_file in tests_dir.rglob("*.py"):
+    for py_file in tests_dir.rglob("*_test.py"):
         try:
             tests = discover_tests(py_file)
-            all_tests.update(tests)
+            for fn, ti in tests.items():
+                all_tests[fn] = (ti, py_file)
         except DiscoverError:
             continue
     return all_tests

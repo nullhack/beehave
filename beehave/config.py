@@ -19,7 +19,6 @@ class Config:
     features_dir: str = "docs/features"
     tests_dir: str = "tests/features"
     default_strategy: str = "text"
-    max_examples: int = 1
     background_check_numeric: bool = True
     background_check_string: bool = True
 
@@ -47,7 +46,6 @@ def load_config(project_root: Path | None = None) -> Config:
         features_dir=tool.get("features_dir", "docs/features"),
         tests_dir=tool.get("tests_dir", "tests/features"),
         default_strategy=tool.get("default_strategy", "text"),
-        max_examples=tool.get("max_examples", 1),
         background_check_numeric=tool.get("background_check_numeric", True),
         background_check_string=tool.get("background_check_string", True),
     )

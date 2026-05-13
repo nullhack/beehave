@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from beehave.config import Config
-from beehave.discover import DiscoverError, discover_tests, discover_tests_dir
-from beehave.generate import coerce_example_value
+from beehave.discover import (
+    DiscoverError,
+    discover_tests,
+    discover_tests_dir_with_paths,
+)
 from beehave.gherkin import GherkinError, parse_feature
-from beehave.models import ScenarioInfo, TestInfo, Violation
+from beehave.models import ScenarioInfo, TestInfo, Violation, coerce_example_value
 
 
 def _check_placeholders(
@@ -19,8 +23,7 @@ def _check_placeholders(
 
     violations: list[Violation] = []
     for ph in si.placeholders:
-        found = ph.name in ti.body_name_nodes or ph.name in ti.given_kwargs
-        if not found:
+        if ph.name not in ti.body_name_nodes:
             violations.append(
                 Violation(
                     path=test_path,
@@ -136,6 +139,40 @@ def check_pair(
     return violations
 
 
+def _scan_unmapped_tests(
+    all_test_files: dict[str, dict[str, TestInfo]],
+    scenarios: dict[str, ScenarioInfo],
+    test_dir: Path,
+) -> list[Violation]:
+    violations: list[Violation] = []
+    for rp, tests in all_test_files.items():
+        test_file = test_dir / f"{rp}.py"
+        for fn, ti in tests.items():
+            si = scenarios.get(fn)
+            if si is None:
+                violations.append(
+                    Violation(
+                        path=str(test_file),
+                        line=ti.line,
+                        error_type="unmapped-test",
+                        message=f"'{fn}' has no matching scenario",
+                    )
+                )
+            elif si.rule_path != rp:
+                violations.append(
+                    Violation(
+                        path=str(test_file),
+                        line=ti.line,
+                        error_type="misplaced-test",
+                        message=(
+                            f"'{fn}' is in {rp}.py but should be in {si.rule_path}.py"
+                        ),
+                        is_warning=True,
+                    )
+                )
+    return violations
+
+
 def check_single(
     feature_path: Path,
     config: Config,
@@ -143,38 +180,39 @@ def check_single(
     try:
         scenarios = parse_feature(feature_path, config)
     except GherkinError as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         return []
 
-    first = next(iter(scenarios.values())) if scenarios else None
-    if first is None:
+    if not scenarios:
         return []
 
+    first = next(iter(scenarios.values()))
     feature_dir = first.feature_path
-    test_file = Path(config.tests_dir) / feature_dir / "default_test.py"
     feature_rel = str(feature_path)
 
-    try:
-        tests = discover_tests(test_file)
-    except DiscoverError as e:
-        print(f"Error: {e}")
-        return []
+    scenario_by_rule: dict[str, dict[str, ScenarioInfo]] = {}
+    for fn, si in scenarios.items():
+        scenario_by_rule.setdefault(si.rule_path, {})[fn] = si
+
+    test_dir = Path(config.tests_dir) / feature_dir
+    all_test_files: dict[str, dict[str, TestInfo]] = {}
+    if test_dir.exists():
+        for py_file in sorted(test_dir.glob("*_test.py")):
+            rp = py_file.stem
+            try:
+                all_test_files[rp] = discover_tests(py_file)
+            except DiscoverError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                all_test_files[rp] = {}
 
     violations: list[Violation] = []
-    for fn, si in scenarios.items():
-        ti = tests.get(fn)
-        violations.extend(check_pair(si, ti, str(test_file), feature_rel))
+    violations.extend(_scan_unmapped_tests(all_test_files, scenarios, test_dir))
 
-    for fn, ti in tests.items():
-        if fn not in scenarios:
-            violations.append(
-                Violation(
-                    path=str(test_file),
-                    line=ti.line,
-                    error_type="unmapped-test",
-                    message=f"'{fn}' has no matching scenario",
-                )
-            )
+    for fn, si in scenarios.items():
+        test_file = test_dir / f"{si.rule_path}.py"
+        rp_tests = all_test_files.get(si.rule_path, {})
+        ti = rp_tests.get(fn)
+        violations.extend(check_pair(si, ti, str(test_file), feature_rel))
 
     return violations
 
@@ -182,7 +220,10 @@ def check_single(
 def check_all(config: Config) -> list[Violation]:
     features_dir = Path(config.features_dir)
     if not features_dir.exists():
-        print(f"Error: features directory '{config.features_dir}' not found")
+        print(
+            f"Error: features directory '{config.features_dir}' not found",
+            file=sys.stderr,
+        )
         return []
 
     all_scenarios: dict[str, ScenarioInfo] = {}
@@ -193,31 +234,48 @@ def check_all(config: Config) -> list[Violation]:
         try:
             scenarios = parse_feature(feature_file, config, seen_function_names=seen_fn)
         except GherkinError as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}", file=sys.stderr)
             continue
         for fn in scenarios:
             feature_paths[fn] = feature_file
         all_scenarios.update(scenarios)
 
     tests_dir = Path(config.tests_dir)
-    all_tests = discover_tests_dir(tests_dir)
+    test_file_map = discover_tests_dir_with_paths(tests_dir)
 
     violations: list[Violation] = []
     for fn, si in all_scenarios.items():
         feature_rel = str(feature_paths[fn])
-        test_file = Path(config.tests_dir) / si.feature_path / "default_test.py"
-        ti = all_tests.get(fn)
+        test_file = Path(config.tests_dir) / si.feature_path / f"{si.rule_path}.py"
+        entry = test_file_map.get(fn)
+        ti = entry[0] if entry else None
         violations.extend(check_pair(si, ti, str(test_file), feature_rel))
 
-    for fn, ti in all_tests.items():
-        if fn not in all_scenarios:
+    for fn, (ti, test_file) in test_file_map.items():
+        si = all_scenarios.get(fn)
+        if si is None:
             violations.append(
                 Violation(
-                    path=str(tests_dir),
+                    path=str(test_file),
                     line=ti.line,
                     error_type="unmapped-test",
                     message=f"'{fn}' has no matching scenario",
                 )
             )
+        else:
+            expected = Path(config.tests_dir) / si.feature_path / f"{si.rule_path}.py"
+            if test_file.resolve() != expected.resolve():
+                violations.append(
+                    Violation(
+                        path=str(test_file),
+                        line=ti.line,
+                        error_type="misplaced-test",
+                        message=(
+                            f"'{fn}' is in {test_file.name} "
+                            f"but should be in {expected.name}"
+                        ),
+                        is_warning=True,
+                    )
+                )
 
     return violations

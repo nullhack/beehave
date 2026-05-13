@@ -9,7 +9,7 @@
 
 - A code generator (`beehave generate`) that produces pure Hypothesis `@given()`/`@example()` stubs from Gherkin `.feature` files — one feature per invocation
 - A consistency checker (`beehave check`) that re-parses features, AST-parses tests, joins by function name, and reports violations in machine-parseable format
-- A cleanup tool (`beehave clean`) that removes orphan test functions — retains import block even if all functions are removed, never deletes the file
+- A cleanup tool (`beehave clean`) that removes unmapped test functions — retains import block even if all functions are removed, never deletes the file
 
 ## What beehave IS NOT
 
