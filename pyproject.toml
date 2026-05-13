@@ -9,11 +9,16 @@ authors = [
     { name = "eol", email = "nullhack@users.noreply.github.com" }
 ]
 dependencies = [
+    "gherkin-official>=39.0",
     "hypothesis>=6.0",
 ]
 
+[project.scripts]
+beehave = "beehave.cli:main"
+
 [dependency-groups]
 dev = [
+    "agents-smith>=1.0.0",
     "pytest>=8.0",
     "ruff>=0.11",
 ]
