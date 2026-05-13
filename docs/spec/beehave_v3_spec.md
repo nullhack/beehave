@@ -94,7 +94,7 @@ Tests import only `hypothesis`. `@given()`, `@example()`, and `@settings` are st
 
 ## Placeholder Syntax and Strategy Inference
 
-`<name>` tokens in step text become Hypothesis parameters. Constraints on `name`:
+`<name>` tokens in step text become Hypothesis parameters. Duplicate `<name>` tokens across a scenario's steps are deduplicated — each unique name produces exactly one parameter. Constraints on `name`:
 
 | Constraint | Rule |
 |-----------|------|
@@ -102,7 +102,7 @@ Tests import only `hypothesis`. `@given()`, `@example()`, and `@settings` are st
 | Not a keyword | `not keyword.iskeyword()` |
 | Not a builtin | `not hasattr(builtins, name)` |
 
-No quoting convention — `'<name>'` and `<name>` in step text are treated identically. Both resolve to the same placeholder.
+No quoting convention — `'<name>'` and `<name>` in step text are treated identically. Both resolve to the same placeholder. All occurrences of a placeholder name within a feature file share the same strategy (one module-level variable = one strategy). Scenarios requiring different strategies for the same semantic name should use distinct placeholder names (e.g., `<int_amount>`, `<float_amount>`).
 
 ### Strategy Resolution
 
@@ -217,7 +217,7 @@ Background steps are transparently merged into every scenario in their scope. be
 | # | Rule |
 |---|------|
 | 1 | **No placeholders in Background.** Background steps must contain **no `<placeholders>`** — literal text only. If a `<placeholder>` token is found in a Background step, beehave raises a parse error naming the offending placeholder. |
-| 2 | **Literal contribution.** Background literals are added to every scenario's literal enforcement set (Check 2 in Body Enforcement). A number or quoted string in a Background step must appear in every scenario's test function within scope. |
+| 2 | **Literal contribution.** Only **quoted string** literals from background steps are added to the scenario's literal enforcement set. Numeric literals in background steps are informational and NOT enforced on scenarios — this avoids requiring incidental numbers (like version numbers or retry counts) in every test body. Quoted strings in background (e.g., `Given the currency is "USD"`) are enforced as `Constant` nodes in every scenario's test function. |
 | 3 | **Scoping.** Feature-level background → all scenarios in the feature. Rule-level background → only scenarios within that rule. |
 | 4 | **Ordering.** Step texts are concatenated in this order: feature background steps → rule background steps → scenario steps. Placeholders and literals are extracted from the concatenated sequence. |
 | 5 | **Uniqueness.** At most one `Background:` block per Feature and at most one per Rule. Multiple `Background:` blocks at the same scope level produce a parse error. |
@@ -400,6 +400,8 @@ for f in bank_account transfer_ledger; do beehave generate "$f"; done
 3. **Skip existing functions** — if a test function with the same name already exists in the target file, do not overwrite. Only append truly new functions. Generate is idempotent.
 4. For new functions, emit a stub containing: commented step text (background steps first, then scenario steps), `@given()` with inferred strategies, `@example()` from Examples table, `...` body.
 
+**Import block:** The file begins with `from hypothesis import ...` including only the names needed: `given` if any function has `@given()`, `example` if any function has `@example()`, `strategies as st` if any `@given()` uses strategy inference. When appending to an existing file, `generate` updates the import block to include any newly needed names.
+
 **Exit codes:** 0 on success. 1 on any error.
 
 ### `beehave check [<feature>]`
@@ -408,13 +410,15 @@ for f in bank_account transfer_ledger; do beehave generate "$f"; done
 
 **Behavior:** parse features → AST-parse tests → dict join by function name → verify all invariants. Does not auto-fix — the user resolves drift manually.
 
+**Discovery scope:** When run without a feature argument, `check` scans ALL `.py` files in `tests_dir` (not only those matched by features). This ensures test functions from deleted `.feature` files are still discovered and reported as `orphan-test`. Test functions with no matching scenario from any feature are reported as orphans.
+
 **Output:** see [Check Output Format](#check-output-format). Exit 0 if clean, exit 1 if any violations.
 
 ### `beehave clean <feature>`
 
 **Input:** exactly one feature path.
 
-**Behavior:** remove test functions that have no matching scenario from the feature's test file. If all functions are removed, the file retains its import block — it is never deleted.
+**Behavior:** remove test functions that have no matching scenario from the feature's test file. If all functions are removed, the file retains its import block — it is never deleted. **Warning:** before removing any non-stub function (body is not `...` or `pass`), print a warning to stderr naming the function and requiring `--force` to proceed. Stub orphans are removed without warning.
 
 ---
 
@@ -480,7 +484,7 @@ max_examples = 1                   # 0 = @example() rows only, N = N random Hypo
 | `features_dir` | `"docs/features"` | Where `.feature` files live |
 | `tests_dir` | `"tests/features"` | Where generated test files live |
 | `default_strategy` | `"text"` | Fallback strategy for placeholders without a user override or Examples-table inference: `text` → `st.text()`, `integers` → `st.integers()`, `floats` → `st.floats()`, `booleans` → `st.booleans()` |
-| `max_examples` | `1` | Controls `hypothesis.settings(max_examples)` for any test with `@given()`. For Scenario Outline, `@example()` rows always run and this adds N random cases beyond them. For plain scenarios with placeholders, N random cases total. `0` disables random exploration — only `@example()` rows run (Scenario Outline) or no random cases at all (plain scenario). |
+| `max_examples` | `1` | Controls `hypothesis.settings(max_examples)` for any test with `@given()`. `generate` emits `@settings(max_examples=N)` as the outermost decorator on every function with `@given()`, where N is the configured value. For Scenario Outline, `@example()` rows always run and this adds N random cases beyond them. For plain scenarios with placeholders, N random cases total. `0` disables random exploration — only `@example()` rows run (Scenario Outline) or no random cases at all (plain scenario). If the user adds their own `@settings()`, the innermost one wins per Hypothesis behavior. `settings` is added to the Hypothesis import block when any function has `@given()`. |
 
 No other configuration settings. No `--dry-run` flag in v3 (future scope).
 
@@ -496,7 +500,7 @@ No other configuration settings. No `--dry-run` flag in v3 (future scope).
 | Title uniqueness | Unique within Feature | Globally unique across all features |
 | Title characters | Any text | Unicode letters, digits, spaces only |
 | Tags | User-defined metadata | `@id` tags not used — function name is the sole lookup key |
-| Scenario Outline Examples | Rows provide test data | Rows become `@example()` decorators via deep-equality bijection |
+| Scenario Outline Examples | Rows provide test data | Rows become `@example()` decorators via deep-equality bijection. Scenario Outline without at least one Examples table with at least one data row is a parse error. |
 | Strategy control | N/A | Module-level variables only — no quoting convention, no per-placeholder config. Default: `st.text()` |
 
 ---
