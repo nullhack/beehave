@@ -88,7 +88,9 @@ With no beehave imports at runtime, body enforcement replaces vocabulary enforce
 
 ### No Runtime Coupling
 
-Tests import only `hypothesis`. `@given()`, `@example()`, and `@settings` are standard Hypothesis. beehave is a development-time tool — it never appears in `import` statements. There is no beehave runtime, no test runner integration, and no pytest plugins.
+Tests import only `hypothesis`. `@given()`, `@example()`, and `@settings` are standard Hypothesis. beehave is a development-time CLI tool — it never appears in test `import` statements. There is no beehave test runner integration in v3.
+
+However, beehave's internal modules (`gherkin`, `discover`, `check`) are designed as composable functions with stable public APIs. A future `pytest-beehave` plugin (external project, not v3 scope) could call these modules directly from a `pytest_collection_modifyitems` hook — providing automatic enforcement at collection time without any `import beehave` in test files. The plugin would derive the feature path from the test file path (via file conventions), parse that one feature, AST-parse the test module, and report violations as collection errors. This requires zero changes to the v3 spec — the module architecture is already the plugin's API.
 
 ---
 
@@ -377,6 +379,8 @@ def test_spending_reduces_balance(initial, amount):
 | `beehave.clean` | Remove orphan test functions. If all functions are removed and only import statements remain, leave the file with those imports — do not delete the file. |
 | `beehave.cli` | Entry point. `generate`, `check`, `clean` subcommands. No `fix` command, no `--dry-run` flag in v3. |
 
+All modules expose stable, composable function APIs (`parse_feature()`, `discover_tests()`, `check_pair()`) suitable for consumption by external tools. A future `pytest-beehave` plugin (not v3 scope) would call these functions from pytest collection hooks, using the file path convention to derive feature↔test mappings.
+
 ---
 
 ## CLI Commands
@@ -508,7 +512,7 @@ No other configuration settings. No `--dry-run` flag in v3 (future scope).
 ## What beehave IS NOT
 
 - **Not a test runner.** beehave generates and checks test files. It does not execute tests.
-- **Not a runtime framework.** Tests import only `hypothesis`. No `import beehave` ever appears in test code.
+- **Not a runtime framework.** Tests import only `hypothesis`. No `import beehave` ever appears in test code. (A future `pytest-beehave` plugin would import beehave in its own plugin code, not in test files.)
 - **Not a step-definition engine.** No step registries, no decorator-to-step-text matching at runtime. Body enforcement is a static AST check.
 - **Not an assertion DSL.** Use plain Python `assert`.
 - **Not a synonym resolver.** Step text is not matched, normalized, or compared across steps.
