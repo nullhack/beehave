@@ -76,11 +76,11 @@ No `@scenario` decorator. No `@id` tags. No cache file. At collection time, beeh
 
 **Title rules:**
 
-- **Characters:** Unicode letters, digits, and spaces only. Applies to Scenario, Scenario Outline, Feature, and Rule titles equally.
+- **Characters:** Unicode letters, digits, and spaces only. Applies to Scenario, Scenario Outline, Feature, and Rule titles equally. Special characters would break generated file paths or Python identifiers.
 - **Non-empty:** The title must be non-empty after trimming.
 - **Scenario titles:** Globally unique across all features. Two scenario titles that collapse to the same function name produce a parse error.
 - **Rule titles:** Unique within their parent Feature. Rule titles are used internally as keys for background lookup and in error messages — duplicate rule titles within a Feature produce a parse error. Per the Gherkin specification, rule names must be unique within their parent feature.
-- **Feature titles:** Globally unique across all features. Used in generated folder structure and error messages.
+- **Feature titles:** Globally unique across all features. Feature titles determine the generated folder structure — `Feature: Bank` generates `tests/features/bank/`. Duplicate or special-character feature titles would create path collisions or invalid directories.
 
 ### Body Enforcement as the Consistency Mechanism
 
@@ -428,7 +428,40 @@ pyproject.toml                                # [tool.beehave] config
 
 Feature path mirrors between `features_dir` and `tests_dir`. `bank_account` → `docs/features/bank_account.feature` + `tests/features/bank_account/default_test.py`.
 
-One `.feature` file per feature, one test directory per feature (1:1 mapping). If a feature grows too large, split it into separate features.
+One `.feature` file per feature, one test directory per feature (1:1 mapping). A feature may contain `Rule:` blocks — all scenarios within a feature (whether at top level or inside rules) map to test functions in the same test file. Rules do not create separate directories or files.
+
+Example with rules:
+
+```gherkin
+Feature: Bank
+  Background:
+    Given a bank exists
+
+  Scenario: new account starts at zero
+    ...
+
+  Rule: domestic transfers
+    Background:
+      Given domestic banking is enabled
+
+    Scenario: local transfer
+      ...
+    Scenario: local transfer fee
+      ...
+
+  Rule: international transfers
+    Background:
+      Given SWIFT is available
+
+    Scenario: wire transfer
+      ...
+```
+
+All five scenarios (top-level + domestic rule + international rule) generate test functions in `tests/features/bank/default_test.py`. Backgrounds compose transparently — each scenario's commented steps include the applicable background chain.
+
+**Title restrictions apply to all levels:** Feature, Rule, and Scenario titles must all contain only Unicode letters, digits, and spaces. Feature and Rule titles are used in folder structure, error messages, and internal keying — special characters would break generated paths or identifiers.
+
+If a feature grows too large, split it into separate features.
 
 ---
 
@@ -439,13 +472,15 @@ One `.feature` file per feature, one test directory per feature (1:1 mapping). I
 features_dir = "docs/features"
 tests_dir = "tests/features"
 default_strategy = "text"          # text → st.text() | integers → st.integers() | floats → st.floats() | booleans → st.booleans()
+max_examples = 1                   # 0 = @example() rows only, N = N random Hypothesis cases beyond @example()
 ```
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `features_dir` | `"docs/features"` | Where `.feature` files live |
 | `tests_dir` | `"tests/features"` | Where generated test files live |
-| `default_strategy` | `"text"` | Fallback strategy for placeholders without a user override or Examples-table inference. Maps to a Hypothesis strategy: `text` → `st.text()`, `integers` → `st.integers()`, `floats` → `st.floats()`, `booleans` → `st.booleans()` |
+| `default_strategy` | `"text"` | Fallback strategy for placeholders without a user override or Examples-table inference: `text` → `st.text()`, `integers` → `st.integers()`, `floats` → `st.floats()`, `booleans` → `st.booleans()` |
+| `max_examples` | `1` | Controls `hypothesis.settings(max_examples)` for any test with `@given()`. For Scenario Outline, `@example()` rows always run and this adds N random cases beyond them. For plain scenarios with placeholders, N random cases total. `0` disables random exploration — only `@example()` rows run (Scenario Outline) or no random cases at all (plain scenario). |
 
 No other configuration settings. No `--dry-run` flag in v3 (future scope).
 
