@@ -377,3 +377,30 @@ class TestCheckAll:
         violations = check_all(config)
         types = [v.error_type for v in violations]
         assert "unmapped-test" in types
+
+    def test_subdirectory_features_found(
+        self, tmp_project: Path, config: Config
+    ) -> None:
+        write_feature(
+            tmp_project,
+            "cart/shopping",
+            """\
+            Feature: Shopping
+              Scenario: add item
+                Given stuff
+            """,
+        )
+        write_feature(
+            tmp_project,
+            "smoke",
+            """\
+            Feature: Smoke
+              Scenario: everything is fine
+                Given stuff
+            """,
+        )
+
+        generate_stubs("cart/shopping", config)
+        generate_stubs("smoke", config)
+        violations = check_all(config)
+        assert violations == []

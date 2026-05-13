@@ -59,12 +59,22 @@ class TestDeriveFunctionName:
         with pytest.raises(GherkinError, match="not a valid Python identifier"):
             _derive_function_name("hello-world")
 
+    def test_uppercase_lowered(self) -> None:
+        assert _derive_function_name("Add Single Item") == "test_add_single_item"
+
+    def test_mixed_case_lowered(self) -> None:
+        assert _derive_function_name("EvErYtHiNg") == "test_everything"
+
+    def test_case_insensitive_collision(self) -> None:
+        assert _derive_function_name("Test") == _derive_function_name("tEsT")
+
     @given(st.from_regex(r"[a-zA-Z_][a-zA-Z0-9_]*", fullmatch=True))
     @settings(max_examples=50)
     def test_single_word_always_valid(self, word: str) -> None:
         result = _derive_function_name(word)
         assert result.startswith("test_")
         assert result.isidentifier()
+        assert result == result.lower()
 
 
 class TestDeriveFeaturePath:
@@ -391,6 +401,57 @@ class TestParseFeature:
         si = result["test_check"]
         assert all(not isinstance(lit.value, int) for lit in si.literals)
         assert all(not isinstance(lit.value, str) for lit in si.literals)
+
+    def test_background_steps_included_in_scenario_info(
+        self, tmp_project: Path, config: Config
+    ) -> None:
+        fp = write_feature(
+            tmp_project,
+            "bgsteps",
+            """\
+            Feature: BG Steps
+              Background:
+                Given a user exists
+                And the user has an empty cart
+
+              Scenario: add item
+                When the user adds "Widget" to the cart
+                Then the cart contains 1 item
+            """,
+        )
+        result = parse_feature(fp, config)
+        si = result["test_add_item"]
+        assert len(si.steps) == 4
+        assert si.steps[0].text == "a user exists"
+        assert si.steps[1].text == "the user has an empty cart"
+        assert si.steps[2].text == 'the user adds "Widget" to the cart'
+        assert si.steps[3].text == "the cart contains 1 item"
+
+    def test_rule_background_steps_included_in_scenario_info(
+        self, tmp_project: Path, config: Config
+    ) -> None:
+        fp = write_feature(
+            tmp_project,
+            "rulebgsteps",
+            """\
+            Feature: Rule BG Steps
+              Background:
+                Given feature bg step
+
+              Rule: Sub
+                Background:
+                  Given rule bg step
+
+                Scenario: combined
+                  Given scenario step
+            """,
+        )
+        result = parse_feature(fp, config)
+        si = result["test_combined"]
+        assert len(si.steps) == 3
+        assert si.steps[0].text == "feature bg step"
+        assert si.steps[1].text == "rule bg step"
+        assert si.steps[2].text == "scenario step"
 
     def test_rule_background_composes(self, tmp_project: Path, config: Config) -> None:
         fp = write_feature(

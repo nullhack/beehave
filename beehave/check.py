@@ -230,7 +230,7 @@ def check_all(config: Config) -> list[Violation]:
     feature_paths: dict[str, Path] = {}
 
     seen_fn: dict[str, str] = {}
-    for feature_file in sorted(features_dir.glob("*.feature")):
+    for feature_file in sorted(features_dir.rglob("*.feature")):
         try:
             scenarios = parse_feature(feature_file, config, seen_function_names=seen_fn)
         except GherkinError as e:

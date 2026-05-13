@@ -173,6 +173,9 @@ def _write_file(
     config: Config,
 ) -> None:
     test_file.parent.mkdir(parents=True, exist_ok=True)
+    init_file = test_file.parent / "__init__.py"
+    if not init_file.exists():
+        init_file.touch()
 
     existing_functions: set[str] = set()
     existing_strategies: set[str] = set()
