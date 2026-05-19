@@ -159,7 +159,7 @@ Entries are sorted alphabetically.
 
 ## Rule
 
-**Definition:** A named organizational block within a Gherkin Feature that groups related scenarios, with a title that must be unique within its parent feature.
+**Definition:** A named organizational block within a Gherkin Feature that groups related scenarios, with a title that must be globally unique (case-insensitive) across all Feature, Rule, and Scenario titles in the project.
 
 **Aliases:** none
 
@@ -171,7 +171,7 @@ Entries are sorted alphabetically.
 
 ## Scenario
 
-**Definition:** A single test case defined by a title and an ordered sequence of Given/When/Then steps, mapped 1:1 to a test function via deterministic name derivation.
+**Definition:** A single test case defined by a title and an ordered sequence of Given/When/Then steps, mapped 1:1 to a test function via deterministic name derivation. The title must be globally unique (case-insensitive) across all Feature, Rule, and Scenario titles in the project.
 
 **Aliases:** test scenario
 

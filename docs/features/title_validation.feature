@@ -102,6 +102,13 @@ Feature: Title Validation
       Then the violation list has 1 violation
       And the violation has error_type "invalid-scenario-title"
 
+    Scenario: underscore is valid charset
+      Given a feature file "docs/features/underscore.feature"
+      And the feature has title "Login_Flow"
+      And the feature has scenario "user signs in with email"
+      When validate_all_titles is called
+      Then the violation list is empty
+
   Rule: Title Word Count Is Validated
     When any Feature, Rule, or Scenario title has fewer than 2 or more than 6
     words — counted by splitting on whitespace after stripping the Gherkin
