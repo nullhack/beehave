@@ -37,62 +37,67 @@ Feature: Title Validation
     stripping, and are globally unique (case-insensitive), then
     validate_all_titles returns an empty list — zero violations.
 
-    Scenario: single file with all valid titles
-      Given a feature file "docs/features/hive_activity.feature" with
-        Feature title "Hive Activity"
-        And Rule title "Hive defense"
-        And Scenario title "guard bee inspects visitor"
+    Scenario: single valid file
+      Given a feature file "docs/features/hive_activity.feature"
+      And the feature has title "Hive Activity"
+      And the feature has rule "Hive defense"
+      And the rule has scenario "guard bee inspects visitor"
       When validate_all_titles is called
       Then the violation list is empty
 
-    Scenario: two files with unique titles across feature rule and scenario types
-      Given a feature file "docs/features/hive_activity.feature" with
-        Feature title "Hive Activity"
-        And Rule title "Hive defense"
-        And Scenario title "guard bee inspects visitor"
-      And a feature file "docs/features/comb_construction.feature" with
-        Feature title "Comb Construction"
-        And Rule title "Wax Production"
-        And Scenario title "worker builds hexagonal cells"
+    Scenario: two files with valid unique titles
+      Given a feature file "docs/features/hive_activity.feature"
+      And the feature has title "Hive Activity"
+      And the feature has rule "Hive defense"
+      And the rule has scenario "guard bee inspects visitor"
+      And a feature file "docs/features/comb_construction.feature"
+      And the feature has title "Comb Construction"
+      And the feature has rule "Wax Production"
+      And the rule has scenario "worker builds hexagonal cells"
       When validate_all_titles is called
       Then the violation list is empty
 
-    Scenario: title with exactly two words at lower boundary
-      Given a feature file with Feature title "Minimal Title"
-      And Scenario title "simple scenario test"
+    Scenario: minimum word count title
+      Given a feature file "docs/features/minimal.feature"
+      And the feature has title "Minimal Title"
+      And the feature has scenario "simple test"
       When validate_all_titles is called
       Then the violation list is empty
 
-    Scenario: title with exactly six words at upper boundary
-      Given a feature file with Feature title "Long Title Feature"
-      And Scenario title "worker bee deposits nectar into wax cell"
+    Scenario: maximum word count title
+      Given a feature file "docs/features/long_title.feature"
+      And the feature has title "Long Title Feature"
+      And the feature has scenario "worker bee deposits nectar into wax cell"
       When validate_all_titles is called
       Then the violation list is empty
 
   Rule: Title Charset Is Validated
     When any Feature, Rule, or Scenario title contains characters outside the
-    valid charset — Unicode letters, digits, and spaces only — then
+    valid charset — word characters, digits, and spaces only — then
     validate_all_titles produces a violation whose error_type reflects the
     title kind: invalid-feature-title, invalid-rule-title, or
     invalid-scenario-title.
 
-    Scenario: feature title contains a hyphen
-      Given a feature file with Feature title "Hive-Activity"
+    Scenario: feature title with hyphen
+      Given a feature file "docs/features/bad_title.feature"
+      And the feature has title "Hive-Activity"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-feature-title"
       And the violation message indicates invalid characters
 
-    Scenario: rule title contains a period
-      Given a feature file with Feature title "Period Rule"
-      And Rule title "Guard.Inspection"
+    Scenario: rule title with period
+      Given a feature file "docs/features/bad_rule.feature"
+      And the feature has title "Period Rule"
+      And the feature has rule "Guard.Inspection"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-rule-title"
 
-    Scenario: scenario title contains a forward slash
-      Given a feature file with Feature title "Forward Slash Scenario"
-      And Scenario title "guard/bee/inspects"
+    Scenario: scenario title with slash
+      Given a feature file "docs/features/bad_scenario.feature"
+      And the feature has title "Forward Slash Scenario"
+      And the feature has scenario "guard/bee/inspects"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-scenario-title"
@@ -103,23 +108,26 @@ Feature: Title Validation
     keyword prefix — then validate_all_titles produces a violation whose
     error_type reflects the title kind.
 
-    Scenario: feature title has only one word
-      Given a feature file with Feature title "Activity"
+    Scenario: feature title has one word
+      Given a feature file "docs/features/single_word.feature"
+      And the feature has title "Activity"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-feature-title"
       And the violation message indicates word count
 
     Scenario: rule title has seven words
-      Given a feature file with Feature title "Seven Word Rule"
-      And Rule title "the guards respond to all unknown visitor bees"
+      Given a feature file "docs/features/seven_words.feature"
+      And the feature has title "Seven Word Rule"
+      And the feature has rule "the guards respond to all unknown visitor bees"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-rule-title"
 
-    Scenario: scenario title is empty after keyword strip
-      Given a feature file with Feature title "Empty Scenario"
-      And Scenario title ""
+    Scenario: scenario title is empty string
+      Given a feature file "docs/features/empty_scenario.feature"
+      And the feature has title "Empty Scenario"
+      And the feature has scenario ""
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-scenario-title"
@@ -129,60 +137,64 @@ Feature: Title Validation
     — comparing Feature against Feature, Feature against Rule, Feature against
     Scenario, Rule against Rule, Rule against Scenario, and Scenario against
     Scenario — then validate_all_titles produces a violation for each duplicate
-    whose error_type reflects the tile kind: duplicate-feature-title,
+    whose error_type reflects the title kind: duplicate-feature-title,
     duplicate-rule-title, or duplicate-scenario-title.
 
-    Scenario: two features with case insensitive duplicate feature titles
-      Given a feature file "docs/features/hive_activity.feature" with
-        Feature title "Hive Activity"
-        And Scenario title "guard bee inspects visitor"
-      And a feature file "docs/features/hive_activity_duplicate.feature" with
-        Feature title "hive activity"
-        And Scenario title "forager returns with nectar"
+    Scenario: duplicate feature titles
+      Given a feature file "docs/features/hive_activity.feature"
+      And the feature has title "Hive Activity"
+      And the feature has scenario "guard bee inspects visitor"
+      And a feature file "docs/features/hive_dup.feature"
+      And the feature has title "hive activity"
+      And the feature has scenario "forager returns with nectar"
       When validate_all_titles is called
       Then the violation list has 2 violations
       And one violation has error_type "duplicate-feature-title" for file "hive_activity.feature"
-      And one violation has error_type "duplicate-feature-title" for file "hive_activity_duplicate.feature"
+      And one violation has error_type "duplicate-feature-title" for file "hive_dup.feature"
 
-    Scenario: rule title matches feature title
-      Given a feature file with Feature title "Hive Activity"
-      And Rule title "Hive Activity"
-      And Scenario title "guard bee inspects visitor"
+    Scenario: rule matches feature title
+      Given a feature file "docs/features/rule_feat.feature"
+      And the feature has title "Hive Activity"
+      And the feature has rule "Hive Activity"
+      And the rule has scenario "guard bee inspects visitor"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "duplicate-rule-title"
 
-    Scenario: scenario title matches feature title case insensitively
-      Given a feature file with Feature title "Guard Inspection"
-      And Scenario title "guard inspection"
+    Scenario: scenario matches feature title
+      Given a feature file "docs/features/scenario_feat.feature"
+      And the feature has title "Guard Inspection"
+      And the feature has scenario "guard inspection"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "duplicate-scenario-title"
 
-    Scenario: scenario title matches rule title
-      Given a feature file with Feature title "Hive Activity"
-      And Rule title "Foraging Patterns"
-      And Scenario title "Foraging Patterns"
+    Scenario: scenario matches rule title
+      Given a feature file "docs/features/scenario_rule.feature"
+      And the feature has title "Hive Activity"
+      And the feature has rule "Foraging Patterns"
+      And the rule has scenario "Foraging Patterns"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "duplicate-scenario-title"
 
-    Scenario: two scenarios with case insensitive duplicate
-      Given a feature file with Feature title "Hive Activity"
-      And Scenario title "guard bee inspects visitor"
-      And Scenario title "Guard Bee Inspects Visitor"
+    Scenario: duplicate scenarios
+      Given a feature file "docs/features/dup_scenarios.feature"
+      And the feature has title "Hive Activity"
+      And the feature has scenario "guard bee inspects visitor"
+      And the feature has scenario "Guard Bee Inspects Visitor"
       When validate_all_titles is called
       Then the violation list has 2 violations
       And both violations have error_type "duplicate-scenario-title"
 
-    Scenario: multiple violation types in one validation pass
-      Given a feature file "docs/features/mixed_issues.feature" with
-        Feature title "Hive-Activity"
-        And Rule title "Hive Activity"
-        And Scenario title "forager returns with nectar"
-      And a feature file "docs/features/other.feature" with
-        Feature title "Hive Activity"
-        And Scenario title "other scenario"
+    Scenario: mixed violation types
+      Given a feature file "docs/features/mixed.feature"
+      And the feature has title "Hive-Activity"
+      And the feature has rule "Hive Activity"
+      And the rule has scenario "forager returns with nectar"
+      And a feature file "docs/features/other.feature"
+      And the feature has title "Hive Activity"
+      And the feature has scenario "other scenario"
       When validate_all_titles is called
       Then the violation list has 3 violations
       And one violation has error_type "invalid-feature-title"
@@ -195,10 +207,10 @@ Feature: Title Validation
     alongside scenario-level violations. Title violations are non-warning
     errors and contribute to exit code 1.
 
-    Scenario: check all includes title charset violation with scenario violations
-      Given a feature file "docs/features/bad_title.feature" with
-        Feature title "Bad-Title"
-        And Scenario title "simple scenario"
+    Scenario: check includes title and scenario violations
+      Given a feature file "docs/features/bad_title.feature"
+      And the feature has title "Bad-Title"
+      And the feature has scenario "simple scenario"
       And no matching test file exists for "bad_title"
       When check_all is called
       Then the violation list contains an invalid-feature-title violation for "Bad-Title"
@@ -212,13 +224,13 @@ Feature: Title Validation
     generation is refused with exit code 1, all violations are printed,
     and zero partial output is written to disk.
 
-    Scenario: pre flight fails when any feature has title violation
-      Given a feature file "docs/features/hive_activity.feature" with
-        Feature title "Hive Activity"
-        And Scenario title "guard bee inspects visitor"
-      And a feature file "docs/features/seven_words.feature" with
-        Feature title "seven word title feature file name"
-        And Scenario title "some scenario"
+    Scenario: preflight blocks generation
+      Given a feature file "docs/features/hive_activity.feature"
+      And the feature has title "Hive Activity"
+      And the feature has scenario "guard bee inspects visitor"
+      And a feature file "docs/features/seven_words.feature"
+      And the feature has title "seven word title feature file name"
+      And the feature has scenario "some scenario"
       When generate_stubs is called for "hive_activity.feature"
       Then the process exits with exit code 1
       And the output contains a violation for "seven word title feature file name"
