@@ -1,10 +1,31 @@
 Feature: Status Command
 
+  The `beehave status` command computes and displays the development stage
+  of every feature in the project by synthesizing parsed Gherkin scenarios,
+  discovered test functions, and consistency violation data. Each feature
+  receives a stage label ("broken", "no scenarios", "needs scenarios",
+  "needs tests", "needs bodies", "needs fixes", or "ok") derived
+  deterministically from disk state — no stored state, no caching.
+
+  Serves the Status Reporting bounded context. Key entities: ScenarioStatus,
+  FeatureStatus, StatusReport, OrphanedDir, Collision.
+
   # Constraints:
+  # Technology:
   # - Feature parsing: from beehave.gherkin import parse_feature, detect_empty_rules
   # - Test discovery: from beehave.discover import discover_tests
   # - Consistency checking: from beehave.check import check_pair
   # - CLI integration: status subcommand in cli.py
+  # Quality:
+  # - Correctness: Stage derivation is deterministic — given identical disk state,
+  #   the status command always produces the same stage for each feature.
+  # - Reliability: Zero partial output. Parse errors produce "broken" stage, not
+  #   a crash. The StatusReport always includes every feature in the features_dir.
+  # - Simplicity: Status Reporting imports beehave internal modules (gherkin, discover,
+  #   check) — it is a beehave command, not generated code.
+  # - Composability: The --json output schema (features array, summary object,
+  #   orphaned_directories, collisions) is stable within a major version for external
+  #   tooling consumption.
 
   Background:
     Given a project with features directory "docs/features"
