@@ -1,0 +1,23 @@
+{
+  "walkthrough": 8,
+  "description": "Mixed feature → worst wins",
+  "type": "edge_case",
+  "state": {
+    "feature_file": "docs/features/mixed_status.feature",
+    "scenarios_parsed": {
+      "test_health_check": {"title": "health check", "function_name": "test_health_check", "line": 5},
+      "test_create_user": {"title": "create user", "function_name": "test_create_user", "line": 10},
+      "test_delete_user": {"title": "delete user", "function_name": "test_delete_user", "line": 15}
+    },
+    "discovered_tests": {
+      "test_health_check": {"is_stub": false, "body_name_nodes": ["status"], "body_constant_nodes": ["200"]},
+      "test_create_user": {"is_stub": true, "body": "pass"},
+      "test_delete_user": null
+    },
+    "note": "test_health_check = ok, test_create_user = stub (no body), test_delete_user = unmapped (no test)"
+  },
+  "stimulus": {
+    "call": "beehave.status.compute_feature_status('docs/features/mixed_status.feature')",
+    "contract": "Status Reporting computes scenario statuses, then derives feature stage by worst scenario"
+  }
+}

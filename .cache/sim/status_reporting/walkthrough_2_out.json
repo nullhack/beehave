@@ -1,0 +1,20 @@
+{
+  "walkthrough": 2,
+  "result": {
+    "parse_feature": "returns {} (empty dict, zero scenarios)",
+    "feature_status": {
+      "path": "empty_plan",
+      "title": "Empty Plan",
+      "stage": "no scenarios",
+      "scenarios_total": 0,
+      "scenarios_ok": 0,
+      "scenarios_errors": 0,
+      "scenarios_no_body": 0,
+      "scenarios_no_test": 0,
+      "violations_error_count": 0,
+      "violations_warning_count": 0,
+      "parse_error_message": null,
+      "scenarios": []
+    }
+  }
+}

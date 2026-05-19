@@ -1,0 +1,38 @@
+{
+  "walkthrough": 10,
+  "description": "Tree output with rules",
+  "type": "happy_path",
+  "state": {
+    "feature_file": "docs/features/ecommerce.feature",
+    "feature_title": "Ecommerce",
+    "feature_path": "ecommerce",
+    "stage": "needs fixes",
+    "scenarios_total": 6,
+    "scenarios_ok": 3,
+    "scenarios_errors": 2,
+    "scenarios_no_body": 1,
+    "scenarios_no_test": 0,
+    "rules": [
+      {
+        "title": "Cart operations",
+        "scenarios": [
+          {"title": "add item to cart", "status": "ok", "is_outline": true, "line": 8},
+          {"title": "remove item from cart", "status": "ok", "is_outline": false, "line": 16},
+          {"title": "clear entire cart", "status": "no body", "is_outline": false, "line": 22}
+        ]
+      },
+      {
+        "title": "Checkout flow",
+        "scenarios": [
+          {"title": "checkout with valid payment", "status": "2 errors", "is_outline": false, "line": 30, "violation_codes": ["price", "tax"]},
+          {"title": "checkout with insufficient balance", "status": "ok", "is_outline": false, "line": 36},
+          {"title": "checkout with empty cart", "status": "1 error", "is_outline": false, "line": 42, "violation_codes": ["total"]}
+        ]
+      }
+    ]
+  },
+  "stimulus": {
+    "call": "beehave.status.format_tree(status_report)",
+    "contract": "Rules shown as hierarchy nodes with aggregation of child scenario statuses"
+  }
+}

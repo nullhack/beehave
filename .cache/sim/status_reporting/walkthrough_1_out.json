@@ -1,0 +1,21 @@
+{
+  "walkthrough": 1,
+  "result": {
+    "parse_feature": "raises GherkinError('(1:1): expected: #TagLine, #FeatureLine, #RuleLine, #Comment, #Empty, got ...')",
+    "caught_by": "Status Reporting error handler",
+    "feature_status": {
+      "path": "bad_syntax",
+      "title": "Bad Syntax",
+      "stage": "broken",
+      "scenarios_total": 0,
+      "scenarios_ok": 0,
+      "scenarios_errors": 0,
+      "scenarios_no_body": 0,
+      "scenarios_no_test": 0,
+      "violations_error_count": 0,
+      "violations_warning_count": 0,
+      "parse_error_message": "(1:1): expected: #TagLine, #FeatureLine, #RuleLine, #Comment, #Empty, got 'Scenario bad title syntax'",
+      "scenarios": []
+    }
+  }
+}

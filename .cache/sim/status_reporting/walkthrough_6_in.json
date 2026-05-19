@@ -1,0 +1,23 @@
+{
+  "walkthrough": 6,
+  "description": "Violations → needs fixes",
+  "type": "error_path",
+  "state": {
+    "feature_file": "docs/features/violations_present.feature",
+    "scenarios_parsed": {
+      "test_successful_transfer": {"title": "successful transfer", "function_name": "test_successful_transfer", "line": 5, "placeholders": ["amount"], "literals": ["USD"]},
+      "test_insufficient_funds": {"title": "insufficient funds", "function_name": "test_insufficient_funds", "line": 10, "placeholders": ["amount"], "literals": ["USD"]},
+      "test_zero_amount_transfer": {"title": "zero amount transfer", "function_name": "test_zero_amount_transfer", "line": 15, "placeholders": [], "literals": ["0"]}
+    },
+    "discovered_tests": {
+      "test_successful_transfer": {"is_stub": false, "body_name_nodes": ["amount"], "body_constant_nodes": ["USD"]},
+      "test_insufficient_funds": {"is_stub": false, "body_name_nodes": ["amount"], "body_constant_nodes": []},
+      "test_zero_amount_transfer": {"is_stub": false, "body_name_nodes": [], "body_constant_nodes": ["0"]}
+    },
+    "note": "test_insufficient_funds is missing the 'USD' literal in its body → missing-literal violation"
+  },
+  "stimulus": {
+    "call": "beehave.status.compute_feature_status('docs/features/violations_present.feature')",
+    "contract": "Status Reporting calls check_pair() for each mapped non-stub scenario"
+  }
+}

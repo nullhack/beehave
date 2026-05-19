@@ -1,0 +1,23 @@
+{
+  "walkthrough": 7,
+  "description": "All passing → ok",
+  "type": "happy_path",
+  "state": {
+    "feature_file": "docs/features/all_passing.feature",
+    "scenarios_parsed": {
+      "test_validate_email": {"title": "validate email", "function_name": "test_validate_email", "line": 5, "placeholders": ["address"], "literals": ["valid"]},
+      "test_validate_phone": {"title": "validate phone", "function_name": "test_validate_phone", "line": 10, "placeholders": ["number"], "literals": ["+1"]},
+      "test_reject_empty_input": {"title": "reject empty input", "function_name": "test_reject_empty_input", "line": 15, "placeholders": [], "literals": []}
+    },
+    "discovered_tests": {
+      "test_validate_email": {"is_stub": false, "body_name_nodes": ["address"], "body_constant_nodes": ["valid"]},
+      "test_validate_phone": {"is_stub": false, "body_name_nodes": ["number"], "body_constant_nodes": ["+1"]},
+      "test_reject_empty_input": {"is_stub": false, "body_name_nodes": [], "body_constant_nodes": []}
+    },
+    "note": "All 3 scenarios are non-stub with zero violations"
+  },
+  "stimulus": {
+    "call": "beehave.status.compute_feature_status('docs/features/all_passing.feature')",
+    "contract": "Status Reporting computes scenario statuses, all ok → feature stage = 'ok'"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "walkthrough": 5,
+  "result": {
+    "scenario_statuses": [
+      {"title": "add item", "status": "no body", "is_stub": true, "violations": []},
+      {"title": "remove item", "status": "no body", "is_stub": true, "violations": []},
+      {"title": "clear cart", "status": "no body", "is_stub": true, "violations": []}
+    ],
+    "feature_status": {
+      "path": "all_stubs",
+      "title": "All Stubs",
+      "stage": "needs bodies",
+      "scenarios_total": 3,
+      "scenarios_ok": 0,
+      "scenarios_errors": 0,
+      "scenarios_no_body": 3,
+      "scenarios_no_test": 0,
+      "violations_error_count": 0,
+      "violations_warning_count": 0,
+      "parse_error_message": null,
+      "scenarios": "..."
+    }
+  }
+}

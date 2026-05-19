@@ -1,0 +1,15 @@
+{
+  "walkthrough": 10,
+  "result": {
+    "tree_output": "needs fixes     ecommerce (Ecommerce)\n  1 no body, 2 errors  ├── Cart operations\n  ok                │   ├── add item to cart              (3 ex)\n  ok                │   ├── remove item from cart\n  no body           │   └── clear entire cart\n  2 errors, 1 ok    └── Checkout flow\n  2 errors              ├── checkout with valid payment    price, tax\n  ok                    ├── checkout with insufficient balance\n  1 error               └── checkout with empty cart        total\n",
+    "format_rules_applied": [
+      "Feature heading shows stage label (14-char column) + slug + (Title)",
+      "Rule nodes show worst status aggregated from children (e.g. '1 no body, 2 errors')",
+      "Rule nodes use tree characters (├──, └──) connecting to parent feature",
+      "Scenario nodes use tree characters connecting to parent rule",
+      "Scenario Outlines show example count in parens: '(3 ex)'",
+      "Failing scenarios show violation codes inline after title",
+      "ok features/scenarios show status 'ok' aligned in label column"
+    ]
+  }
+}

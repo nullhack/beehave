@@ -1,0 +1,24 @@
+{
+  "walkthrough": 4,
+  "result": {
+    "scenario_statuses": [
+      {"title": "login with valid credentials", "status": "ok", "is_stub": false, "violations": []},
+      {"title": "login with expired token", "status": "ok", "is_stub": false, "violations": []},
+      {"title": "login with empty password", "status": "no test", "is_stub": false, "violations": []}
+    ],
+    "feature_status": {
+      "path": "partial_mapping",
+      "title": "Partial Mapping",
+      "stage": "needs tests",
+      "scenarios_total": 3,
+      "scenarios_ok": 2,
+      "scenarios_errors": 0,
+      "scenarios_no_body": 0,
+      "scenarios_no_test": 1,
+      "violations_error_count": 0,
+      "violations_warning_count": 0,
+      "parse_error_message": null,
+      "scenarios": "..."
+    }
+  }
+}

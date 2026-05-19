@@ -1,0 +1,31 @@
+{
+  "walkthrough": 6,
+  "result": {
+    "check_pair_results": {
+      "test_successful_transfer": [],
+      "test_insufficient_funds": [
+        {"path": "tests/features/violations_present/default_test.py", "line": 10, "error_type": "missing-literal", "message": "literal 'USD' not found", "is_warning": false}
+      ],
+      "test_zero_amount_transfer": []
+    },
+    "scenario_statuses": [
+      {"title": "successful transfer", "status": "ok", "is_stub": false, "violations": []},
+      {"title": "insufficient funds", "status": "1 error", "is_stub": false, "violations": [{"error_type": "missing-literal", "message": "literal 'USD' not found"}]},
+      {"title": "zero amount transfer", "status": "ok", "is_stub": false, "violations": []}
+    ],
+    "feature_status": {
+      "path": "violations_present",
+      "title": "Violations Present",
+      "stage": "needs fixes",
+      "scenarios_total": 3,
+      "scenarios_ok": 2,
+      "scenarios_errors": 1,
+      "scenarios_no_body": 0,
+      "scenarios_no_test": 0,
+      "violations_error_count": 1,
+      "violations_warning_count": 0,
+      "parse_error_message": null,
+      "scenarios": "..."
+    }
+  }
+}
