@@ -122,7 +122,7 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 |-------|------|----------|-------------|
 | path | str | Yes | File path where violation occurred |
 | line | int | Yes | Line number (0 = unknown) |
-| error_type | str | Yes | One of: unmapped-scenario, unmapped-test, missing-placeholder, missing-literal, example-mismatch, misplaced-test |
+| error_type | str | Yes | One of: unmapped-scenario, unmapped-test, missing-placeholder, missing-literal, example-mismatch, misplaced-test, invalid-feature-title, invalid-rule-title, invalid-scenario-title, duplicate-feature-title, duplicate-rule-title, duplicate-scenario-title |
 | message | str | Yes | Human-readable description |
 | is_warning | bool | Yes | Only misplaced-test is a warning |
 
@@ -142,6 +142,7 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 | Feature Parsing | gherkin-official library for AST parsing | grep import gherkin_official |
 | Feature Parsing | Regular expressions for token extraction | grep re.compile |
 | Feature Parsing | Python keyword/builtin validation | grep keyword.iskeyword |
+| Feature Parsing | Title validation across all .feature files | grep validate_all_titles |
 
 #### Feature Parsing -> Consistency Checking
 
@@ -163,6 +164,17 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 - Payload: {function_name: ScenarioInfo} plus EmptyRuleInfo
 - Response: None
 - Error handling: GherkinError caught (parse_feature), feature marked as broken stage; GherkinError from detect_empty_rules caught, feature treated as "no scenarios"
+- Ownership: Feature Parsing context
+
+#### Feature Parsing -> Title Validation
+
+- Purpose: Validate all .feature file titles for charset, word count, and global uniqueness
+- Trigger: CLI invokes check (check_all) or generate command
+- Mechanism: Direct function call (validate_all_titles returns list[Violation])
+- Pattern: CONFORMIST
+- Payload: list[Violation] with error_type in {invalid-feature-title, invalid-rule-title, invalid-scenario-title, duplicate-feature-title, duplicate-rule-title, duplicate-scenario-title}
+- Response: Empty list if all titles valid
+- Error handling: GherkinError from any .feature file caught by caller
 - Ownership: Feature Parsing context
 
 ### External Contracts
@@ -195,6 +207,28 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 - **Side Effects**: Reads .feature file from disk (lightweight AST traversal — no ScenarioInfo extraction)
 - **Preconditions**: Feature file exists at given path
 
+#### Contract: validate_all_titles(config) -> list[Violation]
+
+- **Actor**: Consistency Checking (check_all), Code Generation (generate_stubs pre-flight)
+- **Trigger**: All .feature file titles in the project must be validated for charset, word count, and uniqueness
+- **Input**: {config: Config}
+- **Output**: list of Violation objects for invalid or duplicate titles; empty list if all titles valid
+- **Errors**:
+  - Gherkin syntax error in any .feature file -> GherkinError (caught by caller, feature treated as broken)
+- **Side Effects**: Reads all .feature files from disk (lightweight AST traversal — extracts only titles, no ScenarioInfo)
+- **Preconditions**: Config is loaded, features_dir exists
+- **Validation Rules**:
+  - Charset: Feature/Rule/Scenario titles must match `[\w\s]+`
+  - Word Count: 2–6 words on title text only (after stripping Gherkin keyword prefix)
+  - Uniqueness: Case-insensitive global comparison across all Feature, Rule, and Scenario titles
+- **Violation Types Produced**:
+  - invalid-feature-title: Feature title fails charset or word count
+  - invalid-rule-title: Rule title fails charset or word count
+  - invalid-scenario-title: Scenario/Scenario Outline title fails charset or word count
+  - duplicate-feature-title: Feature title matches another Feature title (case-insensitive)
+  - duplicate-rule-title: Rule title matches another Rule or any Feature/Scenario title
+  - duplicate-scenario-title: Scenario title matches another Scenario or any Feature/Rule title
+
 ### State Machines
 
 Not applicable — Feature Parsing has no internal state.
@@ -207,6 +241,16 @@ Not applicable — Feature Parsing has no internal state.
 | Feature with no scenarios or rules | `parse_feature()` returns empty dict `{}`; `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=False, rule_titles=())` |
 | Rule with no scenarios | `parse_feature()` produces no ScenarioInfo entries; `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=True, rule_titles=("Rule title", ...))` |
 | GherkinError from detect_empty_rules | Caught by Status Reporting; feature treated as "no scenarios" (conservative fallback) |
+| Feature title invalid (charset) | GherkinError raised by parse_feature; invalid-feature-title Violation by validate_all_titles |
+| Feature title invalid (word count) | validate_all_titles returns invalid-feature-title Violation |
+| Rule title invalid (charset) | GherkinError raised by parse_feature; invalid-rule-title Violation by validate_all_titles |
+| Rule title invalid (word count) | validate_all_titles returns invalid-rule-title Violation |
+| Scenario title invalid (charset) | GherkinError raised by parse_feature; invalid-scenario-title Violation by validate_all_titles |
+| Scenario title invalid (word count) | validate_all_titles returns invalid-scenario-title Violation |
+| Duplicate Feature title | validate_all_titles returns duplicate-feature-title Violation with file paths |
+| Duplicate Rule title | validate_all_titles returns duplicate-rule-title Violation |
+| Duplicate Scenario title | validate_all_titles returns duplicate-scenario-title Violation |
+| Title text extraction ambiguous | validate_all_titles strips Gherkin keyword prefix (Feature:/Rule:/Scenario:/Scenario Outline:) before validation; colons in title text are part of the title |
 
 ### Invariants
 
@@ -216,6 +260,9 @@ Not applicable — Feature Parsing has no internal state.
 - Feature title derivation is deterministic (title slug = lowercase, words joined by underscore)
 - Background steps are merged transparently into every scenario's step list
 - `detect_empty_rules()` makes a single Gherkin AST pass — it does not extract ScenarioInfo or parse step contents
+- `validate_all_titles()` makes a single pass over all .feature files, extracting only titles (Feature, Rule, Scenario) — no ScenarioInfo extraction
+- All title validation is case-insensitive for uniqueness comparison
+- Title word count validation strips the Gherkin keyword prefix before counting — `Feature: Hive Activity` counts 2 words on `Hive Activity`
 
 ---
 
@@ -349,6 +396,7 @@ Not applicable — Checking is stateless.
 |---------|-------------|-------------|
 | Consistency Checking | Feature parsing | grep from beehave.gherkin import |
 | Consistency Checking | Test discovery | grep from beehave.discover import |
+| Consistency Checking | Title validation | grep validate_all_titles |
 
 #### Consistency Checking -> Status Reporting
 
@@ -358,6 +406,16 @@ Not applicable — Checking is stateless.
 - Pattern: CONFORMIST
 - Payload: (ScenarioInfo, TestInfo, Path, Path) -> list[Violation]
 - Response: List of violations (empty if all checks pass), skips checks if test is stub
+- Ownership: Consistency Checking context
+
+#### Feature Parsing -> Consistency Checking (Title Validation)
+
+- Purpose: Validate all .feature file titles for charset, word count, and global uniqueness before scenario-level checks
+- Trigger: CLI invokes check command (check_all)
+- Mechanism: Direct function call (validate_all_titles returns list[Violation])
+- Pattern: CONFORMIST
+- Payload: list[Violation] from validate_all_titles, appended to check_all result
+- Response: Title violations are treated as errors (non-warning), contributing to exit code 1
 - Ownership: Consistency Checking context
 
 ### External Contracts
@@ -388,8 +446,8 @@ Not applicable — Checking is stateless.
 - **Actor**: CLI (beehave check)
 - **Trigger**: Full project check
 - **Input**: {config: Config}
-- **Output**: All violations across all features
-- **Side Effects**: Reads all .feature files, discovers all *_test.py files
+- **Output**: All violations across all features, including title validation violations
+- **Side Effects**: Reads all .feature files, discovers all *_test.py files; calls validate_all_titles() before scenario-level checks
 
 ### Error Handling
 
@@ -399,11 +457,18 @@ Not applicable — Checking is stateless.
 | Stub test with missing literal | No violation |
 | Stub test with example mismatch | No violation |
 | Misplaced test (wrong directory) | Warning only, does not affect exit code |
+| Invalid Feature title (charset or word count) | invalid-feature-title Violation from validate_all_titles |
+| Invalid Rule title (charset or word count) | invalid-rule-title Violation from validate_all_titles |
+| Invalid Scenario title (charset or word count) | invalid-scenario-title Violation from validate_all_titles |
+| Duplicate Feature title | duplicate-feature-title Violation from validate_all_titles |
+| Duplicate Rule title | duplicate-rule-title Violation from validate_all_titles |
+| Duplicate Scenario title | duplicate-scenario-title Violation from validate_all_titles |
 
 ### Invariants
 
 - Stubs are exempt from all body-based violation checks
 - Misplaced-test is the ONLY warning-level violation; all others are errors
+- Title validation violations (invalid-*, duplicate-*) are always errors (not warnings)
 - Exit code 1 when any non-warning violation exists
 - Exit code 0 when only warnings exist
 
@@ -429,6 +494,18 @@ Not applicable — Code Generation produces files, not domain objects.
 | Code Generation | Test discovery | grep from beehave.discover import |
 | Code Generation | Hypothesis imports in generated code | grep import hypothesis |
 | Code Generation | Zero beehave imports in generated code | grep -v import beehave in generated files |
+| Code Generation | Title validation pre-flight | grep validate_all_titles |
+
+#### Feature Parsing -> Code Generation (Title Validation Pre-Flight)
+
+- Purpose: Validate all .feature file titles before generating any stubs
+- Trigger: CLI invokes generate command (before parse_feature)
+- Mechanism: Direct function call (validate_all_titles returns list[Violation])
+- Pattern: CONFORMIST
+- Payload: list[Violation]; if non-empty, generation is refused with exit code 1
+- Response: Generation proceeds only when result is empty
+- Error handling: GherkinError from validate_all_titles caught, generation refused with exit code 2
+- Ownership: Code Generation context
 
 ### External Contracts
 
@@ -438,8 +515,8 @@ Not applicable — Code Generation produces files, not domain objects.
 - **Trigger**: Developer needs test stubs for a feature
 - **Input**: {feature_path: str, config: Config}
 - **Output**: Creates directories and test files on disk
-- **Side Effects**: Creates tests/features/<feature_slug>/ directory, __init__.py, and *_test.py files
-- **Preconditions**: Feature file is valid Gherkin
+- **Side Effects**: Creates tests/features/<feature_slug>/ directory, __init__.py, and *_test.py files; runs validate_all_titles() pre-flight before any file writes
+- **Preconditions**: All .feature files pass title validation (charset, word count, uniqueness); target feature file is valid Gherkin
 
 ### Error Handling
 
@@ -447,12 +524,16 @@ Not applicable — Code Generation produces files, not domain objects.
 |----------|----------|
 | Feature with zero scenarios | Returns without creating anything |
 | Existing non-stub test function | Preserved, new stub appended for new scenarios only |
+| Title validation fails (any .feature file) | SystemExit(1) with violation list printed; zero stubs written |
+| GherkinError during title validation | SystemExit(2); zero stubs written |
 
 ### Invariants
 
 - Generated code imports only from hypothesis — never from beehave
 - Stub body is always `...` (Ellipsis)
 - Strategy resolution order: module-level variable > Examples table type > default config
+- Title validation pre-flight is all-or-nothing: one invalid/duplicate title anywhere blocks all generation
+- Zero partial output: no directories or files are created when pre-flight fails
 
 ---
 
