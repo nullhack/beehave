@@ -8,7 +8,7 @@
 |-----------------|-------------------|---------------------|-------------------|
 | Feature Parsing | Consistency Checking | CONFORMIST | ScenarioInfo consumed as-is |
 | Feature Parsing | Code Generation | CONFORMIST | ScenarioInfo consumed as-is |
-| Feature Parsing | Status Reporting | CONFORMIST | ScenarioInfo consumed as-is |
+| Feature Parsing | Status Reporting | CONFORMIST | ScenarioInfo and EmptyRuleInfo consumed as-is |
 | Test Discovery | Consistency Checking | CONFORMIST | TestInfo consumed as-is |
 | Test Discovery | Code Generation | CONFORMIST | TestInfo consumed as-is |
 | Test Discovery | Status Reporting | CONFORMIST | TestInfo consumed as-is |
@@ -17,7 +17,7 @@
 | Configuration | Test Discovery | OHS | Config provides directory paths only |
 | Configuration | Code Generation | OHS | Config provides default_strategy mapping |
 | Configuration | Status Reporting | OHS | Config provides directory paths |
-| CLI | Feature Parsing | PL | CLI dispatches to parse_feature via cmd_* handlers |
+| CLI | Feature Parsing | PL | CLI dispatches to parse_feature and detect_empty_rules via cmd_* handlers |
 | CLI | Test Discovery | PL | CLI dispatches via cmd_* handlers |
 | CLI | Consistency Checking | PL | CLI dispatches via cmd_* handlers |
 | CLI | Status Reporting | PL | CLI dispatches via cmd_status handler |
@@ -57,6 +57,8 @@ graph TB
 
 Parses Gherkin `.feature` files into structured domain objects. This context owns the canonical representation of a feature: its title, path, background steps, rules, scenarios, placeholders, literals, and examples tables. All downstream contexts consume ScenarioInfo without modification.
 
+In addition to full parsing, this context provides a lightweight `detect_empty_rules()` function that inspects the Gherkin AST for Rule nodes with zero Scenario children — enabling Status Reporting to distinguish "no scenarios" from "needs scenarios" without a full parse.
+
 ### Entities
 
 | Name | Type | Purpose | Aggregate Root? |
@@ -66,6 +68,7 @@ Parses Gherkin `.feature` files into structured domain objects. This context own
 | Placeholder | Value Object | A `<name>` token extracted from step text | — |
 | Literal | Value Object | A numeric or quoted-string token extracted from step text | — |
 | ExamplesTable | Value Object | The Examples data table from a Scenario Outline | — |
+| EmptyRuleInfo | Value Object | Result of lightweight AST inspection: whether a feature has Rules with zero Scenario children, and which ones | — |
 
 ### Relationships
 
@@ -123,6 +126,13 @@ Parses Gherkin `.feature` files into structured domain objects. This context own
 | message | str | Yes | Human-readable description |
 | is_warning | bool | Yes | Only misplaced-test is a warning |
 
+#### EmptyRuleInfo
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| has_empty_rules | bool | Yes | True if any Rule node has zero Scenario children |
+| rule_titles | tuple[str] | Yes | Titles of Rule nodes with zero Scenario children, in file order; empty if none |
+
 ### Integration Points
 
 #### Technology Requirements
@@ -146,13 +156,13 @@ Parses Gherkin `.feature` files into structured domain objects. This context own
 
 #### Feature Parsing -> Status Reporting
 
-- Purpose: Provide parsed scenarios for stage computation
+- Purpose: Provide parsed scenarios for stage computation, and empty-rule detection for disambiguation
 - Trigger: CLI invokes status command
-- Mechanism: Direct function call (parse_feature returns dict[str, ScenarioInfo])
+- Mechanism: Direct function calls (parse_feature returns dict[str, ScenarioInfo]; detect_empty_rules returns EmptyRuleInfo)
 - Pattern: CONFORMIST
-- Payload: {function_name: ScenarioInfo}
+- Payload: {function_name: ScenarioInfo} plus EmptyRuleInfo
 - Response: None
-- Error handling: GherkinError caught, feature marked as broken stage
+- Error handling: GherkinError caught (parse_feature), feature marked as broken stage; GherkinError from detect_empty_rules caught, feature treated as "no scenarios"
 - Ownership: Feature Parsing context
 
 ### External Contracts
@@ -173,6 +183,18 @@ Parses Gherkin `.feature` files into structured domain objects. This context own
 - **Side Effects**: Reads .feature file from disk
 - **Preconditions**: Feature file exists at given path, is valid Gherkin
 
+#### Contract: detect_empty_rules(feature_path) -> EmptyRuleInfo
+
+- **Actor**: Status Reporting
+- **Trigger**: `parse_feature()` returned an empty dict `{}` and Status Reporting needs to determine whether the feature has no scenarios at all or has Rules with zero Scenario children
+- **Input**: {feature_path: Path}
+- **Output**: EmptyRuleInfo with `has_empty_rules: bool` and `rule_titles: tuple[str]`
+- **Errors**:
+  - Gherkin syntax error -> GherkinError (caught by Status Reporting, feature treated as "no scenarios")
+  - File not found -> GherkinError
+- **Side Effects**: Reads .feature file from disk (lightweight AST traversal — no ScenarioInfo extraction)
+- **Preconditions**: Feature file exists at given path
+
 ### State Machines
 
 Not applicable — Feature Parsing has no internal state.
@@ -182,8 +204,9 @@ Not applicable — Feature Parsing has no internal state.
 | Scenario | Response |
 |----------|----------|
 | Invalid Gherkin syntax | GherkinError raised with line number and message |
-| Feature with no scenarios or rules | Returns empty dict `{}` |
-| Rule with no scenarios | Rule is present in Gherkin AST but produces no ScenarioInfo entries |
+| Feature with no scenarios or rules | `parse_feature()` returns empty dict `{}`; `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=False, rule_titles=())` |
+| Rule with no scenarios | `parse_feature()` produces no ScenarioInfo entries; `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=True, rule_titles=("Rule title", ...))` |
+| GherkinError from detect_empty_rules | Caught by Status Reporting; feature treated as "no scenarios" (conservative fallback) |
 
 ### Invariants
 
@@ -192,6 +215,7 @@ Not applicable — Feature Parsing has no internal state.
 - Function names must not be Python keywords or builtins
 - Feature title derivation is deterministic (title slug = lowercase, words joined by underscore)
 - Background steps are merged transparently into every scenario's step list
+- `detect_empty_rules()` makes a single Gherkin AST pass — it does not extract ScenarioInfo or parse step contents
 
 ---
 
@@ -251,7 +275,7 @@ Discovers and analyzes Python test files via AST parsing. Extracts test function
 - Pattern: CONFORMIST
 - Payload: {function_name: TestInfo}
 - Response: None
-- Error handling: SyntaxError caught, file treated as empty
+- Error handling: SyntaxError caught, file treated as empty; all scenarios become unmapped
 - Ownership: Test Discovery context
 
 ### External Contracts
@@ -436,7 +460,7 @@ Not applicable — Code Generation produces files, not domain objects.
 
 ### Context
 
-Computes and displays the development stage of each feature by synthesizing data from Feature Parsing, Test Discovery, and Consistency Checking. Derives stages entirely from disk state — no stored state, no caching. The command is a pure presentation layer with no new parsing or heuristics.
+Computes and displays the development stage of each feature by synthesizing data from Feature Parsing, Test Discovery, and Consistency Checking. Derives stages entirely from disk state — no stored state, no caching. The command is a presentation layer: it reads parsed data and discovered tests, runs consistency checks, and formats results. It uses `detect_empty_rules()` from Feature Parsing as a lightweight fallback when `parse_feature()` returns an empty dict, to distinguish "no scenarios" from "needs scenarios" without duplicating Gherkin parsing logic.
 
 ### Entities
 
@@ -445,6 +469,8 @@ Computes and displays the development stage of each feature by synthesizing data
 | ScenarioStatus | Value Object | Computed status of a single scenario (no test / no body / N errors / ok) | — |
 | FeatureStatus | Value Object | Computed status of a feature across all its scenarios | — |
 | StatusReport | Value Object | Aggregate report of all features, orphaned directories, and collisions | — |
+| OrphanedDir | Value Object | Test directory with no matching .feature file | — |
+| Collision | Value Object | Cross-feature function name collision (warning, does not affect stage) | — |
 
 ### Relationships
 
@@ -498,7 +524,8 @@ Computes and displays the development stage of each feature by synthesizing data
 
 | Context | Requirement | Verification |
 |---------|-------------|-------------|
-| Status Reporting | Feature parsing | grep from beehave.gherkin import |
+| Status Reporting | Feature parsing (parse_feature) | grep from beehave.gherkin import parse_feature |
+| Status Reporting | Feature parsing (detect_empty_rules) | grep from beehave.gherkin import detect_empty_rules |
 | Status Reporting | Test discovery | grep from beehave.discover import |
 | Status Reporting | Consistency checking | grep from beehave.check import check_pair |
 | Status Reporting | CLI integration | grep status in cli.py |
@@ -509,30 +536,41 @@ Computes and displays the development stage of each feature by synthesizing data
 
 - **Actor**: Developer, CI pipeline
 - **Trigger**: CLI invocation
-- **Input**: Optional feature path slug, optional flags (--json, --stage, --no-color, etc.)
+- **Input**: Optional feature path slug, optional flags:
+  - `--json`: Produce machine-readable JSON output with full hierarchy
+  - `--stage`: Show only feature stages (no scenario detail)
+  - `--no-color`: Disable ANSI color codes
+  - `--include-orphaned`: Include orphaned test directories in output
 - **Output**: 
-  - Default: Tree-based hierarchy showing feature/rule/scenario status
-  - JSON: Machine-readable status report with full hierarchy and counts
+  - Default: Tree-based hierarchy showing feature/rule/scenario status with fixed-width status column
+  - `--json`: Machine-readable JSON with `features` array, `orphaned_directories` array, `collisions` array, and `summary` object
+  - `--stage`: Compact listing: one stage label per feature
 - **Exit codes**:
-  - 0: All features ok (or empty, or no features)
-  - 1: At least one feature not ok
-  - 2: Fatal error
-- **Side Effects**: Reads .feature files and test files from disk. No writes.
-- **Preconditions**: Project has a valid Config (features_dir, tests_dir)
+  - 0: All features ok (or project has zero features)
+  - 1: At least one feature not ok (i.e., any feature's stage is not "ok")
+  - 2: Fatal error (features_dir does not exist in config, disk I/O failure)
+- **Side Effects**: Reads .feature files and test files from disk. Reads pyproject.toml for config. No writes.
+- **Preconditions**: Project has a valid Config (features_dir and tests_dir are resolveable paths)
 
 ### Stage Decision Tree
 
+Feature stage is determined by evaluating these conditions in priority order (1 through 7). The first condition whose predicate is satisfied determines the feature stage. Each condition is evaluated across all scenarios in the feature; the worst scenario dictates the outcome.
+
 | Priority | Condition | Stage |
 |----------|-----------|-------|
-| 1 | parse_feature() raises GherkinError | broken |
-| 2 | parse_feature() returns {} (0 scenarios) | no scenarios |
-| 3 | Feature has Rules but every Rule has zero Scenarios | needs scenarios |
-| 4 | Any scenario has no matching test function (unmapped) | needs tests |
+| 1 | `parse_feature()` raises GherkinError | broken |
+| 2 | `parse_feature()` returns `{}` AND `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=False)` | no scenarios |
+| 3 | `parse_feature()` returns `{}` AND `detect_empty_rules()` returns `EmptyRuleInfo(has_empty_rules=True)` | needs scenarios |
+| 4 | Any scenario has no matching test function (unmapped — no TestInfo found) | needs tests |
 | 5 | All scenarios mapped AND any matched test is a stub | needs bodies |
 | 6 | All scenarios mapped, all non-stub, AND any check_pair() violation | needs fixes |
 | 7 | All scenarios mapped, all non-stub, zero violations | ok |
 
+**GherkinError from detect_empty_rules**: If `detect_empty_rules()` raises GherkinError (e.g., syntax error on the lightweight AST pass), the feature is treated conservatively as `no scenarios`. This avoids degrading to `broken` when the full parse already succeeded.
+
 ### Scenario Status Decision Tree
+
+Each scenario receives one of four statuses, computed independently of the feature stage:
 
 | Priority | Condition | Status |
 |----------|-----------|--------|
@@ -561,8 +599,11 @@ needs fixes     hive_activity (Hive Activity)
 - Rule aggregate shows worst child status with counts
 - Scenario Outlines show example count: `(N ex)`
 - Failing scenarios show violation codes inline
+- Features are separated by a blank line
 
 ### Output Format (JSON)
+
+The `--json` flag produces a single JSON object with the following structure. This is the composability surface for external tooling — the schema is stable across minor versions.
 
 ```json
 {
@@ -575,6 +616,9 @@ needs fixes     hive_activity (Hive Activity)
     "scenarios_errors": 1,
     "scenarios_no_body": 1,
     "scenarios_no_test": 0,
+    "parse_error_message": null,
+    "violations_error_count": 2,
+    "violations_warning_count": 0,
     "scenarios": [{
       "title": "guard bee inspects visitor",
       "function_name": "test_guard_bee_inspects_visitor",
@@ -583,13 +627,17 @@ needs fixes     hive_activity (Hive Activity)
       "is_outline": false,
       "line": 23,
       "violations": [
-        {"error_type": "missing-placeholder", "message": "literal 'scent' not found", "line": 23},
-        {"error_type": "missing-literal", "message": "literal 'floral' not found", "line": 23}
+        {"error_type": "missing-placeholder", "message": "placeholder 'scent' not found in test body", "line": 23},
+        {"error_type": "missing-literal", "message": "literal 'floral' not found in test body", "line": 23}
       ]
     }]
   }],
-  "orphaned_directories": [],
-  "collisions": [],
+  "orphaned_directories": [
+    {"path": "tests/features/removed_feature", "test_files": ["default_test.py"]}
+  ],
+  "collisions": [
+    {"function_name": "test_login", "paths": ["tests/features/auth/default_test.py", "tests/features/sso/default_test.py"]}
+  ],
   "summary": {
     "total_features": 2,
     "broken": 0,
@@ -603,22 +651,56 @@ needs fixes     hive_activity (Hive Activity)
 }
 ```
 
+- `orphaned_directories` is empty unless `--include-orphaned` flag is set
+- `collisions` contains cross-feature function name duplicates detected during post-processing
+- `summary` counts are computed across all features
+
+### State Machines
+
+#### Feature Stage Lifecycle
+
+A feature file progresses through stages as development advances. The lifecycle is implicit — stages are always computed from disk state on each `beehave status` run; no state is stored between invocations. The typical progression follows the Stage Decision Tree priority order from most to least severe:
+
+| From Stage | To Stage | Trigger |
+|-----------|----------|---------|
+| (no file) | broken / no scenarios / needs scenarios | Feature file is created and parsed |
+| broken | no scenarios / needs scenarios / needs tests / needs bodies / needs fixes / ok | Parse error is fixed |
+| no scenarios | needs scenarios | Rules are added (still no Scenarios) |
+| no scenarios | needs tests | Scenarios are added to an empty feature |
+| needs scenarios | needs tests | Scenarios are added under existing Rules |
+| needs tests | needs bodies | All scenarios are mapped to stub test functions |
+| needs tests | needs fixes | All scenarios mapped, some with non-stub tests that have violations |
+| needs tests | ok | All scenarios mapped, all non-stub, zero violations |
+| needs bodies | needs fixes | Stub bodies are replaced with implementation that has violations |
+| needs bodies | ok | Stub bodies are replaced with implementation that passes all checks |
+| needs fixes | ok | All violations are resolved |
+| ok | needs tests / needs bodies / needs fixes | Regression: scenarios added or test bodies changed |
+
 ### Error Handling
 
 | Scenario | Response |
 |----------|----------|
-| Parse error in feature | Stage = "broken", error message shown |
-| Feature with no scenarios or rules | Stage = "no scenarios" |
-| Feature with Rules but no Scenarios | Stage = "needs scenarios" |
+| Parse error in feature (GherkinError from parse_feature) | Stage = "broken", error message in parse_error_message |
+| Feature with no scenarios or rules (parse_feature returns {}, detect_empty_rules returns has_empty_rules=False) | Stage = "no scenarios" |
+| Feature with Rules but no Scenarios (parse_feature returns {}, detect_empty_rules returns has_empty_rules=True) | Stage = "needs scenarios" |
+| GherkinError from detect_empty_rules | Stage = "no scenarios" (conservative fallback — full parse already succeeded) |
+| Test file with Python syntax error (discover_tests returns {}) | All scenarios unmapped → stage = "needs tests" |
 | Rule aggregate: mixed status | Shows worst status with counts (e.g., "1 error, 1 no body") |
-| Orphaned test directory (no .feature) | Reported in orphaned_directories if --include-orphaned |
+| Orphaned test directory (no matching .feature file) | Reported in orphaned_directories if --include-orphaned; never affects any feature stage |
+| Cross-feature function name collision | Reported in collisions array; warning only, does not affect exit code or any feature stage |
+| Features directory does not exist | Fatal: exit code 2, error message to stderr |
+| Disk I/O failure during feature read | Fatal: exit code 2, error message to stderr |
+| Empty project (zero .feature files) | Exit code 0 (no features to be non-ok), StatusReport with no features |
 
 ### Invariants
 
-- Stage is always computed from disk state, never stored
-- Parse errors are first-class stages, not side-channel stderr
-- Warnings (misplaced tests, name collisions) do not affect stage
-- Exit codes mirror beehave check: 0 = clean, 1 = work to do, 2 = fatal
+- **Correctness**: Feature stage is determined by evaluating the Stage Decision Tree conditions in priority order (1 through 7). The first condition whose predicate is satisfied by any scenario determines the feature stage. Given the same disk state, the same stage is always produced — stage derivation is deterministic.
+- **Reliability**: Zero partial output. If any feature parse fails (GherkinError), that feature gets `broken` stage — not a crash. The StatusReport is always complete: every feature in the features directory appears in the output, even if some are broken. If the features_dir itself is missing or unreadable, the command exits 2 without producing partial output.
+- **Simplicity**: Status Reporting imports from beehave internally (gherkin, discover, check). This is expected — it is a beehave command, not generated code.
+- **Composability**: The `--json` output is the composability surface for external tooling (CI systems, dashboards, editors). The JSON schema (features array, summary object, orphaned_directories array, collisions array) is stable within a major version. Machine consumers should parse the JSON output, not the human-readable tree.
+- **Stage Immutability**: Parse errors are first-class stages, not side-channel stderr output. A broken feature contributes to the StatusReport and exits 1 (not 2) because the project may still have useful work to do on other features.
+- **Warning Isolation**: Warnings (misplaced tests from check_pair, cross-feature name collisions from post-processing) do not affect feature stage or exit code. They are informational only.
+- **Exit Code Semantics**: Exit 0 when all features are ok (or zero features). Exit 1 when at least one feature is not ok. Exit 2 on fatal errors (config missing, I/O failure). This mirrors `beehave check` semantics.
 
 ---
 
@@ -651,13 +733,17 @@ Not applicable — CLI is a dispatch layer.
 | check | feature (optional) | Consistency Checking |
 | clean | feature (required), --force | Cleanup |
 | list | --verbose | Status Reporting (existing list command) |
-| status | feature (optional), --json, --stage, --no-color | Status Reporting (new) |
+| status | feature (optional), --json, --stage, --no-color, --include-orphaned | Status Reporting (new) |
 
 #### Exit Code Contract
 
-- Exit 0: No errors (or only warnings)
-- Exit 1: Non-warning violations exist (check) or non-ok features exist (status)
-- Exit 2: Fatal error (config missing, disk I/O failure)
+All beehave commands follow consistent exit code semantics:
+
+| Exit Code | Meaning | When |
+|-----------|---------|------|
+| 0 | Success | No non-warning violations (check), all features ok (status), generation succeeded (generate), cleanup succeeded (clean) |
+| 1 | Work to do | Non-warning violations exist (check), at least one feature not ok (status) |
+| 2 | Fatal error | Config missing/unreadable, features_dir does not exist, disk I/O failure, invalid subcommand |
 
 ### State Machines
 
@@ -667,13 +753,15 @@ Not applicable.
 
 | Scenario | Response |
 |----------|----------|
-| Config file missing | Uses defaults, no error |
+| Config file missing | Uses defaults, no error (features_dir defaults to "docs/features") |
 | Invalid subcommand | argparse shows help, exits 2 |
+| features_dir does not exist | Exit 2 with error to stderr |
 
 ### Invariants
 
-- All commands write to stdout, errors to stderr (except status: parse errors are stdout stages)
+- All commands write to stdout, errors to stderr (except status: parse errors are stdout stages within the StatusReport)
 - Exit code semantics are consistent across all commands
+- Subcommand dispatch is stateless — no stored state between invocations
 
 ---
 

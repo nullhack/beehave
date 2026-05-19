@@ -1,7 +1,7 @@
 Feature: Status Command
 
   # Constraints:
-  # - Feature parsing: from beehave.gherkin import parse_feature
+  # - Feature parsing: from beehave.gherkin import parse_feature, detect_empty_rules
   # - Test discovery: from beehave.discover import discover_tests
   # - Consistency checking: from beehave.check import check_pair
   # - CLI integration: status subcommand in cli.py
@@ -41,9 +41,9 @@ Feature: Status Command
       And scenarios list is empty
 
   Rule: Empty Features Report No Scenarios
-    When a feature file parses successfully but contains zero Scenario or Rule nodes,
-    parse_feature() returns an empty dict. The status command must report stage "no scenarios"
-    with all scenario counts at zero.
+    When a feature file parses successfully into zero ScenarioInfo entries and detect_empty_rules()
+    returns has_empty_rules=False, the status command reports stage "no scenarios" with all
+    scenario counts at zero.
 
     Scenario: feature file with title only and a comment
       Given a feature file "docs/features/placeholder.feature" with content:
@@ -52,7 +52,8 @@ Feature: Status Command
           # Work in progress — no scenarios yet
         """
       When the status command computes the feature status
-      Then the feature stage is "no scenarios"
+      Then detect_empty_rules returns has_empty_rules=False
+      And the feature stage is "no scenarios"
       And scenarios_total is 0
       And scenarios_ok is 0
       And scenarios_no_test is 0
@@ -65,13 +66,13 @@ Feature: Status Command
             Given the system is initialized
         """
       When the status command computes the feature status
-      Then the feature stage is "no scenarios"
+      Then detect_empty_rules returns has_empty_rules=False
+      And the feature stage is "no scenarios"
 
   Rule: Rules Without Scenarios Detected
-    When a feature file has Rule nodes but every Rule contains zero Scenario children,
-    parse_feature() returns an empty dict (no ScenarioInfo entries are produced). The status
-    command must detect this condition — distinct from having no rules at all — and report
-    stage "needs scenarios".
+    When parse_feature() returns an empty dict and detect_empty_rules() returns has_empty_rules=True,
+    the feature has Rule nodes with zero Scenario children. The status command must report
+    stage "needs scenarios", distinct from "no scenarios".
 
     Scenario: feature with rules having no scenario children
       Given a feature file "docs/features/draft_rules.feature" with content:
@@ -81,7 +82,9 @@ Feature: Status Command
           Rule: Authorization rules
         """
       When the status command computes the feature status
-      Then the feature stage is "needs scenarios"
+      Then detect_empty_rules returns has_empty_rules=True
+      And detect_empty_rules returns rule_titles with "Authentication rules", "Authorization rules"
+      And the feature stage is "needs scenarios"
       And scenarios_total is 0
 
   Rule: Unmapped Scenarios Derive Stage
@@ -148,7 +151,7 @@ Feature: Status Command
       And scenarios_ok is 2
 
     Scenario: feature with multiple scenarios having violations
-      Given a feature file "docs/features/multi_viol.fire" with 2 scenarios
+      Given a feature file "docs/features/multi_viol.feature" with 2 scenarios
       And test "test_login" has missing-placeholder violation for "username"
       And test "test_logout" has missing-literal violation for "session"
       When the status command computes the feature status
@@ -278,9 +281,10 @@ Feature: Status Command
       And violations is an empty tuple
 
   Rule: Exit Codes Reflect Overall Status
-    The status command exit code must be consistent with beehave check semantics. Exit 0 when
-    all features are ok or there are no features. Exit 1 when at least one feature is not ok.
-    Exit 2 on fatal errors such as missing configuration or disk I/O failures.
+    The status command exit code must be consistent with beehave check semantics.
+    Exit 0 when all features are ok or there are no features.
+    Exit 1 when at least one feature is not ok.
+    Exit 2 on fatal errors such as missing features directory or disk I/O failure.
 
     Scenario: all features ok exits zero
       Given a project with 2 feature files
@@ -296,8 +300,118 @@ Feature: Status Command
       When the status command runs
       Then the exit code is 1
 
-    Scenario: fatal error exits two
-      Given a project with no pyproject.toml
-      And the features directory does not exist
+    Scenario: broken feature does not cause exit two
+      Given a project with 1 feature file
+      And feature "broken_feature" has parse_error_message "No feature found"
+      And feature "broken_feature" has stage "broken"
+      When the status command runs
+      Then the exit code is 1
+
+    Scenario: features directory missing exits two
+      Given a project with features_dir set to "nonexistent_dir"
+      And the directory "nonexistent_dir" does not exist
       When the status command runs
       Then the exit code is 2
+      And an error message is written to stderr
+
+    Scenario: project with no feature files exits zero
+      Given a project with features directory "docs/features"
+      And the directory contains zero .feature files
+      When the status command runs
+      Then the exit code is 0
+
+  Rule: Orphaned Directories Reported When Flagged
+    When --include-orphaned is passed, the status command reports test directories that
+    have no matching .feature file. Orphaned directories do not affect any feature stage
+    or the exit code.
+
+    Scenario: orphaned directory shown when flag is set
+      Given a test directory "tests/features/removed_feature" exists
+      And the test directory contains "default_test.py"
+      And no feature file "docs/features/removed_feature.feature" exists
+      When the status command runs with --include-orphaned
+      Then the StatusReport orphaned_directories contains an entry with path "tests/features/removed_feature"
+      And the entry test_files includes "default_test.py"
+      And the exit code is not affected by the orphaned directory
+
+    Scenario: orphaned directory not shown without flag
+      Given a test directory "tests/features/removed_feature" exists
+      And no feature file "docs/features/removed_feature.feature" exists
+      When the status command runs without --include-orphaned
+      Then the StatusReport orphaned_directories is empty
+
+  Rule: Cross-Feature Collisions Detected
+    During post-processing across all features, the status command detects test functions
+    with the same name appearing in multiple test files. These collisions are reported as
+    warnings in the StatusReport but do not affect any feature stage or the exit code.
+
+    Scenario: two features produce same function name
+      Given feature "auth" has scenario "login" producing function "test_login"
+      And feature "sso" also has scenario "login" producing function "test_login"
+      When the status command runs
+      Then the StatusReport collisions contains an entry for "test_login"
+      And the entry paths includes "tests/features/auth/default_test.py"
+      And the entry paths includes "tests/features/sso/default_test.py"
+      And the exit code is not affected by the collision
+
+    Scenario: no collisions when function names are unique
+      Given feature "auth" has scenarios producing functions "test_login", "test_logout"
+      And feature "payment" has scenarios producing functions "test_charge", "test_refund"
+      When the status command runs
+      Then the StatusReport collisions is empty
+
+  Rule: JSON Output Is Machine Readable
+    When the --json flag is passed, the status command produces a single JSON object with
+    features array, orphaned_directories array, collisions array, and summary object.
+    The output is valid JSON suitable for consumption by CI systems and dashboards.
+
+    Scenario: JSON output includes full feature hierarchy
+      Given a project with 2 feature files
+      And feature "auth" has stage "ok" with 3 scenarios all ok
+      And feature "payment" has stage "needs fixes" with 2 scenarios
+      When the status command runs with --json
+      Then the output is valid JSON
+      And the JSON has "features" array with 2 entries
+      And the JSON has "summary" object with total_features 2
+      And the JSON summary.ok is 1
+      And the JSON summary.needs_fixes is 1
+      And each feature entry has "scenarios" array with scenario detail
+
+    Scenario: JSON output includes summary counts by stage
+      Given a project with 3 feature files
+      And features have stages "ok", "broken", "needs bodies"
+      When the status command runs with --json
+      Then the JSON summary.broken is 1
+      And the JSON summary.needs_bodies is 1
+      And the JSON summary.ok is 1
+      And all other summary counts are 0
+
+    Scenario: JSON output includes collision and orphan entries
+      Given a project with an orphaned directory "tests/features/old_feature"
+      And a cross-feature collision on function "test_login"
+      When the status command runs with --json and --include-orphaned
+      Then the JSON orphaned_directories is not empty
+      And the JSON collisions is not empty
+
+  Rule: Test Discovery Failure Yields Needs Tests
+    When a test file has a Python syntax error, discover_tests returns an empty dict.
+    The status command treats all scenarios in the corresponding feature as unmapped,
+    resulting in stage "needs tests". This is a graceful degradation — the feature is
+    not marked "broken" because the .feature file itself parsed successfully.
+
+    Scenario: syntax error in test file unmaps all scenarios
+      Given a feature file "docs/features/syntax_error.feature" with 2 scenarios
+      And test file "tests/features/syntax_error/default_test.py" has a Python syntax error
+      When the status command computes the feature status
+      Then discover_tests returns an empty dict
+      And all scenario statuses are "no test"
+      And the feature stage is "needs tests"
+      And scenarios_no_test is 2
+      And scenarios_total is 2
+
+    Scenario: empty test file unmaps all scenarios
+      Given a feature file "docs/features/empty_test.feature" with 1 scenario
+      And test file "tests/features/empty_test/default_test.py" is empty
+      When the status command computes the feature status
+      Then the feature stage is "needs tests"
+      And scenarios_no_test is 1
