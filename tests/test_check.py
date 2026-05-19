@@ -183,8 +183,8 @@ class TestCheckSingle:
             tmp_project,
             "clean",
             """\
-            Feature: Clean
-              Scenario: hello
+            Feature: Clean Check
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -197,18 +197,18 @@ class TestCheckSingle:
             tmp_project,
             "unmapped",
             """\
-            Feature: Unmapped
-              Scenario: exists
+            Feature: Unmapped Check
+              Scenario: exists now
                 Given stuff
             """,
         )
         generate_stubs("unmapped", config)
         write_test(
             tmp_project,
-            "unmapped",
+            "unmapped_check",
             "default_test.py",
             """\
-            def test_exists():
+            def test_exists_now():
                 ...
 
             def test_unmapped_function():
@@ -279,11 +279,11 @@ class TestCheckSingle:
             tmp_project,
             "mv",
             """\
-            Feature: Move
+            Feature: Move Check
               Scenario: top level
                 Given stuff
 
-              Rule: Sub
+              Rule: Sub Rule
                 Scenario: sub scenario
                   Given things
             """,
@@ -293,7 +293,7 @@ class TestCheckSingle:
             tmp_project,
             "mv",
             """\
-            Feature: Move
+            Feature: Move Check
               Scenario: top level
                 Given stuff
 
@@ -313,8 +313,8 @@ class TestCheckSingle:
             tmp_project,
             "rules",
             """\
-            Feature: Rules
-              Rule: Alpha
+            Feature: Rules Check
+              Rule: Alpha Rule
                 Scenario: alpha one
                   Given stuff
             """,
@@ -330,8 +330,8 @@ class TestCheckAll:
             tmp_project,
             "f1",
             """\
-            Feature: F1
-              Scenario: s1
+            Feature: Feature One
+              Scenario: scenario one
                 Given stuff
             """,
         )
@@ -339,8 +339,8 @@ class TestCheckAll:
             tmp_project,
             "f2",
             """\
-            Feature: F2
-              Scenario: s2
+            Feature: Feature Two
+              Scenario: scenario two
                 Given stuff
             """,
         )
@@ -356,7 +356,7 @@ class TestCheckAll:
             tmp_project,
             "cross",
             """\
-            Feature: Cross
+            Feature: Cross Check
               Scenario: cross scenario
                 Given stuff
             """,
@@ -364,7 +364,7 @@ class TestCheckAll:
         generate_stubs("cross", config)
         write_test(
             tmp_project,
-            "cross",
+            "cross_check",
             "default_test.py",
             """\
             def test_cross_scenario():
@@ -385,7 +385,7 @@ class TestCheckAll:
             tmp_project,
             "cart/shopping",
             """\
-            Feature: Shopping
+            Feature: Cart Shopping
               Scenario: add item
                 Given stuff
             """,
@@ -394,7 +394,7 @@ class TestCheckAll:
             tmp_project,
             "smoke",
             """\
-            Feature: Smoke
+            Feature: Smoke Test
               Scenario: everything is fine
                 Given stuff
             """,

@@ -1,3 +1,11 @@
+"""Gherkin feature file parser and title validation.
+
+Parses .feature files into ScenarioInfo objects, extracting steps, placeholders,
+literals, and examples tables. Also provides global title validation that checks
+all feature, rule, and scenario titles for uniqueness, character set, and word
+count constraints.
+"""
+
 from __future__ import annotations
 
 import builtins
@@ -14,6 +22,7 @@ from beehave.models import (
     ParsedStep,
     Placeholder,
     ScenarioInfo,
+    Violation,
 )
 
 _TITLE_RE = re.compile(r"^[\w\s]+$")
@@ -23,7 +32,7 @@ _QUOTED_STRING_RE = re.compile(r"""(?:"([^"]*)"|'([^']*)')""")
 
 
 class GherkinError(Exception):
-    pass
+    """Raised when a feature file is missing, malformed, or has invalid titles."""
 
 
 def _validate_title(title: str, kind: str, context: str = "") -> None:
@@ -164,9 +173,11 @@ def _build_scenario(
     check_numeric: bool,
     check_string: bool,
     seen_fn: dict[str, str],
+    skip_title_validation: bool = False,
 ) -> ScenarioInfo:
     title = sc["name"]
-    _validate_title(title, "Scenario", f"Feature: {feature_title}")
+    if not skip_title_validation:
+        _validate_title(title, "Scenario", f"Feature: {feature_title}")
 
     function_name = _derive_function_name(title)
     if function_name in seen_fn:
@@ -214,6 +225,7 @@ def _collect_scenarios_from_children(
     check_numeric: bool,
     check_string: bool,
     seen_fn: dict[str, str],
+    skip_title_validation: bool = False,
 ) -> list[ScenarioInfo]:
     scenarios: list[ScenarioInfo] = []
     for child in children:
@@ -231,13 +243,15 @@ def _collect_scenarios_from_children(
                 check_numeric=check_numeric,
                 check_string=check_string,
                 seen_fn=seen_fn,
+                skip_title_validation=skip_title_validation,
             )
             scenarios.append(sc)
 
         if "rule" in child:
             rule = child["rule"]
             rule_title = rule["name"]
-            _validate_title(rule_title, "Rule", f"Feature: {feature_title}")
+            if not skip_title_validation:
+                _validate_title(rule_title, "Rule", f"Feature: {feature_title}")
             rp = _derive_rule_path(rule_title) + "_test"
 
             rule_bg: list[ParsedStep] = []
@@ -262,6 +276,7 @@ def _collect_scenarios_from_children(
                         check_numeric=check_numeric,
                         check_string=check_string,
                         seen_fn=seen_fn,
+                        skip_title_validation=skip_title_validation,
                     )
                     scenarios.append(sc)
 
@@ -272,7 +287,31 @@ def parse_feature(
     feature_path: Path,
     config: Config,
     seen_function_names: dict[str, str] | None = None,
+    skip_title_validation: bool = False,
 ) -> dict[str, ScenarioInfo]:
+    """Parse a single .feature file into a dict of ScenarioInfo objects.
+
+    Extracts steps, placeholders, literals, background steps, and examples
+    tables from every scenario and rule-scoped scenario.  Title validation
+    runs by default but can be skipped for the inner parse pass used by
+    ``check_all`` (which already calls ``validate_all_titles`` globally).
+
+    Args:
+        feature_path: Path to the ``.feature`` file.
+        config: The project configuration.
+        seen_function_names: Accumulator that tracks function-name collisions
+            across multiple parse calls.
+        skip_title_validation: When ``True``, per-title validation and duplicate
+            detection inside this parse call are suppressed.
+
+    Returns:
+        A dict mapping function names to ``ScenarioInfo``.
+
+    Raises:
+        GherkinError: If the file does not exist, cannot be parsed, or contains
+            no ``Feature:`` header.
+
+    """
     if not feature_path.exists():
         raise GherkinError(f"Feature file not found: {feature_path}")
 
@@ -288,7 +327,8 @@ def parse_feature(
         raise GherkinError(f"No feature found in {feature_path}")
 
     feature_title = feature["name"]
-    _validate_title(feature_title, "Feature")
+    if not skip_title_validation:
+        _validate_title(feature_title, "Feature")
     feature_path_str = _derive_feature_path(feature_title)
 
     if seen_function_names is None:
@@ -312,6 +352,252 @@ def parse_feature(
         check_numeric=config.background_check_numeric,
         check_string=config.background_check_string,
         seen_fn=seen_function_names,
+        skip_title_validation=skip_title_validation,
     )
 
     return {s.function_name: s for s in scenarios}
+
+
+def _validate_single_title(
+    title: str,
+    kind: str,
+    path: str,
+    line: int,
+    violations: list[Violation],
+) -> bool:
+    """Validate one title against the project rules.
+
+    Rules enforced:
+    1. Title must be non-empty after stripping.
+    2. Title must match ``_TITLE_RE`` (Unicode letters, digits, spaces only).
+    3. Title must contain 2-6 words.
+
+    Args:
+        title: The raw title string from the feature file.
+        kind: One of ``"feature"``, ``"rule"``, ``"scenario"``.
+        path: The feature file path (for error reporting).
+        line: The source line number (for error reporting).
+        violations: Mutable list that receives ``Violation`` objects for
+            every rule that fails.
+
+    Returns:
+        ``True`` if the title passes all checks, ``False`` otherwise.
+
+    """
+    error_type = f"invalid-{kind}-title"
+
+    if not title or not title.strip():
+        violations.append(
+            Violation(
+                path=path,
+                line=line,
+                error_type=error_type,
+                message=f"{kind.capitalize()} title must be non-empty.",
+            )
+        )
+        return False
+
+    if not _TITLE_RE.match(title):
+        violations.append(
+            Violation(
+                path=path,
+                line=line,
+                error_type=error_type,
+                message=(
+                    f"{kind.capitalize()} title '{title}' contains "
+                    f"invalid characters. Only Unicode letters, digits, "
+                    f"and spaces are allowed."
+                ),
+            )
+        )
+        return False
+
+    words = title.split()
+    if len(words) < 2:
+        violations.append(
+            Violation(
+                path=path,
+                line=line,
+                error_type=error_type,
+                message=(
+                    f"{kind.capitalize()} title '{title}' has "
+                    f"{len(words)} word(s). Minimum 2 words required."
+                ),
+            )
+        )
+        return False
+    if len(words) > 6:
+        violations.append(
+            Violation(
+                path=path,
+                line=line,
+                error_type=error_type,
+                message=(
+                    f"{kind.capitalize()} title '{title}' has "
+                    f"{len(words)} words. Maximum 6 words allowed."
+                ),
+            )
+        )
+        return False
+
+    return True
+
+
+def _register_title(
+    title: str,
+    kind: str,
+    path: str,
+    line: int,
+    seen: dict[str, list[tuple[str, str, str, int]]],
+) -> None:
+    """Record a validated title in the case-insensitive duplicate tracker.
+
+    Titles are normalised to lower case for comparison so ``"Hive Activity"``
+    and ``"hive activity"`` map to the same key.
+
+    Args:
+        title: The validated title string.
+        kind: One of ``"feature"``, ``"rule"``, ``"scenario"``.
+        path: The feature file path.
+        line: The source line number.
+        seen: Mutable dict that accumulates title entries keyed by lower-cased
+            title.
+
+    """
+    key = title.strip().lower()
+    seen.setdefault(key, []).append((title.strip(), kind, path, line))
+
+
+def _emit_duplicates(
+    seen: dict[str, list[tuple[str, str, str, int]]],
+    violations: list[Violation],
+) -> None:
+    """Emit duplicate-title violations from the accumulated registry.
+
+    When the same title key is used by more than one entity, a violation is
+    reported for the *lowest-priority* kind (scenario preferred over rule,
+    rule over feature) so that one logical "owner" is considered the
+    original and the others are flagged as duplicates.
+
+    Args:
+        seen: Accumulator dict from ``_register_title``.
+        violations: Mutable list that receives ``Violation`` objects.
+
+    """
+    kind_priority = {"scenario": 0, "rule": 1, "feature": 2}
+
+    for entries in seen.values():
+        if len(entries) > 1:
+            kinds = {kind for _, kind, _, _ in entries}
+            report_kind = min(kinds, key=lambda k: kind_priority[k])
+
+            for title, kind, path, line in entries:
+                if kind != report_kind:
+                    continue
+                violations.append(
+                    Violation(
+                        path=path,
+                        line=line,
+                        error_type=f"duplicate-{kind}-title",
+                        message=(
+                            f"Duplicate {kind} title '{title}' "
+                            f"(case-insensitive match with "
+                            f"'{entries[0][0]}')."
+                        ),
+                    )
+                )
+
+
+def validate_all_titles(config: Config) -> list[Violation]:
+    """Validate all titles across every ``.feature`` file in the project.
+
+    Scans the features directory, extracts every Feature, Rule, and Scenario
+    title, and checks:
+    - Character-set validity (``_TITLE_RE``).
+    - Non-empty requirement.
+    - Word-count bounds (2-6 words).
+    - Case-insensitive uniqueness across the whole project.
+
+    Used as a pre-flight gate in ``generate_stubs`` and as the final step in
+    ``check_all``.
+
+    Args:
+        config: The project configuration.
+
+    Returns:
+        A (possibly empty) list of ``Violation`` objects.  Each violation
+        carries an ``error_type`` of ``invalid-{kind}-title`` or
+        ``duplicate-{kind}-title``.
+
+    """
+    features_dir = Path(config.features_dir)
+    if not features_dir.is_dir():
+        return []
+
+    violations: list[Violation] = []
+    seen: dict[str, list[tuple[str, str, str, int]]] = {}
+
+    for feature_path in sorted(features_dir.rglob("*.feature")):
+        try:
+            content = feature_path.read_text(encoding="utf-8")
+            doc = Parser().parse(content)
+        except Exception as e:
+            line = getattr(e, "line", 0) or 0
+            raise GherkinError(f"{feature_path}:{line}: {e}") from e
+
+        feature = doc.get("feature")
+        if not feature:
+            raise GherkinError(f"No feature found in {feature_path}")
+
+        feature_title = feature["name"]
+        feature_line = feature.get("location", {}).get("line", 1)
+        if _validate_single_title(
+            feature_title, "feature", str(feature_path), feature_line, violations
+        ):
+            _register_title(
+                feature_title, "feature", str(feature_path), feature_line, seen
+            )
+
+        for child in feature.get("children", []):
+            if "rule" in child:
+                rule = child["rule"]
+                rule_title = rule["name"]
+                rule_line = rule.get("location", {}).get("line", 1)
+                if _validate_single_title(
+                    rule_title, "rule", str(feature_path), rule_line, violations
+                ):
+                    _register_title(
+                        rule_title, "rule", str(feature_path), rule_line, seen
+                    )
+                for rc in rule.get("children", []):
+                    if "scenario" in rc:
+                        sc = rc["scenario"]
+                        sc_title = sc["name"]
+                        sc_line = sc.get("location", {}).get("line", 1)
+                        if _validate_single_title(
+                            sc_title,
+                            "scenario",
+                            str(feature_path),
+                            sc_line,
+                            violations,
+                        ):
+                            _register_title(
+                                sc_title,
+                                "scenario",
+                                str(feature_path),
+                                sc_line,
+                                seen,
+                            )
+            elif "scenario" in child:
+                sc = child["scenario"]
+                sc_title = sc["name"]
+                sc_line = sc.get("location", {}).get("line", 1)
+                if _validate_single_title(
+                    sc_title, "scenario", str(feature_path), sc_line, violations
+                ):
+                    _register_title(
+                        sc_title, "scenario", str(feature_path), sc_line, seen
+                    )
+
+    _emit_duplicates(seen, violations)
+    return violations

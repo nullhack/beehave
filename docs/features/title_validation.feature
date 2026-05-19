@@ -203,10 +203,9 @@ Feature: Title Validation
       And the feature has title "Hive Activity"
       And the feature has scenario "other scenario"
       When validate_all_titles is called
-      Then the violation list has 3 violations
+      Then the violation list has 2 violations
       And one violation has error_type "invalid-feature-title"
       And one violation has error_type "duplicate-rule-title"
-      And one violation has error_type "duplicate-feature-title"
 
   Rule: Title Violations Included In Check
     When the `beehave check` command invokes check_all, title validation

@@ -17,7 +17,7 @@ class TestCliGenerate:
             "cli_gen",
             """\
             Feature: CLI Gen
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -37,7 +37,7 @@ class TestCliCheck:
             "cli_chk",
             """\
             Feature: CLI Chk
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -52,7 +52,7 @@ class TestCliCheck:
             "cli_bad",
             """\
             Feature: CLI Bad
-              Scenario: broken
+              Scenario: broken test
                 Given the hive has <amount> nectar
             """,
         )
@@ -65,7 +65,7 @@ class TestCliCheck:
             from hypothesis import given, strategies as st
 
             @given(amount=st.integers())
-            def test_broken(amount):
+            def test_broken_test(amount):
                 assert True
             """,
         )
@@ -81,7 +81,7 @@ class TestCliCheck:
             "cli_all",
             """\
             Feature: CLI All
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -96,10 +96,10 @@ class TestCliCheck:
             "cli_warn",
             """\
             Feature: CLI Warn
-              Scenario: top
+              Scenario: top level
 
-              Rule: Sub
-                Scenario: sub
+              Rule: Sub Rule
+                Scenario: sub level
                   Given stuff
             """,
         )
@@ -109,9 +109,9 @@ class TestCliCheck:
             "cli_warn",
             """\
             Feature: CLI Warn
-              Scenario: top
+              Scenario: top level
 
-              Scenario: sub
+              Scenario: sub level
                 Given stuff
             """,
         )
@@ -128,7 +128,7 @@ class TestCliClean:
             "cli_cln",
             """\
             Feature: CLI Cln
-              Scenario: keep
+              Scenario: keep me
                 Given stuff
             """,
         )
@@ -138,7 +138,7 @@ class TestCliClean:
             "cli_cln",
             "default_test.py",
             """\
-            def test_keep():
+            def test_keep_me():
                 ...
 
             def test_unmapped():
@@ -161,7 +161,7 @@ class TestCliList:
             "list1",
             """\
             Feature: List One
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -170,7 +170,7 @@ class TestCliList:
             "list2",
             """\
             Feature: List Two
-              Scenario: world
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -187,7 +187,7 @@ class TestCliList:
             "lv",
             """\
             Feature: List Verbose
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )
@@ -212,7 +212,7 @@ class TestCliList:
             "nested/inner",
             """\
             Feature: Nested Inner
-              Scenario: hello
+              Scenario: hello world
                 Given stuff
             """,
         )

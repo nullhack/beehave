@@ -1,3 +1,10 @@
+"""Feature-to-test consistency checker.
+
+Verifies that every scenario has a matching test function with the correct
+placeholders, literals, and example-table bijection.  Also runs global title
+validation across all ``.feature`` files.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -9,7 +16,7 @@ from beehave.discover import (
     discover_tests,
     discover_tests_dir_with_paths,
 )
-from beehave.gherkin import GherkinError, parse_feature
+from beehave.gherkin import GherkinError, parse_feature, validate_all_titles
 from beehave.models import ScenarioInfo, TestInfo, Violation, coerce_example_value
 
 
@@ -120,6 +127,23 @@ def check_pair(
     test_path: str,
     feature_path: str,
 ) -> list[Violation]:
+    """Check a single scenario against its test function.
+
+    Validates that the test exists, that every Gherkin placeholder appears in
+    the test body, that every string/numeric literal in the test has a
+    corresponding Gherkin step token, and that ``@example`` decorators match
+    Examples table rows.
+
+    Args:
+        si: Parsed scenario information.
+        ti: Discovered test info, or ``None`` if no test was found.
+        test_path: Path to the test file (for error reporting).
+        feature_path: Path to the feature file (for error reporting).
+
+    Returns:
+        A list of ``Violation`` objects (empty if everything matches).
+
+    """
     violations: list[Violation] = []
 
     if ti is None:
@@ -177,6 +201,19 @@ def check_single(
     feature_path: Path,
     config: Config,
 ) -> list[Violation]:
+    """Check a single feature file against its test directory.
+
+    Parses the feature, discovers the corresponding test files, and runs
+    ``check_pair`` for every scenario.
+
+    Args:
+        feature_path: Path to a ``.feature`` file.
+        config: The project configuration.
+
+    Returns:
+        A list of ``Violation`` objects.
+
+    """
     try:
         scenarios = parse_feature(feature_path, config)
     except GherkinError as e:
@@ -218,6 +255,20 @@ def check_single(
 
 
 def check_all(config: Config) -> list[Violation]:
+    """Run the full project-wide consistency check.
+
+    Parses every ``.feature`` file, discovers every test function, and then
+    for each scenario verifies placeholder coverage, literal mapping, example
+    bijection, file placement, and orphan tests.  Finally runs
+    ``validate_all_titles`` to catch title-level problems.
+
+    Args:
+        config: The project configuration.
+
+    Returns:
+        A consolidated list of every ``Violation`` found.
+
+    """
     features_dir = Path(config.features_dir)
     if not features_dir.exists():
         print(
@@ -232,7 +283,12 @@ def check_all(config: Config) -> list[Violation]:
     seen_fn: dict[str, str] = {}
     for feature_file in sorted(features_dir.rglob("*.feature")):
         try:
-            scenarios = parse_feature(feature_file, config, seen_function_names=seen_fn)
+            scenarios = parse_feature(
+                feature_file,
+                config,
+                seen_function_names=seen_fn,
+                skip_title_validation=True,
+            )
         except GherkinError as e:
             print(f"Error: {e}", file=sys.stderr)
             continue
@@ -277,5 +333,7 @@ def check_all(config: Config) -> list[Violation]:
                         is_warning=True,
                     )
                 )
+
+    violations.extend(validate_all_titles(config))
 
     return violations

@@ -1,3 +1,10 @@
+"""Test stub generator.
+
+Reads a ``.feature`` file and produces corresponding pytest-beehave test stubs,
+complete with Hypothesis strategies inferred from Examples tables and Gherkin
+placeholders.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -8,7 +15,7 @@ from pathlib import Path
 
 from beehave.config import Config
 from beehave.discover import discover_tests
-from beehave.gherkin import GherkinError, parse_feature
+from beehave.gherkin import GherkinError, parse_feature, validate_all_titles
 from beehave.models import ExamplesTable, ScenarioInfo, coerce_example_value
 
 
@@ -239,6 +246,29 @@ def generate_stubs(
     feature_path: str,
     config: Config,
 ) -> None:
+    """Generate test stubs for a feature file.
+
+    Runs ``validate_all_titles`` as a pre-flight gate: if any title in the
+    project is invalid or duplicated, generation is refused.  Then parses the
+    requested feature, builds import blocks, infers Hypothesis strategies from
+    Examples tables and Gherkin placeholders, and writes the test stubs to
+    ``tests/features/<feature_path>/``.
+
+    Args:
+        feature_path: The feature file stem (e.g. ``"hive_activity"``).
+        config: The project configuration.
+
+    Raises:
+        SystemExit: When pre-flight title validation fails or the feature file
+            does not exist.
+
+    """
+    violations = validate_all_titles(config)
+    if violations:
+        for v in violations:
+            print(str(v), file=sys.stderr)
+        raise SystemExit(1)
+
     fpath = Path(config.features_dir) / f"{feature_path}.feature"
     if not fpath.exists():
         print(f"Error: Feature file not found: {fpath}", file=sys.stderr)
