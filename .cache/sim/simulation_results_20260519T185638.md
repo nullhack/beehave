@@ -65,9 +65,21 @@
 
 | Pain Point | Status | Resolution |
 |------------|--------|------------|
-| PP-1: `[\w\s]+` regex ambiguity | Open | Needs spec clarification — either update regex or update plain-language description |
-| PP-2: Colon in title text vs charset | Open | Needs spec clarification — colon must be either allowed or disallowed, not both |
-| PP-3: Partial failure error behavior | Open | Needs spec clarification — define zero-partial-output behavior explicitly |
+| PP-1: `[\w\s]+` regex ambiguity | **Resolved** | Allow underscores. Regex `[\w\s]+` is correct — `_` is valid in titles. Stakeholder decision: 2026-05-19. |
+| PP-2: Colon in title text vs charset | **Resolved** | Reject colons. Colons in title text are invalid — current charset `[\w\s]+` is correct. Stakeholder decision: 2026-05-19. |
+| PP-3: Partial failure error behavior | **Resolved** | Zero partial output. If GherkinError occurs mid-scan, `validate_all_titles` raises immediately — no violations returned. Stakeholder decision: 2026-05-19. |
+
+### Artifact Update Tasks (for fix-spec)
+
+The following artifacts contain stale content that contradicts the resolved positions above. These are NOT new pain points — they are natural consequences of the stakeholder resolutions and must be updated in fix-spec:
+
+| Artifact | Location | Issue | Resolution Needed |
+|----------|----------|-------|-------------------|
+| `title_validation.feature` | Lines 93-98 | Scenario `scenario title contains an underscore` expects `invalid-scenario-title` for `guard_bee_inspects` | Remove this Scenario or invert it (underscore → no violation). With PP-1 resolved, underscores are valid. |
+| `title_validation.feature` | Lines 72-78 | Rule "Title Charset Is Validated" description says "Unicode letters, digits, and spaces only" | Update to "Unicode letters, digits, underscores, and spaces only" to match resolved PP-1 position. |
+| `domain_spec.md` | Line 95 | ScenarioInfo.title constraint: "Non-empty, letters/digits/spaces only" | Update to "Non-empty, letters/digits/underscores/spaces only" or equivalent. |
+| `domain_spec.md` | Line 220 | Charset rule says `[\w\s]+` but plain-language description needs alignment | Clarify that `\w` intentionally includes underscore — update surrounding prose. |
+| `domain_spec.md` | Line 253 | "colons in title text are part of the title" | Remove or invert — colons are now explicitly invalid (PP-2 resolved). |
 
 ---
 
@@ -80,14 +92,14 @@ Stringing all 6 rules from `title_validation.feature` into an end-to-end validat
 3. **File enumeration:** Discover all `.feature` files in `features_dir`
 4. **Per-file lightweight AST traversal:**
    - Parse each `.feature` via gherkin-official AST
-   - **Parse error** → `GherkinError` raised immediately (zero partial output) → **Rule: (none — error path, PP-3 ambiguous)**
-   - Extract Feature title, Rule titles, Scenario/Scenario Outline titles
-5. **Per-title validation:**
-   - **Charset check:** `[\w\s]+` regex match → **Rule: Title Charset Is Validated** ✓
-     - Hyphen → invalid-feature-title (W8)
-     - Period → invalid-rule-title (W9)
-     - Underscore → invalid-scenario-title (W10, PP-1)
-     - Colon → invalid-feature-title (W16, PP-2 — contradictory)
+    - **Parse error** → `GherkinError` raised immediately (zero partial output) → **(PP-3 resolved: zero partial output, consistent with Reliability)**
+    - Extract Feature title, Rule titles, Scenario/Scenario Outline titles
+ 5. **Per-title validation:**
+    - **Charset check:** `[\w\s]+` regex match → **Rule: Title Charset Is Validated** ✓
+      - Hyphen → invalid-feature-title (W8)
+      - Period → invalid-rule-title (W9)
+      - Underscore → valid (W10, PP-1 resolved: underscore is allowed by `\w`)
+      - Colon → invalid-feature-title (W16, PP-2 resolved: colons rejected)
    - **Word count check:** Split on whitespace, count 2-6 words → **Rule: Title Word Count Is Validated** ✓
      - 1 word → violation (W5)
      - 7 words → violation (W6)
@@ -113,9 +125,18 @@ Stringing all 6 rules from `title_validation.feature` into an end-to-end validat
 |-----------|--------|--------|
 | Happy-path flow: validate_all_titles → output | ✅ Complete | W1-W4 cover valid titles producing empty violations list across single and multi-file scenarios. |
 | External Contract rules → fixture detail | ✅ Complete | Violation shape (path, line, error_type, message, is_warning) defined. All 6 violation types covered. Contract input (config) and output (list[Violation]) clear. |
-| Composed rules → working validation | ⚠️ Blocked by PP-1, PP-2, PP-3 | PP-1 (underscore) and PP-2 (colon) prevent deterministic charset implementation. PP-3 prevents caller from knowing error contract. |
+| Composed rules → working validation | ✅ Complete | PP-1/PP-2/PP-3 all resolved by stakeholder. Charset: underscores allowed, colons rejected. Error behavior: zero partial output on GherkinError. |
 | Cross-context flows complete | ✅ Complete | Feature Parsing→Consistency Checking (W19): title violations in check_all. Feature Parsing→Code Generation (W20): pre-flight blocks generation. Both CONFORMIST, payloads match. |
-| Missing E2E steps | PP-3: Error path undefined | No walkthrough can simulate what happens when file N of M fails — zero output vs partial? |
+| Missing E2E steps | ✅ None | PP-3 resolved: GherkinError → immediate raise, zero partial output. Error path is now defined. |
+
+### New Reviewer Observations (non-blocking)
+
+These are NOT pain points and do NOT block PASS. They are observations for fix-spec attention:
+
+| Obs# | Category | Detail |
+|------|----------|--------|
+| OBS-1 | Missing walkthrough | No walkthrough tests a Scenario Outline title specifically. The .feature file Rules reference "Scenario/Scenario Outline" but all title walkthroughs use `Scenario:` keyword. Keyword stripping is identical for both (`Scenario Outline:` → strip → title), so risk is low. |
+| OBS-2 | Unicode regex gap | `domain_spec.md` line 95 says "Unicode letters" and [[requirements/gherkin]] says "Unicode letters, digits, and spaces." But `[\w\s]+` in Python's default `re` mode matches only ASCII `[a-zA-Z0-9_\s]`. Accented characters (é, ñ, ü) would fail charset despite being "Unicode letters." No walkthrough tested non-ASCII characters. Consider either adding `re.UNICODE` flag or narrowing charset claim to ASCII. |
 
 ---
 
@@ -124,7 +145,7 @@ Stringing all 6 rules from `title_validation.feature` into an end-to-end validat
 | Attribute | Priority | Stressed? | Evidence |
 |-----------|----------|-----------|----------|
 | **Correctness** (deterministic mapping) | Must | ✅ | All validation rules are deterministic: given the same feature files, the same violations are always produced. W1-W2 verify deterministic empty lists; W5-W15 verify deterministic violation production. |
-| **Reliability** (zero partial output) | Must | ⚠️ Partially stressed | W20 verifies generate_stubs zero-partial-output: violation pre-flight → no files created. W17 is ambiguous (PP-3) — error behavior during multi-file scan is undefined. |
+| **Reliability** (zero partial output) | Must | ✅ | W17: GherkinError→immediate raise, zero violations (PP-3 resolved). W20: pre-flight failure → SystemExit(1), zero stubs. Fully stressed. |
 | **Simplicity** (zero beehave imports) | Must | ➖ N/A | Targets Code Generation context, not Feature Parsing. Feature Parsing imports gherkin-official internally as expected. |
 | **Composability** (stable public API) | Should | ✅ | Violation structure (domain_spec.md lines 121-128) is stable; caller API is `validate_all_titles(config) -> list[Violation]`. W19/W20 verify composability from two different callers. |
 
@@ -137,7 +158,7 @@ All 6 Rules in `title_validation.feature` traced to simulation walkthroughs.
 | Rule | Walkthrough(s) | Status |
 |------|---------------|--------|
 | Valid Titles Produce No Violations | W1, W2, W3, W4 | ✓ |
-| Title Charset Is Validated | W8, W9, W10, W16 | ⚠️ (PP-1, PP-2) |
+| Title Charset Is Validated | W8, W9, W10, W16 | ⚠️ PP-1/PP-2 resolved; artifact updates needed (.feature W10 Scenario contradicts resolved underscore position; domain_spec lines 95, 253) |
 | Title Word Count Is Validated | W5, W6, W7 | ✓ |
 | Duplicate Titles Are Detected | W11, W12, W13, W14, W15, W18 | ✓ |
 | Title Violations Included In Check | W19 | ✓ |
@@ -157,28 +178,59 @@ All 6 Rules in `title_validation.feature` traced to simulation walkthroughs.
 
 ## Summary
 
-**Verdict: ⚠️ PASS WITH PAIN POINTS** — 3 pain points identified, all require stakeholder clarification before implementation.
+**Verdict: ✅ PASS** — Adversarial review complete. All 3 original pain points resolved by stakeholder. All 6 reviewer decision criteria met. 2 non-blocking observations recorded for fix-spec attention.
+
+### Review Authority
+
+| Field | Value |
+|-------|-------|
+| Reviewer | R (independent, not the SA who simulated) |
+| Review timestamp | 2026-05-19T19:30:00Z |
+| Review iteration | 1 of 5 |
+| Stance | Adversarial — actively searched for missed scenarios, invalid pain points, cross-document contradictions |
 
 ### Decision Criteria
 
 | # | Criterion | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | Zero unresolved pain points | ❌ | 3 open pain points: PP-1 (underscore regex ambiguity), PP-2 (colon contradiction), PP-3 (error behavior ambiguity). All need spec-level clarification. |
-| 2 | Entity coverage | ✅ | Violation entity (all 6 error_type values) covered. ScenarioInfo, Config, Feature, Rule, Scenario titles all exercised. |
-| 3 | Integration point coverage | ✅ | Feature Parsing→Consistency Checking (W19) and Feature Parsing→Code Generation (W20) both covered with success and failure scenarios. |
-| 4 | Quality attribute coverage | ⚠️ | Correctness stressed (W1-W18). Reliability partially stressed (W20, but PP-3 blocks W17). Simplicity N/A. Composability stressed (W19-W20). |
-| 5 | Rule quality (6 rules) | ✅ | All 6 rules are BDD-testable with concrete Example scenarios. Traceable to walkthroughs. No contradictions between rules. Word count and charset rules fully covered. |
-| 6 | Cross-context consistency | ✅ | Both integration points (check_all, generate_stubs pre-flight) have matching payload shapes. CONFORMIST patterns verified. |
+| 1 | Zero unresolved pain points | ✅ | PP-1, PP-2, PP-3 all resolved by stakeholder (2026-05-19). 0 unresolved. |
+| 2 | Entity coverage | ✅ | Violation (6 error_types), Config, Feature/Rule/Scenario titles all exercised across happy/edge/error paths. Minor gap: no Scenario Outline title walkthrough (OBS-1, low risk). |
+| 3 | Integration point coverage | ✅ | Feature Parsing→Consistency Checking and Feature Parsing→Code Generation both covered with success and failure scenarios. GherkinError propagation architecturally consistent. |
+| 4 | Quality attribute coverage | ✅ | Correctness: deterministic mapping (W1-W18). Reliability: zero partial output (W17, W20). Simplicity: N/A. All Must-priority attributes stressed. |
+| 5 | Rule quality (6 rules) | ✅ | All 6 rules specific, BDD-testable, traceable to walkthroughs (100% provenance), no rule-to-rule contradictions. ⚠️ Rule "Title Charset Is Validated" Scenario W10 needs update to match PP-1 resolution (artifact stale, not a new pain point). |
+| 6 | Cross-context consistency | ✅ | Both integration points have matching CONFORMIST payloads. Bilateral contracts verified. |
+
+### Cross-Document Consistency (Reconciliation Check)
+
+| Check | Documents | Status | Detail |
+|-------|-----------|--------|--------|
+| domain_spec ↔ glossary | Feature/Rule/Scenario/Scenario Outline terms | ✅ | Glossary definitions (lines 78, 160, 172, 184) align with domain_spec usage. |
+| domain_spec ↔ feature | validate_all_titles contract, error types, charset, word count | ⚠️ | Feature file W10 Scenario (underscore→violation) contradicts PP-1 resolution. domain_spec line 253 contradicts PP-2 resolution. Fix-spec will update both. |
+| glossary ↔ feature | "Titles must contain ONLY" vs resolved position | ⚠️ | Glossary for Feature (line 78) says "globally-unique title" but charset is in domain_spec. [[requirements/gherkin]] says "Unicode letters, digits, and spaces only" — needs update for underscores per PP-1. |
+| product_definition ↔ scope | Title validation within beehave scope | ✅ | Title validation is a beehave check, not a test runner/framework — within scope. |
 
 ### Counts
 
 - Total walkthroughs: 20
 - Rules with provenance: 6/6 (100%)
-- Pain points: 3 (all open)
-- Pain point categories: 1 ambiguous, 1 contradictory, 1 ambiguous
+- Pain points: 3 (all resolved by stakeholder)
+- New observations: 2 (non-blocking, for fix-spec attention)
+- E2E completeness: 4/4 criteria passed (was 3/4 with PP-3 blocking; now 4/4)
 
-### Non-Blocking Observations
+### Non-Blocking Observations (from original simulation, still valid)
 
 - The Feature feature file title "Title Validation" has 2 words ✓, unique across all .feature files ✓, and uses only letters and spaces ✓.
 - All Rule titles are 2-6 words and unique within the feature file.
 - The existing `hive_activity.feature` uses `Scenario:` and `Scenario Outline:` keywords. The title_validation.feature follows the same convention for consistency within the project, even though [[requirements/gherkin]] recommends `Example:`.
+
+### Artifact Update Tasks for Fix-Spec
+
+The following must be updated in fix-spec to align artifacts with stakeholder resolutions:
+
+1. **`title_validation.feature` lines 93-98**: Remove or invert Scenario "scenario title contains an underscore" — underscore is now valid.
+2. **`title_validation.feature` lines 72-78**: Update Rule description to say "Unicode letters, digits, underscores, and spaces only."
+3. **`domain_spec.md` line 95**: Update ScenarioInfo.title constraint to allow underscores.
+4. **`domain_spec.md` line 220**: Update charset prose to clarify `\w` intentionally includes underscore.
+5. **`domain_spec.md` line 253**: Remove or invert "colons in title text are part of the title."
+6. **Consider OBS-1**: Add Scenario Outline title variant to one existing walkthrough or create a new W21.
+7. **Consider OBS-2**: Clarify whether `\w` matches Unicode or ASCII letters (add `re.UNICODE` flag or narrow claim).
