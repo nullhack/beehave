@@ -1,0 +1,16 @@
+{
+  "walkthrough": 12,
+  "result": {
+    "validate_all_titles": "returns list with 1 violation",
+    "violations": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "line": 8,
+        "error_type": "duplicate-rule-title",
+        "message": "Rule title 'Hive Activity' is duplicated in Feature title at line 1",
+        "is_warning": false
+      }
+    ],
+    "note": "Rule title matching Feature title → duplicate-rule-title. Cross-type comparison: Rule vs Feature titles."
+  }
+}

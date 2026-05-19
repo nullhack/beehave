@@ -1,0 +1,29 @@
+{
+  "walkthrough": 20,
+  "description": "generate_stubs() calls validate_all_titles() as pre-flight — title violations block generation",
+  "type": "integration",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "titles": {
+          "Feature": "Hive Activity",
+          "Scenario": ["guard bee inspects visitor"]
+        }
+      },
+      {
+        "path": "docs/features/seven_words.feature",
+        "titles": {
+          "Feature": "seven word title feature file name",
+          "Scenario": ["some scenario"]
+        }
+      }
+    ],
+    "note": "One file has valid titles, the other has a Feature title with 7 words → word count violation from validate_all_titles(). pre-flight must fail before generating any stubs."
+  },
+  "stimulus": {
+    "call": "generate_stubs('docs/features/hive_activity.feature', config)",
+    "contract": "Code Generation calls validate_all_titles() pre-flight before any file writes. One violation anywhere blocks all generation."
+  }
+}

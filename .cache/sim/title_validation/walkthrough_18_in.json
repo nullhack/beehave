@@ -1,0 +1,30 @@
+{
+  "walkthrough": 18,
+  "description": "File with multiple title issues: one charset violation and one duplicate",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/mixed_issues.feature",
+        "titles": {
+          "Feature": "Hive-Activity",
+          "Rule": ["Hive Activity"],
+          "Scenario": ["forager returns with nectar"]
+        }
+      },
+      {
+        "path": "docs/features/other.feature",
+        "titles": {
+          "Feature": "Hive Activity",
+          "Scenario": ["other scenario"]
+        }
+      }
+    ],
+    "note": "File 1 Feature title 'Hive-Activity' has hyphen (charset violation). File 1 Rule title 'Hive Activity' matches file 2 Feature title 'Hive Activity' (duplicate). File 2 Feature title 'Hive Activity' also has duplicate."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing produces all detected violations — charset, word count, and duplicates — in a single pass"
+  }
+}

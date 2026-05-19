@@ -1,0 +1,23 @@
+{
+  "walkthrough": 19,
+  "description": "check_all() calls validate_all_titles() — title violations included in check output",
+  "type": "integration",
+  "state": {
+    "features_dir": "docs/features",
+    "tests_dir": "tests/features",
+    "files": [
+      {
+        "path": "docs/features/bad_title.feature",
+        "titles": {
+          "Feature": "Bad-Title",
+          "Scenario": ["simple scenario"]
+        },
+        "note": "Feature title 'Bad-Title' has hyphen → charset violation from validate_all_titles()"
+      }
+    ]
+  },
+  "stimulus": {
+    "call": "check_all(config)",
+    "contract": "Consistency Checking calls validate_all_titles() before scenario-level checks, appends title violations to result"
+  }
+}

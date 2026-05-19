@@ -1,0 +1,27 @@
+{
+  "walkthrough": 17,
+  "description": "One valid file and one file with Gherkin syntax error — validate_all_titles handles the error",
+  "type": "error_path",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "titles": {
+          "Feature": "Hive Activity",
+          "Scenario": ["guard bee inspects visitor"]
+        }
+      },
+      {
+        "path": "docs/features/broken.feature",
+        "titles": null,
+        "note": "Unparseable Gherkin — missing colon after Feature keyword causes parse failure"
+      }
+    ],
+    "note": "One broken file cannot be parsed for titles. The contract says Gherkin syntax error → GherkinError, caught by caller."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing reads all .feature files with lightweight AST traversal; GherkinError from any file is caught by caller"
+  }
+}

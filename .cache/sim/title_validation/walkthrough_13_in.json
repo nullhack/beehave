@@ -1,0 +1,22 @@
+{
+  "walkthrough": 13,
+  "description": "Scenario title matches Feature title — cross-type duplicate",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "titles": {
+          "Feature": "Guard Inspection",
+          "Scenario": ["guard inspection"]
+        }
+      }
+    ],
+    "note": "Scenario title 'guard inspection' matches Feature title 'Guard Inspection' case-insensitively. Cross-type duplicate: Scenario vs Feature. duplicate-scenario-title should be produced."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates uniqueness: Scenario duplicate matches any Feature, Rule, or Scenario title"
+  }
+}

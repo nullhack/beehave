@@ -1,0 +1,16 @@
+{
+  "walkthrough": 13,
+  "result": {
+    "validate_all_titles": "returns list with 1 violation",
+    "violations": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "line": 3,
+        "error_type": "duplicate-scenario-title",
+        "message": "Scenario title 'guard inspection' is duplicated in Feature title at line 1",
+        "is_warning": false
+      }
+    ],
+    "note": "Scenario title case-insensitively matching Feature title → duplicate-scenario-title. Cross-type comparison: Scenario vs Feature titles."
+  }
+}

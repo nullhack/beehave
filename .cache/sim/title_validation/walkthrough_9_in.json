@@ -1,0 +1,22 @@
+{
+  "walkthrough": 9,
+  "description": "Rule title with period — invalid charset character",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/period_rule.feature",
+        "titles": {
+          "Feature": "Period Rule",
+          "Rule": ["Guard.Inspection"]
+        }
+      }
+    ],
+    "note": "Rule title 'Guard.Inspection' contains period (.). Charset constraint: [\\w\\s]+ only. Period is not in [\\w\\s]."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates charset: title must match [\\w\\s]+"
+  }
+}

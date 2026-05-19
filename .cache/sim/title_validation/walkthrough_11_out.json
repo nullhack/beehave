@@ -1,0 +1,23 @@
+{
+  "walkthrough": 11,
+  "result": {
+    "validate_all_titles": "returns list with 2 violations (one per duplicate occurrence)",
+    "violations": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "line": 1,
+        "error_type": "duplicate-feature-title",
+        "message": "Feature title 'Hive Activity' is duplicated in docs/features/hive_activity_duplicate.feature",
+        "is_warning": false
+      },
+      {
+        "path": "docs/features/hive_activity_duplicate.feature",
+        "line": 1,
+        "error_type": "duplicate-feature-title",
+        "message": "Feature title 'hive activity' is duplicated in docs/features/hive_activity.feature",
+        "is_warning": false
+      }
+    ],
+    "note": "Case-insensitive duplicate Feature titles across two files → two duplicate-feature-title violations. Both titles flagged."
+  }
+}

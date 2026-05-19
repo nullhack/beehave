@@ -1,0 +1,22 @@
+{
+  "walkthrough": 3,
+  "description": "Feature title with exactly 2 words — minimum word count boundary",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/minimal_title.feature",
+        "titles": {
+          "Feature": "Minimal Title",
+          "Scenario": ["simple scenario test"]
+        }
+      }
+    ],
+    "note": "Feature title 'Minimal Title' = 2 words (split on whitespace after stripping 'Feature:' prefix). Scenario title 'simple scenario test' = 3 words."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates word count: 2-6 words on title text after stripping Gherkin keyword prefix"
+  }
+}

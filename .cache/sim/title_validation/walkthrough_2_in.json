@@ -1,0 +1,31 @@
+{
+  "walkthrough": 2,
+  "description": "Two valid feature files with different titles — all valid charset, word count, and unique",
+  "type": "happy_path",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "titles": {
+          "Feature": "Hive Activity",
+          "Rule": ["Hive defense", "Foraging"],
+          "Scenario": ["guard bee inspects visitor", "forager returns with nectar"]
+        }
+      },
+      {
+        "path": "docs/features/comb_construction.feature",
+        "titles": {
+          "Feature": "Comb Construction",
+          "Rule": ["Wax Production"],
+          "Scenario": ["worker bee builds hexagonal cells"]
+        }
+      }
+    ],
+    "note": "All titles globally unique — no duplicates across Feature, Rule, or Scenario title sets"
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates all .feature file titles for charset, word count, and global uniqueness across all files"
+  }
+}

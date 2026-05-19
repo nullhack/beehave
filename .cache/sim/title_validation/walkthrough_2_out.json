@@ -1,0 +1,8 @@
+{
+  "walkthrough": 2,
+  "result": {
+    "validate_all_titles": "returns empty list",
+    "violations": [],
+    "note": "Two files with globally unique titles — zero charset, word count, or duplicate violations across files"
+  }
+}

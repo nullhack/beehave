@@ -1,0 +1,22 @@
+{
+  "walkthrough": 4,
+  "description": "Scenario title with exactly 6 words — maximum word count boundary",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/long_title.feature",
+        "titles": {
+          "Feature": "Long Title Feature",
+          "Scenario": ["worker bee deposits nectar into wax cell"]
+        }
+      }
+    ],
+    "note": "Scenario title 'worker bee deposits nectar into wax cell' = 6 words (split on whitespace after stripping 'Scenario:' prefix). Feature title 'Long Title Feature' = 3 words."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates word count: 2-6 words on title text after stripping Gherkin keyword prefix"
+  }
+}

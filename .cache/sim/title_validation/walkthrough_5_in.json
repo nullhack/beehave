@@ -1,0 +1,21 @@
+{
+  "walkthrough": 5,
+  "description": "Feature title with 1 word — below minimum word count",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/one_word.feature",
+        "titles": {
+          "Feature": "Activity"
+        }
+      }
+    ],
+    "note": "Feature title 'Activity' = 1 word after stripping 'Feature:' prefix. Boundary condition: below 2-word minimum."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates word count: 2-6 words required"
+  }
+}

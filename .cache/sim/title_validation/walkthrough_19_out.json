@@ -1,0 +1,23 @@
+{
+  "walkthrough": 19,
+  "result": {
+    "check_all": "returns list with title violation + scenario-level violations",
+    "violations": [
+      {
+        "path": "docs/features/bad_title.feature",
+        "line": 1,
+        "error_type": "invalid-feature-title",
+        "message": "Feature title 'Bad-Title' contains invalid characters",
+        "is_warning": false
+      },
+      {
+        "path": "docs/features/bad_title.feature",
+        "line": 3,
+        "error_type": "unmapped-scenario",
+        "message": "scenario 'simple scenario' is not mapped to any test function",
+        "is_warning": false
+      }
+    ],
+    "note": "Title validation violations (invalid-feature-title) and scenario-level violations (unmapped-scenario) are combined in check_all output. Title violations are errors (not warnings) and contribute to exit code 1."
+  }
+}

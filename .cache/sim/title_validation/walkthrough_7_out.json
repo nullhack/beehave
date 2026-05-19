@@ -1,0 +1,16 @@
+{
+  "walkthrough": 7,
+  "result": {
+    "validate_all_titles": "returns list with 1 violation",
+    "violations": [
+      {
+        "path": "docs/features/empty_scenario.feature",
+        "line": 3,
+        "error_type": "invalid-scenario-title",
+        "message": "Scenario title '' has 0 words, must have 2-6 words",
+        "is_warning": false
+      }
+    ],
+    "note": "Empty scenario title → invalid-scenario-title. Word count of 0 is below the 2-word minimum."
+  }
+}

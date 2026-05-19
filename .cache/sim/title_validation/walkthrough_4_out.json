@@ -1,0 +1,8 @@
+{
+  "walkthrough": 4,
+  "result": {
+    "validate_all_titles": "returns empty list",
+    "violations": [],
+    "note": "Scenario title has exactly 6 words — passes word count upper boundary. 6 words is the maximum allowed."
+  }
+}

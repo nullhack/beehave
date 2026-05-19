@@ -1,0 +1,16 @@
+{
+  "walkthrough": 8,
+  "result": {
+    "validate_all_titles": "returns list with 1 violation",
+    "violations": [
+      {
+        "path": "docs/features/hyphen_title.feature",
+        "line": 1,
+        "error_type": "invalid-feature-title",
+        "message": "Feature title 'Hive-Activity' contains invalid characters",
+        "is_warning": false
+      }
+    ],
+    "note": "Feature title with hyphen → invalid-feature-title. Hyphen is not in [\\w\\s] charset."
+  }
+}

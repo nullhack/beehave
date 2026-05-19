@@ -1,0 +1,21 @@
+{
+  "walkthrough": 8,
+  "description": "Feature title with hyphen — invalid charset character",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hyphen_title.feature",
+        "titles": {
+          "Feature": "Hive-Activity"
+        }
+      }
+    ],
+    "note": "Feature title 'Hive-Activity' contains hyphen (-). Charset constraint: [\\w\\s]+ only (Unicode letters, digits, spaces). Hyphen is not in [\\w\\s]."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates charset: title must match [\\w\\s]+"
+  }
+}

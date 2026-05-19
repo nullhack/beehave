@@ -1,0 +1,16 @@
+{
+  "walkthrough": 5,
+  "result": {
+    "validate_all_titles": "returns list with 1 violation",
+    "violations": [
+      {
+        "path": "docs/features/one_word.feature",
+        "line": 1,
+        "error_type": "invalid-feature-title",
+        "message": "Feature title 'Activity' has 1 word, must have 2-6 words",
+        "is_warning": false
+      }
+    ],
+    "note": "Feature title with 1 word → invalid-feature-title. Word count is validated after stripping the Gherkin keyword prefix."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "walkthrough": 15,
+  "description": "Two scenarios in same file with case-insensitive duplicate titles",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/hive_activity.feature",
+        "titles": {
+          "Feature": "Hive Activity",
+          "Scenario": ["guard bee inspects visitor", "Guard Bee Inspects Visitor"]
+        }
+      }
+    ],
+    "note": "Two scenarios with case-insensitive identical titles: 'guard bee inspects visitor' and 'Guard Bee Inspects Visitor'. Same-type duplicate."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates uniqueness: Scenario duplicate matches any Scenario title"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "walkthrough": 10,
+  "description": "Scenario title with underscore — invalid charset character",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/underscore_scenario.feature",
+        "titles": {
+          "Feature": "Underscore Scenario",
+          "Scenario": ["guard_bee_inspects"]
+        }
+      }
+    ],
+    "note": "Scenario title 'guard_bee_inspects' contains underscore (_). Charset constraint: [\\w\\s]+ only. In Python regex, \\w includes underscore! Pain point: does [\\w\\s]+ intentionally allow or disallow underscore?"
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates charset: title must match [\\w\\s]+"
+  }
+}

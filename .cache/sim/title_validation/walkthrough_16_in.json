@@ -1,0 +1,22 @@
+{
+  "walkthrough": 16,
+  "description": "Feature title containing colon in text after keyword prefix",
+  "type": "edge_case",
+  "state": {
+    "features_dir": "docs/features",
+    "files": [
+      {
+        "path": "docs/features/colon_title.feature",
+        "titles": {
+          "Feature": "Config: Strategy Defaults",
+          "Scenario": ["resolves strategy from examples table"]
+        }
+      }
+    ],
+    "note": "Feature title 'Config: Strategy Defaults'. Keyword prefix is 'Feature:'. After stripping, title text is 'Config: Strategy Defaults'. Colons in title text are part of the title per domain_spec.md line 253. Word count: 'Config:' and 'Strategy' and 'Defaults' = 3 words (colon attached to 'Config:' but split on whitespace gives 3 tokens: 'Config:', 'Strategy', 'Defaults'). Actually: splitting on whitespace → ['Config:', 'Strategy', 'Defaults'] → 3 words. Colon is NOT in [\\w\\s]+ charset: ':' is punctuation."
+  },
+  "stimulus": {
+    "call": "validate_all_titles(config)",
+    "contract": "Feature Parsing validates keywords: strips Gherkin prefix, colons in text are part of the title. Charset: [\\w\\s]+"
+  }
+}
