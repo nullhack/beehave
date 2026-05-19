@@ -238,3 +238,39 @@ Entries are sorted alphabetically.
 **Example:** An Examples column containing `1`, `5`, `10` infers an integer strategy; a column containing `"Alice"`, `"Bob"` infers a string strategy.
 
 **Source:** 2026-05-13
+
+---
+
+## Feature Stage
+
+**Definition:** A label computed by `beehave status` for each `.feature` file, derived from the worst status of its constituent scenarios.
+
+**Aliases:** stage
+
+**Example:** A feature with 2 passing scenarios and 1 stub scenario has stage `needs bodies`.
+
+**Source:** 2026-05-19
+
+---
+
+## Scenario Status
+
+**Definition:** A label computed by `beehave status` for each scenario, indicating whether it has a test, whether the test body is implemented, and whether `beehave check` reports any violations.
+
+**Aliases:** status
+
+**Example:** A scenario whose matching test function is a stub has status `no body`.
+
+**Source:** 2026-05-19
+
+---
+
+## Status Report
+
+**Definition:** The aggregate output of `beehave status` containing feature statuses, orphaned test directories, cross-feature function name collisions, and summary counts by stage.
+
+**Aliases:** status output
+
+**Example:** Running `beehave status` produces a tree-based Status Report with one line per feature heading and indented scenario detail.
+
+**Source:** 2026-05-19
