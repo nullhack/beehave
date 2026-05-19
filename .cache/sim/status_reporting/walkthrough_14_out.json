@@ -1,0 +1,21 @@
+{
+  "walkthrough": 14,
+  "result": {
+    "status_report": {
+      "features": [
+        {"path": "login", "stage": "ok", "scenarios_ok": 3, "scenarios_total": 3},
+        {"path": "signup", "stage": "needs tests", "scenarios_no_test": 2, "scenarios_total": 2}
+      ],
+      "summary": {
+        "total_features": 2,
+        "ok": 1,
+        "needs_tests": 1
+      }
+    },
+    "exit_code_logic": "After computing StatusReport, check: do ALL features have stage 'ok'? → NO (signup is 'needs tests') → exit(1)",
+    "exit_code": 1,
+    "stderr": null,
+    "note": "Exit 1 regardless of whether other features are ok. Mirrors beehave check semantics: exit 1 when any non-warning violation exists."
+  },
+  "verification": "PASS — Exit code 1 correctly produced when one feature is not ok. The presence of ok features does not suppress the non-zero exit code."
+}

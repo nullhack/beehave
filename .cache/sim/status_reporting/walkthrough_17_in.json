@@ -1,0 +1,28 @@
+{
+  "walkthrough": 17,
+  "description": "M3: Cross-feature function name collision detected during post-processing",
+  "type": "edge_case",
+  "state": {
+    "project_state": {
+      "features_dir": "docs/features",
+      "features": [
+        {
+          "path": "auth",
+          "title": "Authentication",
+          "scenarios": [{"function_name": "test_login", "title": "login"}, {"function_name": "test_logout", "title": "logout"}]
+        },
+        {
+          "path": "sso",
+          "title": "Single Sign-On",
+          "scenarios": [{"function_name": "test_login", "title": "login"}, {"function_name": "test_sso_redirect", "title": "SSO redirect"}]
+        }
+      ]
+    },
+    "note": "Both auth and sso features have a scenario producing function_name 'test_login'. The ScenarioInfo function names are unique per-feature but collide cross-feature. Collisions are detected during post-processing after all features are computed."
+  },
+  "stimulus": {
+    "call": "beehave status",
+    "contract": "Status Reporting: post-processing collects all ScenarioInfo.function_name across features and detects duplicates. Collision entities added to StatusReport.collisions. Collisions are warnings — they do NOT affect feature stage or exit code.",
+    "question": "Does the status command detect cross-feature function name collisions and report them without affecting exit code or feature stages?"
+  }
+}

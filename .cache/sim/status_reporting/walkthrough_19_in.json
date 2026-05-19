@@ -1,0 +1,17 @@
+{
+  "walkthrough": 19,
+  "description": "M5: Test discovery failure — Python syntax error in test file yields empty dict, all scenarios become unmapped",
+  "type": "error_path",
+  "state": {
+    "feature_file": "docs/features/syntax_error.feature",
+    "feature_content": "Feature: Syntax Error\n  Scenario: valid scenario one\n    Given something\n  Scenario: valid scenario two\n    Given something else\n",
+    "test_file": "tests/features/syntax_error/default_test.py",
+    "test_file_content": "def test_valid_scenario_one(\n    pass\n\ndef test_valid_scenario_two(): ...\n",
+    "note": "Test file has a Python SyntaxError (missing closing parenthesis on line 1). discover_tests() attempts AST parsing and catches SyntaxError. Per Test Discovery error handling (domain_spec.md:308-309): returns empty dict {}."
+  },
+  "stimulus": {
+    "call": "beehave.status.compute_feature_status('docs/features/syntax_error.feature')",
+    "contract": "Status Reporting calls discover_tests() via Test Discovery. When discover_tests returns {} due to syntax error, all scenarios become unmapped. Feature stage must be 'needs tests', NOT 'broken'.",
+    "question": "Does Status Reporting correctly handle the Test Discovery integration failure path, producing 'needs tests' rather than 'broken'?"
+  }
+}

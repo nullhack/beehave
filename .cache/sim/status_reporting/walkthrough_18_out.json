@@ -1,0 +1,66 @@
+{
+  "walkthrough": 18,
+  "result": {
+    "json_output": {
+      "features": [
+        {
+          "path": "auth",
+          "title": "Authentication",
+          "stage": "ok",
+          "scenarios_total": 3,
+          "scenarios_ok": 3,
+          "scenarios_errors": 0,
+          "scenarios_no_body": 0,
+          "scenarios_no_test": 0,
+          "parse_error_message": null,
+          "violations_error_count": 0,
+          "violations_warning_count": 0,
+          "scenarios": [
+            {"title": "login", "function_name": "test_login", "status": "ok", "is_stub": false, "is_outline": false, "line": 5, "violations": []},
+            {"title": "logout", "function_name": "test_logout", "status": "ok", "is_stub": false, "is_outline": false, "line": 12, "violations": []},
+            {"title": "reset password", "function_name": "test_reset_password", "status": "ok", "is_stub": false, "is_outline": false, "line": 19, "violations": []}
+          ]
+        },
+        {
+          "path": "payment",
+          "title": "Payment",
+          "stage": "needs fixes",
+          "scenarios_total": 2,
+          "scenarios_ok": 0,
+          "scenarios_errors": 1,
+          "scenarios_no_body": 1,
+          "scenarios_no_test": 0,
+          "parse_error_message": null,
+          "violations_error_count": 2,
+          "violations_warning_count": 0,
+          "scenarios": [
+            {"title": "process charge", "function_name": "test_process_charge", "status": "2 errors", "is_stub": false, "is_outline": false, "line": 8, "violations": [{"error_type": "missing-placeholder", "message": "placeholder 'price' not found in test body", "line": 8}, {"error_type": "missing-literal", "message": "literal 'approved' not found in test body", "line": 8}]},
+            {"title": "refund", "function_name": "test_refund", "status": "no body", "is_stub": true, "is_outline": false, "line": 18, "violations": []}
+          ]
+        }
+      ],
+      "orphaned_directories": [],
+      "collisions": [],
+      "summary": {
+        "total_features": 2,
+        "broken": 0,
+        "no_scenarios": 0,
+        "needs_scenarios": 0,
+        "needs_tests": 0,
+        "needs_bodies": 0,
+        "needs_fixes": 1,
+        "ok": 1
+      }
+    },
+    "schema_validation": {
+      "top_level_keys": ["features", "orphaned_directories", "collisions", "summary"],
+      "all_present": true,
+      "feature_keys": ["path", "title", "stage", "scenarios_total", "scenarios_ok", "scenarios_errors", "scenarios_no_body", "scenarios_no_test", "parse_error_message", "violations_error_count", "violations_warning_count", "scenarios"],
+      "scenario_keys": ["title", "function_name", "status", "is_stub", "is_outline", "line", "violations"],
+      "summary_keys": ["total_features", "broken", "no_scenarios", "needs_scenarios", "needs_tests", "needs_bodies", "needs_fixes", "ok"]
+    },
+    "exit_code": 1,
+    "note": "Exit code 1 because payment has stage 'needs fixes' (not all features ok). JSON output is stable: features array length matches total_features in summary. Scenario counts sum correctly (auth: 3=3+0+0+0, payment: 2=0+1+1+0)."
+  },
+  "verification": "PASS — JSON output is valid machine-readable with correct structure per domain_spec.md:607-652 schema. Feature-level and scenario-level counts are internally consistent. Summary counts match feature array contents."
+}

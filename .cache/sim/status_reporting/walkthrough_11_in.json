@@ -1,0 +1,15 @@
+{
+  "walkthrough": 11,
+  "description": "PP-1 verify: Feature with title only, no children → detect_empty_rules() returns has_empty_rules=False → no scenarios",
+  "type": "happy_path",
+  "state": {
+    "feature_file": "docs/features/placeholder.feature",
+    "file_content": "Feature: Placeholder\n  # Work in progress — no scenarios yet\n",
+    "note": "Feature file parses successfully via parse_feature() which returns {} (zero ScenarioInfo entries, no scenarios or rules). Status Reporting calls detect_empty_rules() as fallback."
+  },
+  "stimulus": {
+    "call": "beehave.status.compute_feature_status('docs/features/placeholder.feature')",
+    "contract": "Status Reporting calls parse_feature() first, then detect_empty_rules() when parse_feature() returns {}",
+    "question": "Can Status Reporting correctly distinguish 'no scenarios' from 'needs scenarios' given EmptyRuleInfo from detect_empty_rules()?"
+  }
+}

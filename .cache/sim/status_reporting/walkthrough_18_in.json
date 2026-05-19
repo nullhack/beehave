@@ -1,0 +1,39 @@
+{
+  "walkthrough": 18,
+  "description": "M4: JSON output format with full machine-readable hierarchy",
+  "type": "happy_path",
+  "state": {
+    "project_state": {
+      "features_dir": "docs/features",
+      "features": [
+        {
+          "path": "auth",
+          "title": "Authentication",
+          "stage": "ok",
+          "scenarios": [
+            {"title": "login", "function_name": "test_login", "status": "ok", "is_stub": false, "is_outline": false, "line": 5, "violations": []},
+            {"title": "logout", "function_name": "test_logout", "status": "ok", "is_stub": false, "is_outline": false, "line": 12, "violations": []},
+            {"title": "reset password", "function_name": "test_reset_password", "status": "ok", "is_stub": false, "is_outline": false, "line": 19, "violations": []}
+          ]
+        },
+        {
+          "path": "payment",
+          "title": "Payment",
+          "stage": "needs fixes",
+          "scenarios": [
+            {"title": "process charge", "function_name": "test_process_charge", "status": "2 errors", "is_stub": false, "is_outline": false, "line": 8, "violations": [{"error_type": "missing-placeholder", "message": "placeholder 'price' not found in test body", "line": 8}, {"error_type": "missing-literal", "message": "literal 'approved' not found in test body", "line": 8}]},
+            {"title": "refund", "function_name": "test_refund", "status": "no body", "is_stub": true, "is_outline": false, "line": 18, "violations": []}
+          ]
+        }
+      ],
+      "orphaned_directories": [],
+      "collisions": []
+    },
+    "note": "The --json flag produces a single JSON object. The schema is stable across minor versions and designed for CI/dashboard consumption."
+  },
+  "stimulus": {
+    "call": "beehave status --json",
+    "contract": "External Contract (domain_spec.md:537): --json flag produces machine-readable JSON with features array, orphaned_directories array, collisions array, and summary object.",
+    "question": "Does the JSON output contain all required top-level keys (features, orphaned_directories, collisions, summary) with correct structure and counts?"
+  }
+}
