@@ -2,7 +2,7 @@ Feature: Title Validation
 
   The `validate_all_titles(config)` function reads all `.feature` files from
   the project's features directory and validates every Feature, Rule, and
-  Scenario title for charset (Unicode letters, digits, spaces only), word
+  Scenario title for charset (word characters, digits, spaces only), word
   count (2–6 words after stripping the Gherkin keyword prefix), and global
   case-insensitive uniqueness across all three title types. It returns a
   list of Violation objects — one per invalid or duplicate title — or an
@@ -90,9 +90,9 @@ Feature: Title Validation
       Then the violation list has 1 violation
       And the violation has error_type "invalid-rule-title"
 
-    Scenario: scenario title contains an underscore
-      Given a feature file with Feature title "Underscore Scenario"
-      And Scenario title "guard_bee_inspects"
+    Scenario: scenario title contains a forward slash
+      Given a feature file with Feature title "Forward Slash Scenario"
+      And Scenario title "guard/bee/inspects"
       When validate_all_titles is called
       Then the violation list has 1 violation
       And the violation has error_type "invalid-scenario-title"
