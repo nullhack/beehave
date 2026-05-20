@@ -246,7 +246,7 @@ Feature: Status Command
     counts are comma-joined (e.g., "1 no body, 2 errors"). Tree-drawing characters
     (├──, └──, │) connect parent feature to child rules and scenarios.
 
-    Scenario: mixed status rule joins counts in output
+    Scenario: rule with mixed status joins counts
       Given a feature file "docs/features/mixed.feature" with 1 Rule
       And Rule "Mixed status" has scenarios with statuses: ok, no body, 2 errors
       When the status command formats the tree output
