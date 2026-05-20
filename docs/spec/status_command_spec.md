@@ -143,8 +143,6 @@ needs scenarios temperature_control (Temperature Control)
 - Failing scenarios show violation codes inline after the scenario name
 - `no scenarios` for features with no children; `needs scenarios` for features with Rules but no Scenarios
 - `--json` flag outputs full JSON with feature/scenario hierarchy, counts, and violation details
-- `--summary-only` collapses to feature-level lines only
-- `--stage <stage>` filters by feature stage
 
 ### 4.2 JSON Output (`--json`)
 
@@ -205,10 +203,7 @@ needs scenarios temperature_control (Temperature Control)
 | `broken` | Red bold | `\033[1;31m` |
 | `no scenarios` | Dim | `\033[2m` |
 
-**Color control:**
-- `--color` / `--no-color`: explicit override
-- Default: auto-detect `sys.stdout.isatty()`
-- Environment variable fallback: `NO_COLOR` / `FORCE_COLOR`
+**Color control:** Auto-detect `sys.stdout.isatty()`. Environment variable fallback: `NO_COLOR` / `FORCE_COLOR`.
 
 ---
 
@@ -230,11 +225,7 @@ beehave status [feature] [options]
 
 | Flag | Description |
 |------|-------------|
-| `--stage STAGE` | Filter to features with the given stage. Repeatable for OR filtering. |
 | `--json` | Output machine-readable JSON to stdout. |
-| `--no-color` | Disable ANSI color output. |
-| `--color` | Force ANSI color output. |
-| `--summary-only` | Show only the summary footer, no feature table. Useful for CI/gating. |
 | `--include-unmapped` | Show unmapped test directories. |
 
 ### 5.4 Exit Codes
@@ -249,12 +240,9 @@ beehave status [feature] [options]
 
 ```bash
 $ beehave status                                    # Show all features
-$ beehave status --summary-only                     # CI gate
-$ beehave status --stage "needs tests" --stage "needs bodies"  # Filter by stage
 $ beehave status hive_activity                      # Single feature
 $ beehave status --json | jq '.summary'             # Machine-readable
 $ beehave status --include-unmapped                 # Include unmapped test dirs
-$ beehave status --color | less -R                  # Force color in piped output
 ```
 
 ### 5.6 Stderr Usage

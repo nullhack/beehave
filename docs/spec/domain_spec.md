@@ -669,7 +669,6 @@ Computes and displays the development stage of each feature by synthesizing data
 - **Trigger**: CLI invocation
 - **Input**: Optional feature path slug, optional flags:
   - `--json`: Produce machine-readable JSON output with full hierarchy
-  - `--no-color`: Disable ANSI color codes
   - `--include-unmapped`: Include unmapped test directories in output
 - **Output**: 
   - Default: Tree-based hierarchy showing feature/rule/scenario status with fixed-width status column
@@ -862,7 +861,7 @@ Not applicable — CLI is a dispatch layer.
 | check | feature (optional) | Consistency Checking |
 | clean | feature (required), --force | Cleanup |
 | list | --verbose | Status Reporting (existing list command) |
-| status | feature (optional), --json, --no-color, --include-unmapped | Status Reporting (new) |
+| status | feature (optional), --json, --include-unmapped | Status Reporting (new) |
 
 #### Exit Code Contract
 
