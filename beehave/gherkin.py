@@ -523,6 +523,32 @@ def _emit_duplicates(
                 )
 
 
+def detect_empty_rules(doc: dict) -> bool:
+    """Return True if the feature document has any rules with no scenarios.
+
+    A rule is "empty" when it has no scenario children. Features with no
+    rules at all return ``False`` — only rules that exist but lack scenarios
+    are considered empty.
+
+    Args:
+        doc: The parsed feature document dict from ``Parser().parse()``.
+
+    Returns:
+        ``True`` if at least one rule exists with zero scenario children.
+
+    """
+    feature = doc.get("feature")
+    if not feature:
+        return False
+    for child in feature.get("children", []):
+        if "rule" in child:
+            rule = child["rule"]
+            rule_children = rule.get("children", [])
+            if not any("scenario" in rc for rc in rule_children):
+                return True
+    return False
+
+
 def validate_all_titles(config: Config) -> list[Violation]:
     """Validate all titles across every ``.feature`` file in the project.
 
