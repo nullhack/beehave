@@ -1,0 +1,12 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 12,
+  "expected_after_fix": {
+    "placeholders": [
+      {"name": "name", "raw": "<name>"}
+    ],
+    "literals": []
+  },
+  "fix_applied": "Literal extraction filters out any quoted content matching <...> pattern before creating Literal objects. Placeholder regex already captures it. No more double-capture.",
+  "verification": "Literal list is empty — <...> inside quotes is excluded from literal extraction per R3 exception"
+}

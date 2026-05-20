@@ -1,0 +1,10 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 17,
+  "expected": {
+    "body_name_nodes": ["x"],
+    "body_constant_nodes": [42],
+    "is_stub": false
+  },
+  "verification": "Docstring constant 'This is a docstring.' is excluded. Only x and 42 from the second statement are collected."
+}

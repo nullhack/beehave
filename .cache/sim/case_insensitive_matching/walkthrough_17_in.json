@@ -1,0 +1,12 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 17,
+  "type": "edge-case",
+  "rule": "R4 — Leading docstring excluded",
+  "description": "Docstring constant at start of body is excluded from constant collection",
+  "input": {
+    "test_function_body": "\"\"\"This is a docstring.\"\"\"\nx = 42",
+    "has_docstring": true
+  },
+  "initial_state": "Test function with leading docstring"
+}

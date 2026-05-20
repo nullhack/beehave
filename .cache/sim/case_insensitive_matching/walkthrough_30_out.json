@@ -1,0 +1,13 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 30,
+  "expected": {
+    "violations": [
+      {"error_type": "missing-placeholder", "message": "placeholder 'PhoneNumber' not found in test body"}
+    ],
+    "normalized_placeholder": "phonenumber",
+    "normalized_body_names": ["phone_number", "validate_number"],
+    "match_found": false
+  },
+  "verification": "<PhoneNumber>.lower() = 'phonenumber', but body has 'phone_number' (with underscore). After lowering: 'phonenumber' ≠ 'phone_number'. Different strings → no match → missing-placeholder violation. This is expected behavior: underscores are not collapsed by case-insensitive matching."
+}

@@ -1,0 +1,12 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 15,
+  "bug": true,
+  "bug_id": 18,
+  "expected_before_fix": {
+    "body_name_nodes": ["balance", "x"],
+    "body_constant_nodes": [2010, 5],
+    "is_stub": false
+  },
+  "problem": "Only ast.Constant(n) values collected (2010, 5). UnaryOp(USub(), Constant(2010)) produces -2010 in the AST but _extract_body_nodes ignores it. When Gherkin has literal -2010, check_pair() looks for -2010 in body_constant_nodes but only finds 2010 → missing-literal false positive."
+}

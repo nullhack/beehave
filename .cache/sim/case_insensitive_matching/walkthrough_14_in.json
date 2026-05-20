@@ -1,0 +1,12 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 14,
+  "type": "happy-path",
+  "rule": "R4 — UnaryOp(USub()) folding",
+  "description": "Negative number in body via UnaryOp is folded into constant set",
+  "input": {
+    "test_function_body": "balance = -2010\ntemp = -3.14",
+    "has_docstring": false
+  },
+  "initial_state": "AST with UnaryOp(USub(), Constant(...)) nodes"
+}

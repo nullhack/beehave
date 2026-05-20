@@ -1,0 +1,15 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 11,
+  "bug": true,
+  "bug_id": 19,
+  "expected_before_fix": {
+    "placeholders": [
+      {"name": "name", "raw": "<name>"}
+    ],
+    "literals": [
+      {"value": "<name>", "raw": "\"<name>\"", "type": "string"}
+    ]
+  },
+  "problem": "Literal extraction does not filter <...> from quoted strings. The literal '<name>' should not exist — the placeholder already captures this semantic. This produces a false positive missing-literal violation because '<name>' is not a real constant in the test body."
+}

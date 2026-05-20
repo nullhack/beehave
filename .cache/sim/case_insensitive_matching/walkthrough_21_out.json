@@ -1,0 +1,11 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 21,
+  "expected": {
+    "violations": [
+      {"error_type": "missing-placeholder", "message": "placeholder 'Dog' not found in test body"}
+    ],
+    "match_detail": "ph.name.lower() = 'dog', body lowered = {'cat', 'owner'} → 'dog' not in set → violation"
+  },
+  "verification": "Missing placeholder violation produced. Case-insensitive but still requires semantic match."
+}

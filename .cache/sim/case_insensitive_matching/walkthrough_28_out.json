@@ -1,0 +1,8 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 28,
+  "expected": {
+    "violations": []
+  },
+  "verification": "Stub tests (is_stub=True) skip all body-based violation checks per invariant. No false positives."
+}

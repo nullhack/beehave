@@ -1,0 +1,12 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 6,
+  "expected": {
+    "placeholders": [
+      {"name": "ID", "raw": "<ID>"},
+      {"name": "id", "raw": "<id>"}
+    ],
+    "literals": []
+  },
+  "verification": "Both extracted — extraction is case-sensitive; case-insensitive matching at comparison stage handles both"
+}

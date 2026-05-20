@@ -10,12 +10,12 @@
 - A code generator (`beehave generate`) that produces pure Hypothesis `@given()`/`@example()` stubs from Gherkin `.feature` files — one feature per invocation
 - A consistency checker (`beehave check`) that re-parses features, AST-parses tests, joins by function name, and reports violations in machine-parseable format
 - A cleanup tool (`beehave clean`) that removes unmapped test functions — retains import block even if all functions are removed, never deletes the file
+- A status reporter (`beehave status`) that computes and displays the development stage of every feature in a project
 
 ## What beehave IS NOT
 
 - Does NOT act as a test runner, runtime framework, step-definition engine, or assertion DSL
 - Does NOT resolve synonyms or replace Hypothesis in any way
-- Does NOT process multiple features in a single invocation (bulk processing)
 - Does NOT provide `--dry-run` preview (acknowledged as future enhancement, not v3 scope)
 - Does NOT manage cache/state, format code, or lint
 
@@ -43,7 +43,6 @@ Python developers using Gherkin for behavior specification need their test code 
 - Test runner or execution engine
 - Runtime framework or step-definition system
 - Assertion DSL or synonym resolution
-- Bulk/multi-feature processing per invocation
 - `--dry-run` preview mode
 - Plugin system (APIs are designed for future composability but no plugin interface in v3)
 - Code formatting or linting

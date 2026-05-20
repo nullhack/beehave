@@ -1,0 +1,11 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 7,
+  "expected": {
+    "placeholders": [],
+    "literals": [
+      {"value": 3, "raw": "3", "type": "numeric"}
+    ]
+  },
+  "verification": "Token '3' matches ^-?\\d+$ → numeric Literal with int value"
+}

@@ -1,0 +1,19 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 26,
+  "type": "edge-case",
+  "rule": "R6 — True vs 1 no false collision",
+  "description": "Gherkin literal 1 does NOT match True in test body (different normalized strings)",
+  "input": {
+    "scenario": {
+      "step_text": "Given the flag is 1",
+      "placeholders": [],
+      "literals": [{"value": 1, "type": "numeric"}]
+    },
+    "test": {
+      "body_name_nodes": [],
+      "body_constant_nodes": [True]
+    }
+  },
+  "initial_state": "check_pair() with bool constant in body"
+}

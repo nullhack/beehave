@@ -1,0 +1,11 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 7,
+  "type": "happy-path",
+  "rule": "R2 — Numeric literal extraction",
+  "description": "Bare integer token extracted as numeric Literal",
+  "input": {
+    "step_text": "Given 3 items in the cart"
+  },
+  "initial_state": "Step with numeric token"
+}

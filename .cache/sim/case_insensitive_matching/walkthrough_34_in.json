@@ -1,0 +1,13 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 34,
+  "type": "edge-case",
+  "rule": "R3 — Negative Numbers Visible In Body (UAdd folding)",
+  "description": "UnaryOp with UAdd +5 in body → exposes 5, indistinguishable from x = 5",
+  "input": {
+    "test_body": "x = +5\n",
+    "expected_constant_nodes": [5],
+    "initial_state": "discover_tests() AST-walking a test body with +5"
+  },
+  "initial_state": "discover_tests() extracts body_constant_nodes from AST"
+}

@@ -1,0 +1,10 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 13,
+  "expected": {
+    "body_name_nodes": ["x", "y", "name"],
+    "body_constant_nodes": [42, 77000, "Rex"],
+    "is_stub": false
+  },
+  "verification": "All ast.Constant values present. Names collected for placeholder matching."
+}

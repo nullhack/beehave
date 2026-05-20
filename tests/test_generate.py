@@ -174,24 +174,24 @@ class TestGenerateStubs:
             tmp_project,
             "gen1",
             """\
-            Feature: Gen1
-              Scenario: hello
+            Feature: Gen One
+              Scenario: hello world
                 Given stuff
             """,
         )
         generate_stubs("gen1", config)
-        test_file = tmp_project / "tests" / "features" / "gen1" / "default_test.py"
+        test_file = tmp_project / "tests" / "features" / "gen_one" / "default_test.py"
         assert test_file.exists()
         content = test_file.read_text()
-        assert "def test_hello():" in content
+        assert "def test_hello_world():" in content
 
     def test_creates_rule_files(self, tmp_project: Path, config: Config) -> None:
         write_feature(
             tmp_project,
             "gen2",
             """\
-            Feature: Gen2
-              Scenario: top
+            Feature: Gen Two
+              Scenario: top level
 
               Rule: My Rule
                 Scenario: in rule
@@ -199,11 +199,11 @@ class TestGenerateStubs:
             """,
         )
         generate_stubs("gen2", config)
-        default = tmp_project / "tests" / "features" / "gen2" / "default_test.py"
-        rule = tmp_project / "tests" / "features" / "gen2" / "my_rule_test.py"
+        default = tmp_project / "tests" / "features" / "gen_two" / "default_test.py"
+        rule = tmp_project / "tests" / "features" / "gen_two" / "my_rule_test.py"
         assert default.exists()
         assert rule.exists()
-        assert "def test_top():" in default.read_text()
+        assert "def test_top_level():" in default.read_text()
         assert "def test_in_rule():" in rule.read_text()
 
     def test_idempotent(self, tmp_project: Path, config: Config) -> None:
@@ -211,18 +211,18 @@ class TestGenerateStubs:
             tmp_project,
             "idem",
             """\
-            Feature: Idem
-              Scenario: once
+            Feature: Idem Feature
+              Scenario: once only
                 Given stuff
             """,
         )
         generate_stubs("idem", config)
         first = (
-            tmp_project / "tests" / "features" / "idem" / "default_test.py"
+            tmp_project / "tests" / "features" / "idem_feature" / "default_test.py"
         ).read_text()
         generate_stubs("idem", config)
         second = (
-            tmp_project / "tests" / "features" / "idem" / "default_test.py"
+            tmp_project / "tests" / "features" / "idem_feature" / "default_test.py"
         ).read_text()
         assert first == second
 
@@ -233,8 +233,8 @@ class TestGenerateStubs:
             tmp_project,
             "outline",
             """\
-            Feature: Outline
-              Scenario Outline: addition
+            Feature: Outline Feature
+              Scenario Outline: addition test
                 Given <a> and <b>
 
                 Examples:
@@ -244,7 +244,7 @@ class TestGenerateStubs:
         )
         generate_stubs("outline", config)
         content = (
-            tmp_project / "tests" / "features" / "outline" / "default_test.py"
+            tmp_project / "tests" / "features" / "outline_feature" / "default_test.py"
         ).read_text()
         assert "@example(a=1, b=2)" in content
         assert "@given(a=st.integers(), b=st.integers())" in content
@@ -258,13 +258,13 @@ class TestGenerateStubs:
             tmp_project,
             "initcheck",
             """\
-            Feature: Initcheck
-              Scenario: hello
+            Feature: Init Check
+              Scenario: hello world
                 Given stuff
             """,
         )
         generate_stubs("initcheck", config)
-        init_file = tmp_project / "tests" / "features" / "initcheck" / "__init__.py"
+        init_file = tmp_project / "tests" / "features" / "init_check" / "__init__.py"
         assert init_file.exists()
 
     def test_does_not_overwrite_existing_init_py(
@@ -274,12 +274,12 @@ class TestGenerateStubs:
             tmp_project,
             "initexist",
             """\
-            Feature: Initexist
-              Scenario: hello
+            Feature: Init Exist
+              Scenario: hello world
                 Given stuff
             """,
         )
-        test_dir = tmp_project / "tests" / "features" / "initexist"
+        test_dir = tmp_project / "tests" / "features" / "init_exist"
         test_dir.mkdir(parents=True, exist_ok=True)
         init_file = test_dir / "__init__.py"
         init_file.write_text("# custom init\n", encoding="utf-8")

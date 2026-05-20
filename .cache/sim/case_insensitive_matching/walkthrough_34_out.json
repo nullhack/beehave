@@ -1,0 +1,10 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 34,
+  "expected": {
+    "body_constant_nodes": [5],
+    "ast_shape": "UnaryOp(UAdd(), Constant(5)) -> folded to 5",
+    "indistinguishable_from": "x = 5 (bare Constant(5))"
+  },
+  "verification": "discover_tests() folds UnaryOp(UAdd(), Constant(5)) → exposes 5 in body_constant_nodes. This is indistinguishable from bare Constant(5) (i.e., x = 5). Domain_spec Test Discovery rule: UAdd folding documented. Bare '+5' in Gherkin step text is NOT extracted as numeric literal (doesn't match ^-?\\d+(\\.\\d+)?$), so Gherkin-side +5 extraction is not tested — out of scope."
+}

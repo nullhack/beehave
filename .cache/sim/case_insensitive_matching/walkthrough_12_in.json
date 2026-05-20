@@ -1,0 +1,13 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 12,
+  "type": "bug-after",
+  "rule": "Bug #19 — Quoted placeholder double-capture AFTER fix",
+  "description": "\"<name>\" in step text: placeholder extracted, literal skipped",
+  "input": {
+    "step_text": "Given a user named \"<name>\" in scenario outline <name>",
+    "known_keywords": [],
+    "known_builtins": []
+  },
+  "initial_state": "Step with placeholder inside double quotes (fixed code)"
+}

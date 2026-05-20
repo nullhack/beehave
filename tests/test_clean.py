@@ -16,18 +16,18 @@ class TestCleanUnmapped:
             tmp_project,
             "cln1",
             """\
-            Feature: Cln1
-              Scenario: keep
+            Feature: Cln One
+              Scenario: keep me
                 Given stuff
             """,
         )
         generate_stubs("cln1", config)
         write_test(
             tmp_project,
-            "cln1",
+            "cln_one",
             "default_test.py",
             """\
-            def test_keep():
+            def test_keep_me():
                 ...
 
             def test_unmapped():
@@ -36,9 +36,9 @@ class TestCleanUnmapped:
         )
         clean_unmapped("cln1", config)
         content = (
-            tmp_project / "tests" / "features" / "cln1" / "default_test.py"
+            tmp_project / "tests" / "features" / "cln_one" / "default_test.py"
         ).read_text()
-        assert "test_keep" in content
+        assert "test_keep_me" in content
         assert "test_unmapped" not in content
 
     def test_warns_on_non_stub(
@@ -48,18 +48,18 @@ class TestCleanUnmapped:
             tmp_project,
             "cln2",
             """\
-            Feature: Cln2
-              Scenario: keep
+            Feature: Cln Two
+              Scenario: keep me
                 Given stuff
             """,
         )
         generate_stubs("cln2", config)
         write_test(
             tmp_project,
-            "cln2",
+            "cln_two",
             "default_test.py",
             """\
-            def test_keep():
+            def test_keep_me():
                 ...
 
             def test_real():
@@ -70,12 +70,7 @@ class TestCleanUnmapped:
         captured = capsys.readouterr()
         assert "Warning" in captured.out
         assert "test_real" in captured.out
-        content = (
-            (tmp_project / "tests" / "cln2" / "default_test.py").read_text()
-            if (tmp_project / "tests" / "cln2" / "default_test.py").exists()
-            else ""
-        )
-        test_dir = tmp_project / "tests" / "features" / "cln2" / "default_test.py"
+        test_dir = tmp_project / "tests" / "features" / "cln_two" / "default_test.py"
         content = test_dir.read_text()
         assert "test_real" in content
 
@@ -84,18 +79,18 @@ class TestCleanUnmapped:
             tmp_project,
             "cln3",
             """\
-            Feature: Cln3
-              Scenario: keep
+            Feature: Cln Three
+              Scenario: keep me
                 Given stuff
             """,
         )
         generate_stubs("cln3", config)
         write_test(
             tmp_project,
-            "cln3",
+            "cln_three",
             "default_test.py",
             """\
-            def test_keep():
+            def test_keep_me():
                 ...
 
             def test_real():
@@ -104,9 +99,9 @@ class TestCleanUnmapped:
         )
         clean_unmapped("cln3", config, force=True)
         content = (
-            tmp_project / "tests" / "features" / "cln3" / "default_test.py"
+            tmp_project / "tests" / "features" / "cln_three" / "default_test.py"
         ).read_text()
-        assert "test_keep" in content
+        assert "test_keep_me" in content
         assert "test_real" not in content
 
     def test_nonexistent_feature_exits(self, tmp_project: Path, config: Config) -> None:
@@ -119,13 +114,15 @@ class TestCleanUnmapped:
             "clnr",
             """\
             Feature: Cln Rule
-              Rule: Alpha
+              Rule: Alpha Rule
                 Scenario: keep alpha
                   Given stuff
             """,
         )
         generate_stubs("clnr", config)
-        test_file = tmp_project / "tests" / "features" / "cln_rule" / "alpha_test.py"
+        test_file = (
+            tmp_project / "tests" / "features" / "cln_rule" / "alpha_rule_test.py"
+        )
         content = (
             test_file.read_text()
             + """

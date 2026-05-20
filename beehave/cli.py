@@ -10,6 +10,7 @@ from beehave.config import load_config
 from beehave.discover import discover_tests
 from beehave.generate import generate_stubs
 from beehave.gherkin import GherkinError, parse_feature
+from beehave.status import compute_status
 
 
 def cmd_generate(args: argparse.Namespace) -> None:
@@ -97,6 +98,15 @@ def cmd_list(args: argparse.Namespace) -> None:
             print(f"  stubs: {stub_count}/{total} ({impl_count} implemented)")
 
 
+def cmd_status(args: argparse.Namespace) -> None:
+    config = load_config()
+    compute_status(
+        config,
+        json_output=args.json,
+        include_unmapped=args.include_unmapped,
+    )
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="beehave",
@@ -152,6 +162,22 @@ def main(argv: list[str] | None = None) -> None:
         help="Show scenario counts, rules, and stub status",
     )
     lst.set_defaults(func=cmd_list)
+
+    sts = subparsers.add_parser(
+        "status",
+        help="Show development status of all features",
+    )
+    sts.add_argument(
+        "--json",
+        action="store_true",
+        help="Output status report as JSON",
+    )
+    sts.add_argument(
+        "--include-unmapped",
+        action="store_true",
+        help="Report test directories with no matching feature file",
+    )
+    sts.set_defaults(func=cmd_status)
 
     args = parser.parse_args(argv)
     args.func(args)

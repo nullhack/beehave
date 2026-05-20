@@ -1,0 +1,12 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 32,
+  "expected": {
+    "violations": [],
+    "gherkin_extraction": "Literal(value='') from quoted string '\"\"'",
+    "str_normalized_gherkin": "",
+    "str_normalized_body": "",
+    "match_found": true
+  },
+  "verification": "Gherkin '\"\"' extracted as Literal(value='') per domain_spec _extract_literals rule 2. str('') → '' (empty string). Body Constant('') → str('') → ''. Both normalize to empty string → match → zero violations."
+}

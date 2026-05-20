@@ -27,6 +27,19 @@ def _is_stub_body(body: list[ast.stmt]) -> bool:
 def _extract_body_nodes(
     body: list[ast.stmt],
 ) -> tuple[tuple[str, ...], tuple[object, ...]]:
+    """Walk a test function body and collect all names and constants.
+
+    The first statement in a multi-statement body is skipped if it is a
+    docstring.  ``UnaryOp`` nodes wrapping constants are folded (e.g.
+    ``-5`` becomes the constant ``-5``, not ``5`` with a negation flag).
+
+    Args:
+        body: The list of AST statements in the function body.
+
+    Returns:
+        A 2-tuple of ``(names, constants)``, each sorted.
+
+    """
     check_nodes: list[ast.stmt] = []
     for node in body:
         if (
@@ -34,6 +47,7 @@ def _extract_body_nodes(
             and isinstance(node, ast.Expr)
             and isinstance(node.value, ast.Constant)
             and isinstance(node.value.value, str)
+            and len(body) > 1
         ):
             continue
         check_nodes.append(node)
@@ -46,6 +60,11 @@ def _extract_body_nodes(
             names.add(node.id)
         elif isinstance(node, ast.Constant):
             constants.add(node.value)
+        elif isinstance(node, ast.UnaryOp) and isinstance(node.operand, ast.Constant):
+            if isinstance(node.op, ast.USub):
+                constants.add(-node.operand.value)
+            elif isinstance(node.op, ast.UAdd):
+                constants.add(node.operand.value)
 
     return tuple(sorted(names)), tuple(sorted(constants, key=repr))
 

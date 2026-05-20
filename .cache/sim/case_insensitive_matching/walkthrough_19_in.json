@@ -1,0 +1,19 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 19,
+  "type": "happy-path",
+  "rule": "R5 — Case-insensitive placeholder match (same case)",
+  "description": "<Dog> in Gherkin matches Dog in test body",
+  "input": {
+    "scenario": {
+      "step_text": "Given a <Dog> barks",
+      "placeholders": [{"name": "Dog", "raw": "<Dog>"}],
+      "literals": []
+    },
+    "test": {
+      "body_name_nodes": ["dog", "Dog", "owner"],
+      "body_constant_nodes": []
+    }
+  },
+  "initial_state": "check_pair() comparing placeholders against test body"
+}

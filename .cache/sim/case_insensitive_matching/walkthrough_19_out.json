@@ -1,0 +1,9 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 19,
+  "expected": {
+    "violations": [],
+    "match_detail": "ph.name.lower() = 'dog', body_name_nodes lowered = {'dog', 'owner', 'dog'} → 'dog' in set → match"
+  },
+  "verification": "Exact case match (Dog→Dog already matched by set intersection before fix; post-fix, lowered comparison covers all variants)"
+}

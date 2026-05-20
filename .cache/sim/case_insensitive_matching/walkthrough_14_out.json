@@ -1,0 +1,10 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 14,
+  "expected": {
+    "body_name_nodes": ["balance", "temp"],
+    "body_constant_nodes": [2010, -2010, 3.14, -3.14],
+    "is_stub": false
+  },
+  "verification": "Both the literal n AND the folded -n appear in constants. -2010 is visible for literal matching. Both positive and negative forms from each UnaryOp."
+}

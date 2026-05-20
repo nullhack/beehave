@@ -1,6 +1,6 @@
 # beehave v3 Specification
 
-> A CLI that generates plain Hypothesis test stubs from Gherkin and checks body consistency. Tests import nothing from beehave at runtime.
+> A CLI that generates plain Hypothesis test stubs from Gherkin, checks body consistency, and reports feature development status. Tests import nothing from beehave at runtime.
 
 ---
 
@@ -10,10 +10,11 @@
 - A code generator (`beehave generate`) producing pure Hypothesis `@given()`/`@example()` stubs — processes one feature per invocation; users script loops for bulk processing
 - A consistency checker (`beehave check`) that re-parses features, AST-parses tests, joins by function name, and reports violations in machine-parseable format
 - A cleanup tool (`beehave clean`) that removes unmapped test functions — if all functions are removed, the file retains its import block (the file is never deleted)
+- A status reporter (`beehave status`) that walks all features and reports their development stage via a stage decision tree with tree-format output
 - Function-name-based traceability: `test_deposit_increases_balance` ↔ `Scenario: deposit increases balance`
 - Background transparency: background steps merge into every scenario in scope — no background functions, no special syntax, just more commented steps in the generated stub
 
-**IS NOT:** A test runner, runtime framework, step-definition engine, assertion DSL, synonym resolver, Hypothesis replacement, bulk processor, or `--dry-run` preview tool. No beehave imports appear in test code. `--dry-run` is acknowledged as a future enhancement but is not in v3 scope.
+**IS NOT:** A test runner, runtime framework, step-definition engine, assertion DSL, synonym resolver, Hypothesis replacement, or bulk processor. No beehave imports appear in test code.
 
 **Users:** Python developers writing property-based tests who want Gherkin as the spec source of truth.
 
@@ -434,6 +435,20 @@ When run with a specific feature argument, `check` scans ALL `*_test.py` files i
 **Input:** exactly one feature path.
 
 **Behavior:** remove test functions that have no matching scenario from the feature's test files (grouped by `rule_path`). If all functions are removed from a file, the file retains its import block — it is never deleted. **Warning:** before removing any non-stub function (body is not `...` or `pass`), print a warning to stderr naming the function and requiring `--force` to proceed. Stub unmapped functions are removed without warning.
+
+### `beehave status`
+
+**Input:** optional feature path, optional flags.
+
+**Behavior:** walks all `.feature` files and reports the development stage of each feature via a stage decision tree. Each feature is classified into one of seven stages in priority order: `broken`, `no scenarios`, `needs scenarios`, `needs tests`, `needs bodies`, `needs fixes`, or `ok`. Features that are `ok` collapse to a single line; all others display a scenario tree with per-scenario status labels.
+
+**Flags:**
+- `--json`: output a machine-readable JSON report containing feature hierarchy, unmapped directories, collisions, and summary.
+- `--include-unmapped`: include unmapped test directories in the report.
+
+**Exit codes:** 0 = all features `ok`, 1 = any feature not `ok`, 2 = fatal error (features directory missing).
+
+**Output format:** tree-based hierarchy. Each feature shown as `slug (Title) stage`. Non-ok features expand to show rules and scenarios with status labels (`ok`, `no body`, `N errors`, `no test`). Rule aggregates show comma-joined child counts (e.g., `"1 no body, 2 errors"`).
 
 ---
 

@@ -1,0 +1,11 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 33,
+  "expected": {
+    "placeholders": [
+      {"name": "name", "raw": "<name>"}
+    ],
+    "literals": []
+  },
+  "verification": "_extract_placeholders: '<name>' matches placeholder regex regardless of surrounding quotes → Placeholder(name='name') extracted. _extract_literals: single-quoted string ''...'' detected, content '<name>' matches <...> pattern → excluded from literal capture (per domain_spec rule 2, both '...' and \"...\" are handled identically, including <...> filtering regardless of quote style). Result: Placeholder only, no Literal double-capture. Identical behavior to double-quoted '\"<name>\"' (W12)."
+}
