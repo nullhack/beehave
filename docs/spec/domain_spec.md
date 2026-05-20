@@ -669,13 +669,11 @@ Computes and displays the development stage of each feature by synthesizing data
 - **Trigger**: CLI invocation
 - **Input**: Optional feature path slug, optional flags:
   - `--json`: Produce machine-readable JSON output with full hierarchy
-  - `--stage`: Show only feature stages (no scenario detail)
   - `--no-color`: Disable ANSI color codes
   - `--include-orphaned`: Include orphaned test directories in output
 - **Output**: 
   - Default: Tree-based hierarchy showing feature/rule/scenario status with fixed-width status column
   - `--json`: Machine-readable JSON with `features` array, `orphaned_directories` array, `collisions` array, and `summary` object
-  - `--stage`: Compact listing: one stage label per feature
 - **Exit codes**:
   - 0: All features ok (or project has zero features)
   - 1: At least one feature not ok (i.e., any feature's stage is not "ok")
@@ -864,7 +862,7 @@ Not applicable — CLI is a dispatch layer.
 | check | feature (optional) | Consistency Checking |
 | clean | feature (required), --force | Cleanup |
 | list | --verbose | Status Reporting (existing list command) |
-| status | feature (optional), --json, --stage, --no-color, --include-orphaned | Status Reporting (new) |
+| status | feature (optional), --json, --no-color, --include-orphaned | Status Reporting (new) |
 
 #### Exit Code Contract
 

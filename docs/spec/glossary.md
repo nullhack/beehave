@@ -274,3 +274,27 @@ Entries are sorted alphabetically.
 **Example:** Running `beehave status` produces a tree-based Status Report with one line per feature heading and indented scenario detail.
 
 **Source:** 2026-05-19
+
+---
+
+## Orphaned Directory
+
+**Definition:** A test directory under tests/features/ that has no corresponding .feature file with a matching feature_path slug.
+
+**Aliases:** orphaned dir
+
+**Example:** A `tests/features/checkout/` directory with test files but no `docs/features/checkout.feature` is reported as an orphaned directory by `beehave status --include-orphaned`.
+
+**Source:** 2026-05-20
+
+---
+
+## Collision
+
+**Definition:** A cross-feature function name duplication where two scenarios in different .feature files produce the same derived test function name.
+
+**Aliases:** cross-feature collision
+
+**Example:** `Feature: Auth` with `Scenario: login` and `Feature: SSO` with `Scenario: login` both derive `test_login`, producing a Collision reported by `beehave status`.
+
+**Source:** 2026-05-20

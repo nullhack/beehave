@@ -215,7 +215,7 @@ Feature: Status Command
       And scenario B is mapped to a non-stub test with missing-placeholder violation
       When the status command computes the feature status
       Then scenario A status is "ok"
-      Then scenario B status is "1 error"
+      And scenario B status is "1 error"
       And the feature stage is "needs fixes"
 
   Rule: Ok Feature Collapses in Output
@@ -242,8 +242,16 @@ Feature: Status Command
   Rule: Tree Output Shows Rule Hierarchy
     When a non-ok feature contains Rules, the tree output must display each Rule as an
     intermediate hierarchy node. Rule nodes show an aggregated label derived from the worst
-    child scenario statuses with counts. Tree-drawing characters (├──, └──, │) connect
-    parent feature to child rules and scenarios.
+    child scenario statuses with counts. When a rule has scenarios in multiple non-ok statuses,
+    counts are comma-joined (e.g., "1 no body, 2 errors"). Tree-drawing characters
+    (├──, └──, │) connect parent feature to child rules and scenarios.
+
+    Scenario: mixed status rule joins counts in output
+      Given a feature file "docs/features/mixed.feature" with 1 Rule
+      And Rule "Mixed status" has scenarios with statuses: ok, no body, 2 errors
+      When the status command formats the tree output
+      Then Rule "Mixed status" shows aggregation "1 no body, 2 errors"
+      And the feature stage is "needs fixes"
 
     Scenario: feature rules shown in tree output
       Given a feature file "docs/features/ecommerce.feature" with 2 Rules
