@@ -42,7 +42,7 @@ beehave is a CLI tool that bridges Gherkin `.feature` files and Python test file
 |---------|-----------------|-------|------------|---------------------|-------------------|
 | `generate` | `Consistency Checking` | CLI user (developer) | Parsed features + discovered test functions | `StubsGenerated` | None (best-effort generation) |
 | `check` | `Consistency Checking` | CLI user (developer) | Parsed features + discovered test functions | `ConsistencyChecked` | None |
-| `clean` | `Consistency Checking` | CLI user (developer) | Discovered test functions + parsed scenario names | `OrphansCleaned` | None |
+| `clean` | `Consistency Checking` | CLI user (developer) | Discovered test functions + parsed scenario names | `UnmappedCleaned` | None |
 
 ---
 
@@ -62,7 +62,7 @@ beehave is a CLI tool that bridges Gherkin `.feature` files and Python test file
 | `TestFunction` | Entity | A Python function discovered via AST parsing. Identified by its derived function name. | `Test Discovery` | No |
 | `ModuleStrategy` | Value Object | A module-level variable defining a Hypothesis strategy for a placeholder name. | `Test Discovery` | — |
 | `Stub` | Value Object | A generated test function with `...` body. Exempt from body enforcement. | `Consistency Checking` | — |
-| `Orphan` | Value Object | A test function with no matching scenario, or a scenario with no matching test function. | `Consistency Checking` | — |
+| `Unmapped` | Value Object | A test function with no matching scenario, or a scenario with no matching test function. | `Consistency Checking` | — |
 
 ---
 

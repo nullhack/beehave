@@ -103,7 +103,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     compute_status(
         config,
         json_output=args.json,
-        include_orphaned=args.include_orphaned,
+        include_unmapped=args.include_unmapped,
     )
 
 
@@ -173,7 +173,7 @@ def main(argv: list[str] | None = None) -> None:
         help="Output status report as JSON",
     )
     sts.add_argument(
-        "--include-orphaned",
+        "--include-unmapped",
         action="store_true",
         help="Report test directories with no matching feature file",
     )

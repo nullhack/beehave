@@ -9,7 +9,7 @@ from beehave.gherkin import detect_empty_rules, parse_feature
 
 
 def compute_status(
-    config: Config, include_orphaned: bool = False, json_output: bool = False
+    config: Config, include_unmapped: bool = False, json_output: bool = False
 ) -> None:
     features_dir = Path(config.features_dir)
     if not features_dir.is_dir():
@@ -216,14 +216,14 @@ def compute_status(
             stage_key = status_label.replace(" ", "_")
             stage_counts[stage_key] = stage_counts.get(stage_key, 0) + 1
 
-    # Report orphaned test directories if flagged
-    orphaned_dirs: list[str] = []
-    if include_orphaned:
+    # Report unmapped test directories if flagged
+    unmapped_dirs: list[str] = []
+    if include_unmapped:
         tests_dir = Path(config.tests_dir)
         if tests_dir.is_dir():
             for test_subdir in sorted(tests_dir.iterdir()):
                 if test_subdir.is_dir() and test_subdir.name not in feature_slugs:
-                    orphaned_dirs.append(test_subdir.name)
+                    unmapped_dirs.append(test_subdir.name)
 
     # Report collisions
     collisions = {fn: slugs for fn, slugs in all_fn_sources.items() if len(slugs) > 1}
@@ -246,7 +246,7 @@ def compute_status(
                     ]
                 },
             },
-            "orphaned_directories": orphaned_dirs,
+            "unmapped_directories": unmapped_dirs,
             "collisions": [
                 {"function_name": fn, "feature_slugs": slugs}
                 for fn, slugs in sorted(collisions.items())
@@ -256,14 +256,14 @@ def compute_status(
 
         print(_json.dumps(result))
     else:
-        if orphaned_dirs:
+        if unmapped_dirs:
             if not first_feature:
                 print()
-            for name in orphaned_dirs:
-                print(f"orphaned: {name}")
+            for name in unmapped_dirs:
+                print(f"unmapped: {name}")
 
         if collisions:
-            if not first_feature or orphaned_dirs:
+            if not first_feature or unmapped_dirs:
                 print()
             for fn, slugs in sorted(collisions.items()):
                 print(f"collision: {fn} appears in {', '.join(slugs)}")

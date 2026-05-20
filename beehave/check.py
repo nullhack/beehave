@@ -289,7 +289,7 @@ def check_all(config: Config) -> list[Violation]:
 
     Parses every ``.feature`` file, discovers every test function, and then
     for each scenario verifies placeholder coverage, literal mapping, example
-    bijection, file placement, and orphan tests.  Finally runs
+    bijection, file placement, and unmapped tests.  Finally runs
     ``validate_all_titles`` to catch title-level problems.
 
     Args:

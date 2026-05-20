@@ -57,9 +57,9 @@ The feature stage is the "worst" scenario status: `no test` > `no body` > `N err
 
 ### 2.3 Non-Feature Artifacts
 
-#### Orphaned Test Directories
+#### Unmapped Test Directories
 
-A test directory (`tests/features/<slug>/`) with no corresponding `.feature` file. Reported separately when `--include-orphaned` is used.
+A test directory (`tests/features/<slug>/`) with no corresponding `.feature` file. Reported separately when `--include-unmapped` is used.
 
 ---
 
@@ -178,7 +178,7 @@ needs scenarios temperature_control (Temperature Control)
       ]
     }
   ],
-  "orphaned_directories": [],
+  "unmapped_directories": [],
   "collisions": [],
   "summary": {
     "total_features": 2,
@@ -235,7 +235,7 @@ beehave status [feature] [options]
 | `--no-color` | Disable ANSI color output. |
 | `--color` | Force ANSI color output. |
 | `--summary-only` | Show only the summary footer, no feature table. Useful for CI/gating. |
-| `--include-orphaned` | Show orphaned test directories. |
+| `--include-unmapped` | Show unmapped test directories. |
 
 ### 5.4 Exit Codes
 
@@ -253,7 +253,7 @@ $ beehave status --summary-only                     # CI gate
 $ beehave status --stage "needs tests" --stage "needs bodies"  # Filter by stage
 $ beehave status hive_activity                      # Single feature
 $ beehave status --json | jq '.summary'             # Machine-readable
-$ beehave status --include-orphaned                 # Include orphaned test dirs
+$ beehave status --include-unmapped                 # Include unmapped test dirs
 $ beehave status --color | less -R                  # Force color in piped output
 ```
 
@@ -314,7 +314,7 @@ class FeatureStatus:
 @dataclass(frozen=True)
 class StatusReport:
     features: tuple[FeatureStatus, ...]
-    orphaned_directories: tuple[dict, ...]
+    unmapped_directories: tuple[dict, ...]
     collisions: tuple[dict, ...]
     summary: dict[str, int]
 ```

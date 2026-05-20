@@ -267,7 +267,7 @@ Entries are sorted alphabetically.
 
 ## Status Report
 
-**Definition:** The aggregate output of `beehave status` containing feature statuses, orphaned test directories, cross-feature function name collisions, and summary counts by stage.
+**Definition:** The aggregate output of `beehave status` containing feature statuses, unmapped test directories, cross-feature function name collisions, and summary counts by stage.
 
 **Aliases:** status output
 
@@ -277,13 +277,13 @@ Entries are sorted alphabetically.
 
 ---
 
-## Orphaned Directory
+## Unmapped Directory
 
 **Definition:** A test directory under tests/features/ that has no corresponding .feature file with a matching feature_path slug.
 
-**Aliases:** orphaned dir
+**Aliases:** unmapped dir
 
-**Example:** A `tests/features/checkout/` directory with test files but no `docs/features/checkout.feature` is reported as an orphaned directory by `beehave status --include-orphaned`.
+**Example:** A `tests/features/checkout/` directory with test files but no `docs/features/checkout.feature` is reported as an unmapped directory by `beehave status --include-unmapped`.
 
 **Source:** 2026-05-20
 

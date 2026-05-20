@@ -8,7 +8,7 @@ Feature: Status Command
   deterministically from disk state — no stored state, no caching.
 
   Serves the Status Reporting bounded context. Key entities: ScenarioStatus,
-  FeatureStatus, StatusReport, OrphanedDir, Collision.
+  FeatureStatus, StatusReport, UnmappedDir, Collision.
 
   # Constraints:
   # Technology:
@@ -24,7 +24,7 @@ Feature: Status Command
   # - Simplicity: Status Reporting imports beehave internal modules (gherkin, discover,
   #   check) — it is a beehave command, not generated code.
   # - Composability: The --json output schema (features array, summary object,
-  #   orphaned_directories, collisions) is stable within a major version for external
+  #   unmapped_directories, collisions) is stable within a major version for external
   #   tooling consumption.
 
   Background:
@@ -349,25 +349,25 @@ Feature: Status Command
       When the status command runs
       Then the exit code is 0
 
-  Rule: Orphaned Directories Reported When Flagged
-    When --include-orphaned is passed, the status command reports test directories that
-    have no matching .feature file. Orphaned directories do not affect any feature stage
+  Rule: Unmapped Directories Reported When Flagged
+    When --include-unmapped is passed, the status command reports test directories that
+    have no matching .feature file. Unmapped directories do not affect any feature stage
     or the exit code.
 
-    Scenario: orphaned directory shown with flag
+    Scenario: unmapped directory shown with flag
       Given a test directory "tests/features/removed_feature" exists
       And the test directory contains "default_test.py"
       And no feature file "docs/features/removed_feature.feature" exists
-      When the status command runs with --include-orphaned
-      Then the StatusReport orphaned_directories contains an entry with path "tests/features/removed_feature"
+      When the status command runs with --include-unmapped
+      Then the StatusReport unmapped_directories contains an entry with path "tests/features/removed_feature"
       And the entry test_files includes "default_test.py"
-      And the exit code is not affected by the orphaned directory
+      And the exit code is not affected by the unmapped directory
 
-    Scenario: orphaned directory not shown without flag
+    Scenario: unmapped directory not shown without flag
       Given a test directory "tests/features/removed_feature" exists
       And no feature file "docs/features/removed_feature.feature" exists
-      When the status command runs without --include-orphaned
-      Then the StatusReport orphaned_directories is empty
+      When the status command runs without --include-unmapped
+      Then the StatusReport unmapped_directories is empty
 
   Rule: Cross Feature Collisions Detected
     During post-processing across all features, the status command detects test functions
@@ -391,7 +391,7 @@ Feature: Status Command
 
   Rule: JSON Output Is Machine Readable
     When the --json flag is passed, the status command produces a single JSON object with
-    features array, orphaned_directories array, collisions array, and summary object.
+    features array, unmapped_directories array, collisions array, and summary object.
     The output is valid JSON suitable for consumption by CI systems and dashboards.
 
     Scenario: JSON output includes full feature hierarchy
@@ -415,11 +415,11 @@ Feature: Status Command
       And the JSON summary.ok is 1
       And all other summary counts are 0
 
-    Scenario: JSON has collision and orphan entries
-      Given a project with an orphaned directory "tests/features/old_feature"
+    Scenario: JSON has collision and unmapped entries
+      Given a project with an unmapped directory "tests/features/old_feature"
       And a cross-feature collision on function "test_login"
-      When the status command runs with --json and --include-orphaned
-      Then the JSON orphaned_directories is not empty
+      When the status command runs with --json and --include-unmapped
+      Then the JSON unmapped_directories is not empty
       And the JSON collisions is not empty
 
   Rule: Test Discovery Failure Yields Needs Tests

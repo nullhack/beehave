@@ -413,7 +413,7 @@ Not applicable — Test Discovery is stateless.
 
 ### Context
 
-Verifies that parsed feature scenarios and discovered test functions are consistent. Produces violations when scenarios are unmapped, test functions are orphaned, placeholders or literals are missing from test bodies, or example rows don't match. Supports both single-feature (`check_single`) and all-features (`check_all`) modes.
+Verifies that parsed feature scenarios and discovered test functions are consistent. Produces violations when scenarios are unmapped, test functions are unmapped, placeholders or literals are missing from test bodies, or example rows don't match. Supports both single-feature (`check_single`) and all-features (`check_all`) modes.
 
 ### Entities
 
@@ -599,8 +599,8 @@ Computes and displays the development stage of each feature by synthesizing data
 |------|------|---------|-----------------|
 | ScenarioStatus | Value Object | Computed status of a single scenario (no test / no body / N errors / ok) | — |
 | FeatureStatus | Value Object | Computed status of a feature across all its scenarios | — |
-| StatusReport | Value Object | Aggregate report of all features, orphaned directories, and collisions | — |
-| OrphanedDir | Value Object | Test directory with no matching .feature file | — |
+| StatusReport | Value Object | Aggregate report of all features, unmapped directories, and collisions | — |
+| UnmappedDir | Value Object | Test directory with no matching .feature file | — |
 | Collision | Value Object | Cross-feature function name collision (warning, does not affect stage) | — |
 
 ### Relationships
@@ -609,7 +609,7 @@ Computes and displays the development stage of each feature by synthesizing data
 |---------|----------|--------|-------------|-------|
 | FeatureStatus | contains | ScenarioStatus | 1:N | One per scenario in the feature |
 | StatusReport | contains | FeatureStatus | 1:N | One per .feature file |
-| StatusReport | contains | OrphanedDir | 0:N | Test dirs with no matching .feature |
+| StatusReport | contains | UnmappedDir | 0:N | Test dirs with no matching .feature |
 | StatusReport | contains | Collision | 0:N | Cross-feature function name collisions |
 
 ### Aggregate Boundaries
@@ -670,10 +670,10 @@ Computes and displays the development stage of each feature by synthesizing data
 - **Input**: Optional feature path slug, optional flags:
   - `--json`: Produce machine-readable JSON output with full hierarchy
   - `--no-color`: Disable ANSI color codes
-  - `--include-orphaned`: Include orphaned test directories in output
+  - `--include-unmapped`: Include unmapped test directories in output
 - **Output**: 
   - Default: Tree-based hierarchy showing feature/rule/scenario status with fixed-width status column
-  - `--json`: Machine-readable JSON with `features` array, `orphaned_directories` array, `collisions` array, and `summary` object
+  - `--json`: Machine-readable JSON with `features` array, `unmapped_directories` array, `collisions` array, and `summary` object
 - **Exit codes**:
   - 0: All features ok (or project has zero features)
   - 1: At least one feature not ok (i.e., any feature's stage is not "ok")
@@ -761,7 +761,7 @@ The `--json` flag produces a single JSON object with the following structure. Th
       ]
     }]
   }],
-  "orphaned_directories": [
+  "unmapped_directories": [
     {"path": "tests/features/removed_feature", "test_files": ["default_test.py"]}
   ],
   "collisions": [
@@ -780,7 +780,7 @@ The `--json` flag produces a single JSON object with the following structure. Th
 }
 ```
 
-- `orphaned_directories` is empty unless `--include-orphaned` flag is set
+- `unmapped_directories` is empty unless `--include-unmapped` flag is set
 - `collisions` contains cross-feature function name duplicates detected during post-processing
 - `summary` counts are computed across all features
 
@@ -815,7 +815,7 @@ A feature file progresses through stages as development advances. The lifecycle 
 | GherkinError from detect_empty_rules | Stage = "no scenarios" (conservative fallback — full parse already succeeded) |
 | Test file with Python syntax error (discover_tests returns {}) | All scenarios unmapped → stage = "needs tests" |
 | Rule aggregate: mixed status | Shows worst status with counts (e.g., "1 error, 1 no body") |
-| Orphaned test directory (no matching .feature file) | Reported in orphaned_directories if --include-orphaned; never affects any feature stage |
+| Unmapped test directory (no matching .feature file) | Reported in unmapped_directories if --include-unmapped; never affects any feature stage |
 | Cross-feature function name collision | Reported in collisions array; warning only, does not affect exit code or any feature stage |
 | Features directory does not exist | Fatal: exit code 2, error message to stderr |
 | Disk I/O failure during feature read | Fatal: exit code 2, error message to stderr |
@@ -826,7 +826,7 @@ A feature file progresses through stages as development advances. The lifecycle 
 - **Correctness**: Feature stage is determined by evaluating the Stage Decision Tree conditions in priority order (1 through 7). The first condition whose predicate is satisfied by any scenario determines the feature stage. Given the same disk state, the same stage is always produced — stage derivation is deterministic.
 - **Reliability**: Zero partial output. If any feature parse fails (GherkinError), that feature gets `broken` stage — not a crash. The StatusReport is always complete: every feature in the features directory appears in the output, even if some are broken. If the features_dir itself is missing or unreadable, the command exits 2 without producing partial output.
 - **Simplicity**: Status Reporting imports from beehave internally (gherkin, discover, check). This is expected — it is a beehave command, not generated code.
-- **Composability**: The `--json` output is the composability surface for external tooling (CI systems, dashboards, editors). The JSON schema (features array, summary object, orphaned_directories array, collisions array) is stable within a major version. Machine consumers should parse the JSON output, not the human-readable tree.
+- **Composability**: The `--json` output is the composability surface for external tooling (CI systems, dashboards, editors). The JSON schema (features array, summary object, unmapped_directories array, collisions array) is stable within a major version. Machine consumers should parse the JSON output, not the human-readable tree.
 - **Stage Immutability**: Parse errors are first-class stages, not side-channel stderr output. A broken feature contributes to the StatusReport and exits 1 (not 2) because the project may still have useful work to do on other features.
 - **Warning Isolation**: Warnings (misplaced tests from check_pair, cross-feature name collisions from post-processing) do not affect feature stage or exit code. They are informational only.
 - **Exit Code Semantics**: Exit 0 when all features are ok (or zero features). Exit 1 when at least one feature is not ok. Exit 2 on fatal errors (config missing, I/O failure). This mirrors `beehave check` semantics.
@@ -862,7 +862,7 @@ Not applicable — CLI is a dispatch layer.
 | check | feature (optional) | Consistency Checking |
 | clean | feature (required), --force | Cleanup |
 | list | --verbose | Status Reporting (existing list command) |
-| status | feature (optional), --json, --no-color, --include-orphaned | Status Reporting (new) |
+| status | feature (optional), --json, --no-color, --include-unmapped | Status Reporting (new) |
 
 #### Exit Code Contract
 

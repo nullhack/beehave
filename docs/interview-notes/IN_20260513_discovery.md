@@ -15,7 +15,7 @@
 | Q2 | What does the product do at a high level? | A CLI tool with three commands: `generate` (produces Hypothesis test stubs from Gherkin), `check` (verifies test bodies match feature specs via AST), and `clean` (removes unmapped test functions). |
 | Q3 | Why does it exist — what problem does it solve? | Developers need Gherkin specifications to stay synchronized with test code without runtime coupling. Existing BDD tools inject frameworks into test code; beehave generates plain Hypothesis tests with zero imports from beehave itself. |
 | Q4 | When and where is it used? | During development, at the command line. Developers run `generate` when writing features, `check` to verify consistency, and `clean` to remove stale tests. |
-| Q5 | Success — what does "done" look like? | Generated stubs are valid Hypothesis tests. `check` reports zero violations. Orphan functions are cleanly removed. No beehave imports appear in test code. |
+| Q5 | Success — what does "done" look like? | Generated stubs are valid Hypothesis tests. `check` reports zero violations. Unmapped functions are cleanly removed. No beehave imports appear in test code. |
 | Q6 | Failure — what must never happen? | Partial output on failure. Tests must never import from beehave. Function name mapping must never be ambiguous (deterministic algorithm only). |
 | Q7 | Out-of-scope — what are we explicitly not building? | Test runner, runtime framework, step-definition engine, assertion DSL, synonym resolver, Hypothesis replacement, bulk processor (one feature per invocation), `--dry-run` preview, code formatter/linter, cache/state manager. |
 
@@ -48,7 +48,7 @@
 
 - Existing BDD tools couple tests to frameworks at runtime, making tests fragile
 - No existing tool enforces that test bodies stay consistent with Gherkin specs
-- Orphan test functions accumulate without automated cleanup
+- Unmapped test functions accumulate without automated cleanup
 
 ## Business Goals Identified
 

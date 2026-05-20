@@ -180,21 +180,21 @@ def test_json_includes_summary_stage_counts(tmp_project, config, capsys):
     assert zero_count == 0
 
 
-def test_json_has_collision_and_orphan_entries(tmp_project, config, capsys):
-    """JSON output includes orphaned_directories and collisions."""
+def test_json_has_collision_and_unmapped_entries(tmp_project, config, capsys):
+    """JSON output includes unmapped_directories and collisions."""
     features_dir = "docs/features"
     tests_dir = "tests/features"
     assert (tmp_project / features_dir).exists()
     assert (tmp_project / tests_dir).exists()
 
-    orphan_dir = "tests/features/old_feature"
+    unmapped_dir = "tests/features/old_feature"
     collision_fn = "test_login"
 
-    # Orphaned directory
+    # Unmapped directory
     test_dir = tmp_project / "tests" / "features" / "old_feature"
     test_dir.mkdir(parents=True, exist_ok=True)
     (test_dir / "default_test.py").write_text("def test_old(): pass\n")
-    assert orphan_dir == "tests/features/old_feature"
+    assert unmapped_dir == "tests/features/old_feature"
 
     # Two features with collision
     write_feature(
@@ -242,9 +242,9 @@ def test_json_has_collision_and_orphan_entries(tmp_project, config, capsys):
     assert collision_fn == "test_login"
 
     with pytest.raises(SystemExit):
-        compute_status(config, json_output=True, include_orphaned=True)
+        compute_status(config, json_output=True, include_unmapped=True)
 
     captured = capsys.readouterr()
     data = json.loads(captured.out)
-    assert len(data.get("orphaned_directories", [])) > 0
+    assert len(data.get("unmapped_directories", [])) > 0
     assert len(data.get("collisions", [])) > 0

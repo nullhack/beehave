@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/beehave?style=for-the-badge)](https://pypi.org/project/beehave/)
 
-**Keep your living documentation and test code in sync — without the step-definition boilerplate.**
+**Keep your living documentation and test code in sync — without step definitions.**
 
 </div>
 
@@ -22,7 +22,7 @@ pip install beehave
 
 ## How it differs from standard Gherkin tools
 
-Traditional BDD frameworks (behave, pytest-bdd) require **step definitions** — separate Python functions decorated with `@given`/`@when`/`@then` whose text must match the Gherkin step text exactly. This creates fragile coupling, boilerplate, and framework lock-in. beehave eliminates all of that:
+Traditional BDD frameworks (behave, pytest-bdd) require **step definitions** — separate Python functions decorated with `@given`/`@when`/`@then` whose text must match the Gherkin step text exactly. This creates fragile coupling and framework lock-in. beehave eliminates all of that:
 
 - **No step definitions.** The function name **is** the link. `Scenario: guard bee inspects visitor` → `test_guard_bee_inspects_visitor`.
 - **No runtime imports.** Your tests import only `hypothesis`. beehave is a dev-time CLI.
