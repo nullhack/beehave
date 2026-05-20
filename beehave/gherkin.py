@@ -86,12 +86,27 @@ def _extract_placeholders(text: str) -> tuple[Placeholder, ...]:
 
 
 def _extract_literals(text: str) -> tuple[Literal, ...]:
+    """Extract numeric and quoted-string literals from step text.
+
+    Quoted strings that match placeholder syntax (e.g. ``"<var>"``) are
+    skipped — they represent quotes around a placeholder, not a literal
+    value.
+
+    Args:
+        text: The text of a Gherkin step.
+
+    Returns:
+        A tuple of ``Literal`` objects (may be empty).
+
+    """
     result: list[Literal] = []
     for token in text.split():
         if _NUMERIC_LITERAL_RE.match(token):
             result.append(Literal(value=int(token), raw=token))
     for match in _QUOTED_STRING_RE.finditer(text):
         value = match.group(1) if match.group(1) is not None else match.group(2)
+        if _PLACEHOLDER_RE.match(value):
+            continue
         result.append(Literal(value=value, raw=match.group(0)))
     return tuple(result)
 

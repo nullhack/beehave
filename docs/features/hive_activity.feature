@@ -25,7 +25,7 @@ Feature: Hive Activity
       When the guard inspects the visitor for "floral" scent
       Then the visitor is <outcome>
 
-  Rule: Foraging
+  Rule: Hive Foraging
 
     Scenario: forager returns with nectar
       Given a forager bee named <name>

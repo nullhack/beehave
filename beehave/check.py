@@ -25,12 +25,26 @@ def _check_placeholders(
     ti: TestInfo,
     test_path: str,
 ) -> list[Violation]:
+    """Verify every Gherkin placeholder appears in the test body.
+
+    Placeholders are matched case-insensitively (``<Prefix>`` matches
+    ``prefix`` in the test body).
+
+    Args:
+        si: Parsed scenario information.
+        ti: Discovered test info.
+        test_path: Path to the test file for error reporting.
+
+    Returns:
+        A list of ``Violation`` objects for each missing placeholder.
+
+    """
     if ti.is_stub:
         return []
 
     violations: list[Violation] = []
     for ph in si.placeholders:
-        if ph.name not in ti.body_name_nodes:
+        if ph.name.lower() not in {n.lower() for n in ti.body_name_nodes}:
             violations.append(
                 Violation(
                     path=test_path,
@@ -47,12 +61,28 @@ def _check_literals(
     ti: TestInfo,
     test_path: str,
 ) -> list[Violation]:
+    """Verify every Gherkin step literal appears in the test body.
+
+    Literal values are matched case-insensitively (``"Hello"`` matches
+    ``"hello"`` in the test body).  Numeric literals are converted to
+    strings before comparison.
+
+    Args:
+        si: Parsed scenario information.
+        ti: Discovered test info.
+        test_path: Path to the test file for error reporting.
+
+    Returns:
+        A list of ``Violation`` objects for each missing literal.
+
+    """
     if ti.is_stub:
         return []
 
     violations: list[Violation] = []
     for lit in si.literals:
-        if lit.value not in ti.body_constant_nodes:
+        lowered_constants = {str(c).lower() for c in ti.body_constant_nodes}
+        if str(lit.value).lower() not in lowered_constants:
             violations.append(
                 Violation(
                     path=test_path,

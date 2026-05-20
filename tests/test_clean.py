@@ -120,7 +120,9 @@ class TestCleanUnmapped:
             """,
         )
         generate_stubs("clnr", config)
-        test_file = tmp_project / "tests" / "features" / "cln_rule" / "alpha_rule_test.py"
+        test_file = (
+            tmp_project / "tests" / "features" / "cln_rule" / "alpha_rule_test.py"
+        )
         content = (
             test_file.read_text()
             + """

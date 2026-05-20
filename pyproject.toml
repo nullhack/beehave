@@ -23,7 +23,7 @@ beehave = "beehave.cli:main"
 dev = [
     "agents-smith>=1.0.0",
     "beehave",
-    "flowr>=1.0.0",
+    "flowr[viz]>=1.1.0",
     "hypothesis>=6.152.7",
     "pytest>=8.0",
     "pytest-beehave>=0.2.2",

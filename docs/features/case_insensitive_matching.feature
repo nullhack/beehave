@@ -132,7 +132,7 @@ Feature: Case Insensitive Matching
       Then no Literal is created for "<name>"
       And _extract_placeholders produces Placeholder(name="name")
 
-    Scenario: non-placeholder quoted content still captured
+    Scenario: non placeholder quoted content captured
       Given a step text 'Given a phone number "[PHONE]"'
       And "[PHONE]" is not a valid placeholder
       When _extract_literals processes the step text
@@ -155,7 +155,7 @@ Feature: Case Insensitive Matching
     distinct, so Gherkin literal `1` never matches test body constant
     `True`, and vice versa.
 
-    Scenario: integer one does not match boolean true
+    Scenario: integer one not match true boolean
       Given a scenario step "Given the flag is 1"
       And the test body contains constant True
       When check_pair compares literals
