@@ -33,8 +33,8 @@ To make this work, beehave applies a few constraints beyond standard Gherkin:
 | Constraint | Why |
 |-----------|-----|
 | Titles contain only **letters, digits, and spaces** | They become Python identifiers (`test_...`) and file paths |
-| `<placeholder>` names must be valid Python identifiers, not keywords or builtins | They become function parameters |
-| `"quoted strings"` and bare numbers in step text are **enforced literals** | `check` verifies they appear as `Constant` nodes in the function body |
+| `"quoted strings"` or `'single-quoted strings'` and bare numbers in step text are **enforced literals** | `check` verifies they appear as `Constant` nodes in the function body (case-insensitive) |
+| `<placeholder>` names must be valid Python identifiers, not keywords or builtins | They become function parameters (case-insensitive matching) |
 | Scenario titles are **globally unique** across all features | One function name = one scenario, everywhere |
 
 ---
@@ -173,6 +173,28 @@ beehave list          # paths and titles
 beehave list -v       # include scenario counts, rules, stub status
 ```
 
+### Show development status
+
+```bash
+beehave status                    # all features with stage and tree output
+beehave status --json             # machine-readable JSON
+beehave status --include-unmapped # include unmapped test directories
+```
+
+Output example:
+
+```
+hive_activity (Hive Activity)  needs fixes
+├── guard bee inspects visitor                1 error
+└── forager returns with nectar              ok
+
+comb_construction (Comb Construction)  ok
+
+dance_language (Waggle Dance Communication)  needs bodies
+├── round dance                              no body
+└── waggle dance                             no body
+```
+
 ---
 
 ## What `check` enforces
@@ -185,8 +207,14 @@ beehave list -v       # include scenario counts, rules, stub status
 | `missing-literal` | error | `"string"` or numeric literal not in function body |
 | `example-mismatch` | error | Examples row has no matching `@example()` or vice versa |
 | `misplaced-test` | warning | Function in wrong file (e.g., after Rule removal) |
+| `invalid-feature-title` | error | Feature title fails charset or word count rules |
+| `invalid-rule-title` | error | Rule title fails charset or word count rules |
+| `invalid-scenario-title` | error | Scenario title fails charset or word count rules |
+| `duplicate-feature-title` | error | Duplicate Feature title (case-insensitive, global) |
+| `duplicate-rule-title` | error | Duplicate Rule title or Rule-Feature collision |
+| `duplicate-scenario-title` | error | Duplicate Scenario title or Scenario-title collision |
 
-Warnings exit 0. Errors exit 1. Stubs (bodies with only `pass` or `...`) skip body enforcement until you implement them.
+`beehave check` also validates feature, rule, and scenario titles: 2–6 words, `[\w\s]+` charset (letters, digits, spaces, underscores), case-insensitive global uniqueness across all title types.
 
 ---
 
@@ -197,7 +225,7 @@ Warnings exit 0. Errors exit 1. Stubs (bodies with only `pass` or `...`) skip bo
 - **Feature title → directory:** `Hive Activity` → `tests/features/hive_activity/`.
 - **Strategy inference:** Examples table column values are typed — all integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, else → `st.text()`.
 - **Background merging:** Feature Background applies to all scenarios. Rule Background applies to that Rule's scenarios only. Background steps cannot contain `<placeholders>`.
-- **Literal extraction:** `"quoted strings"` and numeric tokens in step text are enforced as `Constant` AST nodes in the function body.
+- **Literal extraction:** `"quoted strings"` and `'single-quoted strings'` and numeric tokens in step text are enforced as `Constant` AST nodes in the function body. Matching is case-insensitive: `"Rex"` in Gherkin matches `"rex"` in test body. Both single and double quote styles are supported. `[...]` bracket notation inside quotes is preserved verbatim.
 
 ---
 
