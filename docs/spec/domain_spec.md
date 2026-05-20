@@ -195,6 +195,35 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 - **Side Effects**: Reads .feature file from disk
 - **Preconditions**: Feature file exists at given path, is valid Gherkin
 
+#### Contract: _extract_placeholders(text: str) -> tuple[Placeholder, ...]
+
+- **Actor**: Feature Parsing (called by _parse_step during parse_feature)
+- **Trigger**: A Gherkin step text needs placeholder extraction
+- **Input**: {text: str} — the text of a single Gherkin step
+- **Output**: tuple of Placeholder value objects
+- **Rules**:
+  1. A `<token>` in step text is a Placeholder iff `token` is a valid Python identifier, not a Python keyword, not a Python builtin
+  2. Placeholder regex matches regardless of surrounding quotes (e.g., `"<name>"` extracts `<name>` as Placeholder)
+  3. Duplicate placeholders within a step are deduplicated
+
+#### Contract: _extract_literals(text: str) -> tuple[Literal, ...]
+
+- **Actor**: Feature Parsing (called by _parse_step during parse_feature)
+- **Trigger**: A Gherkin step text needs literal extraction
+- **Input**: {text: str} — the text of a single Gherkin step
+- **Output**: tuple of Literal value objects
+- **Rules**:
+  1. **Numeric literals**: A bare token matching `^-?\d+$` is a numeric Literal. Stored as `Literal(value=int(token), raw=token)`.
+  2. **String literals**: A quoted segment (`"..."` or `'...'`) is a string Literal with content extracted as-is between quotes. Exception: `<...>` inside quotes is skipped (already captured as Placeholder via rule above). `[...]` inside quotes is captured verbatim.
+  3. String literals are NOT deduplicated (each occurrence is a separate literal).
+
+### Invariants
+
+- `_extract_placeholders` never produces a Placeholder for `<token>` where token is inside quotes AND token is a valid placeholder — the placeholder Regex matches regardless of quotes
+- `_extract_literals` never produces a Literal for `<...>` content found inside quoted strings
+- `_extract_literals` captures `[...]` inside quotes verbatim (e.g., `"[PHONE]"` → `Literal(value="[PHONE]")`)
+- Placeholder extraction and literal extraction can run on the same step text without interference
+
 #### Contract: detect_empty_rules(feature_path) -> EmptyRuleInfo
 
 - **Actor**: Status Reporting
@@ -263,6 +292,10 @@ Not applicable — Feature Parsing has no internal state.
 - `validate_all_titles()` makes a single pass over all .feature files, extracting only titles (Feature, Rule, Scenario) — no ScenarioInfo extraction
 - All title validation is case-insensitive for uniqueness comparison
 - Title word count validation strips the Gherkin keyword prefix before counting — `Feature: Hive Activity` counts 2 words on `Hive Activity`
+- `_extract_placeholders` never produces a Placeholder for `<token>` where token is inside quotes AND token is a valid placeholder — the placeholder Regex matches regardless of quotes
+- `_extract_literals` never produces a Literal for `<...>` content found inside quoted strings
+- `_extract_literals` captures `[...]` inside quotes verbatim (e.g., `"[PHONE]"` → `Literal(value="[PHONE]")`)
+- Placeholder extraction and literal extraction can run on the same step text without interference
 
 ---
 
@@ -338,6 +371,11 @@ Discovers and analyzes Python test files via AST parsing. Extracts test function
   - File not found -> FileNotFoundError (unhandled)
 - **Side Effects**: Reads test file from disk
 - **Preconditions**: Test file exists and is valid Python
+- **Body Node Extraction Rules**:
+  - `ast.Constant` values are collected directly (e.g., `42` → `42`, `"hello"` → `"hello"`)
+  - `ast.UnaryOp(USub(), Constant(n))` is folded: `-n` is added to the constant set (e.g., `-2010` exposes both `2010` and `-2010`)
+  - The leading docstring expression (first statement if string constant) is excluded from collection
+  - `ast.Name` identifiers are collected as-is for placeholder matching
 
 #### Contract: discover_tests_dir_with_paths(tests_dir: Path) -> dict[str, tuple[TestInfo, Path]]
 
@@ -365,6 +403,8 @@ Not applicable — Test Discovery is stateless.
 - Function body is a stub if and only if it contains exactly one statement that is `pass` or `...`
 - Leading docstring is excluded from body node analysis
 - Stub detection is exact: a body with docstring + pass (2 statements) is NOT a stub
+- UnaryOp folding: `ast.UnaryOp(USub(), Constant(n))` exposes `-n` in body_constant_nodes alongside `n`
+- Body constant collection includes both direct `ast.Constant` values and folded unary-wrapped constants
 
 ---
 
@@ -428,9 +468,12 @@ Not applicable — Checking is stateless.
 - **Output**: list of Violation objects
 - **Errors**:
   - ti is None -> unmapped-scenario violation
-  - Placeholder not in ti.body_name_nodes -> missing-placeholder violation
-  - Literal not in ti.body_constant_nodes -> missing-literal violation
+  - Placeholder name (case-insensitive) not in ti.body_name_nodes -> missing-placeholder violation
+  - Literal value (string-normalized, case-insensitive) not in ti.body_constant_nodes -> missing-literal violation
   - Examples table row count != @example() decorator count -> example-mismatch violation
+- **Comparison Rules**:
+  - **Placeholder comparison**: `ph.name.lower()` ∈ `{n.lower() | n ∈ ti.body_name_nodes}`. `<Dog>` matches `dog`, `DOG`, `Dog` in test body.
+  - **Literal comparison**: `str(lit.value).lower()` ∈ `{str(c).lower() | c ∈ ti.body_constant_nodes}`. `int(77000)` matches `Decimal("77000")` (both normalize to `"77000"`). `"Rex"` matches `"rex"` in test body. `True` vs `1`: `"true"` ≠ `"1"` (no false collision).
 - **Preconditions**: si and ti are properly parsed
 
 #### Contract: check_single(feature_path, config) -> list[Violation]
@@ -471,6 +514,11 @@ Not applicable — Checking is stateless.
 - Title validation violations (invalid-*, duplicate-*) are always errors (not warnings)
 - Exit code 1 when any non-warning violation exists
 - Exit code 0 when only warnings exist
+- Placeholder comparison is case-insensitive: `<Dog>` matches `dog`, `DOG`, `Dog` in test body
+- Literal comparison is string-normalized and case-insensitive: both sides normalized via `str().lower()` before comparison
+- UnaryOp folding ensures negative literals like `-2010` are visible in body_constant_nodes
+- String normalization prevents type mismatches: `int(77000)` from Gherkin matches `str("77000")` from `Decimal("77000")` in body
+- `True` and `1` never collide: `str(True).lower() == "true"`, `str(1).lower() == "1"` — different types, different normalized forms
 
 ---
 
