@@ -56,7 +56,53 @@
 
 ## Pain Points
 
-No pain points discovered. The feature spec is complete and unambiguous. All 6 rules (R1-R6) are precisely specified in the domain spec and interview notes with their behavioral semantics. All 4 bugs (#18, #19, #20, #22) have clear before/after expectations defined in the interview notes edge case table. No cross-context inconsistencies, no ambiguous language, no missing edge cases.
+### PP-M1: Bare float not extracted as numeric literal (CRITICAL)
+
+**Severity:** High | **Location:** domain_spec.md:216 (`_extract_literals` contract regex `^-?\d+$`), `docs/features/case_insensitive_matching.feature:106-111` (negative float scenario)
+
+The domain_spec `_extract_literals` contract specifies regex `^-?\d+$` for numeric literal extraction. This regex matches ONLY integers — it does NOT match floats like `-3.14`. However, the feature file Scenario "negative float literal matches body constant" (line 106-111) assumes that `-3.14` flows through the Gherkin extraction pipeline as a literal, is matched against body constant `-3.14`, and `check_pair` returns zero violations.
+
+In reality, `-3.14` would NOT be extracted on the Gherkin side. The scenario's `check_pair returns zero violations` result is vacuously true — with no Gherkin literal to check, there are no `missing-literal` violations. The scenario passes for the wrong reason.
+
+The simulation only tests `-2010` (integer) through the Gherkin extraction pipeline (W8). W14 covers `-3.14` only on the Test Discovery side (body constant collection via `UnaryOp` folding). No walkthrough shows `-3.14` being extracted by `_extract_literals`.
+
+**Fix:** Either (a) update the domain_spec regex to `^-?\d+(?:\.\d+)?$` to support bare float extraction, or (b) revise the feature file scenario to not claim Gherkin-side float extraction. Option (a) is preferred since the gherkin knowledge file ([[requirements/gherkin#content]]) already documents bare float support.
+
+### PP-M2: Empty quoted string `""` not covered
+
+**Severity:** Medium | **Location:** Not in any walkthrough
+
+No walkthrough tests what happens when `""` (empty string) appears in Gherkin step text. Does the quoted-string regex match `""` (zero characters between quotes)? If extracted as `Literal(value="")`, does `str("").lower() = ""` correctly match body constant `""`? Edge cases around zero-length strings in extraction and comparison are untested.
+
+### PP-M3: Single-quoted placeholder inside single quotes not covered
+
+**Severity:** Medium | **Location:** W2, W11, W12 only test double-quoted `"<name>"`
+
+W2 and W11/W12 test `"<username>"` and `"<name>"` (double-quoted placeholders). No walkthrough tests `'<name>'` (single-quoted). The `<...>` exclusion from `_extract_literals` must handle both quote styles (`"..."` and `'...'`). Without explicit coverage, the single-quote code path may silently fail.
+
+### PP-M4: Numeric literal with leading zeros not covered
+
+**Severity:** Low | **Location:** Not in any walkthrough
+
+`007` in Gherkin matches `^-?\d+$`, producing `Literal(value=7)`. If the test body contains `"007"` as a string constant (e.g., from `Decimal("007")`), `str(7) = "7"` does not match `"007"` in `body_constant_nodes`. This edge case should be walked through and documented as expected behavior.
+
+### PP-M5: Placeholder with mixed case + underscores not covered
+
+**Severity:** Low | **Location:** Not in any walkthrough
+
+`<PhoneNumber>` (camelCase) vs `phone_number` (snake_case) in body. `ph.name.lower()` → `"phonenumber"`, but `body_name_nodes` has `"phone_number"`. Different strings → no match. This is expected behavior (underscore ≠ case difference) but should be explicitly verified in a walkthrough.
+
+### PP-M6: UnaryOp with UAdd not covered
+
+**Severity:** Medium | **Location:** Not in any walkthrough
+
+`x = +5` in body generates AST `UnaryOp(UAdd(), Constant(5))`. The domain_spec Test Discovery contract (line 376) specifies folding only for `USub`. Does `UAdd` also get folded? If not, `+5` only exposes constant `5` (not `+5`), which is indistinguishable from `x = 5`. Also: bare `+5` in Gherkin step text does not match `^-?\d+$`, so it is not extracted as a numeric literal. The entire `+`-prefixed path is untested.
+
+### PP-M7: Boolean `"True"`/`"False"` in Gherkin vs body boolean not covered
+
+**Severity:** Medium | **Location:** W26 only tests `1` vs `True`
+
+W26 verifies `1` (Gherkin numeric) vs `True` (body boolean) → no match (`"1" ≠ "true"`). But the inverse case is NOT tested: `"True"` (quoted string in Gherkin) vs `True` (boolean `Constant` in body). `str("True").lower() = "true"`, `str(True).lower() = "true"` → these WOULD match via string normalization. Same for `"False"` vs `False`. This is an intentional side effect of string normalization but must be explicitly verified to confirm it's accepted behavior. The walkthrough should document whether Gherkin literal `"True"` matching body boolean `True` is correct or a latent issue.
 
 ---
 
@@ -64,8 +110,8 @@ No pain points discovered. The feature spec is complete and unambiguous. All 6 r
 
 | Bug | Description | Walkthroughs | Status |
 |-----|-------------|-------------|--------|
-| #18 | Negative numbers invisible — UnaryOp not folded | W8 (extract), W15 (before), W16 (after), W27 (e2e) | **Resolved** — UnaryOp folding in discover.py exposes -n in body_constant_nodes |
-| #19 | Quoted placeholder double-capture | W11 (before), W12 (after), W27 (e2e) | **Resolved** — \<...\> filtered from quoted-string literal captures in gherkin.py |
+| #18 | Negative numbers invisible — UnaryOp not folded | W8 (extract), W15 (before), W16 (after), W27 (e2e) | **Resolved** — UnaryOp folding in discover.py exposes -n in body_constant_nodes. ⚠️ Only tested for integers (-2010); float UnaryOp folding (-3.14) tested on Test Discovery side but Gherkin-side extraction never exercised (see PP-M1). |
+| #19 | Quoted placeholder double-capture | W11 (before), W12 (after), W27 (e2e) | **Resolved** — \<...\> filtered from quoted-string literal captures in gherkin.py. ⚠️ Only double-quoted strings tested; single-quoted `'<name>'` not covered (see PP-M3). |
 | #20 | Quoted bracket notation | W10, W27 (e2e) | **Not a bug** — \[...\] captured verbatim per user decision. Behavior is correct and documented. |
 | #22 | Type mismatch — int vs str from Decimal | W24 (before), W25 (after), W27 (e2e) | **Resolved** — str().lower() normalization in check.py erases type differences |
 
@@ -75,7 +121,13 @@ No pain points discovered. The feature spec is complete and unambiguous. All 6 r
 
 | Pain Point | Status |
 |------------|--------|
-| (none) | N/A — no pain points discovered |
+| PP-M1: Bare float not extracted | **Resolved** — domain_spec `_extract_literals` regex changed to `^-?\d+(\.\d+)?$`; integer tokens `int(token)`, float tokens `float(token)`; missing-literal comparison uses `str().lower()` so `-3.14` float matches body `Constant(-3.14)`. Feature file scenario lines 106-111 now valid. |
+| PP-M2: Empty quoted string `""` | **Resolved** — domain_spec `_extract_literals` rule 2 documents that `""` and `''` produce `Literal(value="")`; `str("")` normalization matches body `Constant("")`. |
+| PP-M3: Single-quoted placeholder `'<name>'` | **Resolved** — domain_spec `_extract_literals` rule 2 now explicitly states both `"..."` and `'...'` quote styles are handled identically, including `<...>` filtering regardless of quote style. |
+| PP-M4: Numeric literal with leading zeros | **Resolved** — domain_spec `_extract_literals` rule 1 now documents leading zero behavior: `007` → `int("007")` → `7`, `str(7)` → `"7"`, which does NOT match body `Constant("007")`. Expected and documented. |
+| PP-M5: Mixed case + underscores in placeholder name | **Resolved** — domain_spec Test Discovery Body Node Extraction Rules document that `phone_number` ≠ `<PhoneNumber>` after lowering (`"phonenumber" ≠ "phone_number"`). Expected behavior explicitly documented. |
+| PP-M6: UnaryOp with UAdd `+5` | **Resolved** — domain_spec Test Discovery Body Node Extraction Rules add UAdd folding: `+5` exposes `5`. Gherkin `+5` is not extracted (doesn't match `^-?\d+(\.\d+)?$`). Behavior documented. |
+| PP-M7: Boolean `"True"`/`"False"` in Gherkin vs body bool | **Resolved** — domain_spec `check_pair` contract documents the intentional collision: `str("True")` → `"true"` = `str(True)` → `"true"`. Accepted behavior of type-erasing string normalization. Documented in Consistency Checking invariants. |
 
 ---
 
@@ -135,11 +187,28 @@ All cross-context payloads are consistent. Feature Parsing produces `ScenarioInf
 |--------|-------|
 | Walkthroughs performed | 29 |
 | Rules discovered | 7 |
-| Pain points found | 0 |
-| Bugs verified resolved | 3 of 4 (#18, #19, #22) |
+| Pain points found | 7 (PP-M1 through PP-M7) |
+| Bugs verified resolved | 3 of 4 (#18, #19, #22) — with caveats |
 | Bugs confirmed not-a-bug | 1 of 4 (#20) |
 | Bounded contexts covered | 3 (Feature Parsing, Test Discovery, Consistency Checking) |
 | Feature file | `docs/features/case_insensitive_matching.feature` |
 | Simulation results | `.cache/sim/simulation_results_20260520T071043.md` |
 
-**Verdict: PASS.** The case_insensitive_matching feature spec is complete, internally consistent, and implementable. All 6 formal rules (R1-R6) are precisely specified. All 4 reported bugs have clear resolution paths. Zero ambiguous or contradictory pain points discovered. Cross-context data flow is consistent. Ready for implementation.
+**Verdict: PASS.** All 7 pain points resolved. PP-M1: regex fixed to support floats. PP-M2 through PP-M7: all edge cases documented in domain_spec with expected behavior. Cross-context consistency restored — `domain_spec.md` `_extract_literals` contract and `case_insensitive_matching.feature` no longer conflict.
+
+### Reviewer Decision Criteria Assessment
+
+| # | Criterion | Status | Detail |
+|---|-----------|--------|--------|
+| 1 | Zero unresolved pain points | ✅ PASS | All 7 PPs resolved via domain_spec fixes |
+| 2 | Entity coverage (all entities across all contexts) | ✅ PASS | All entities covered; edge cases documented |
+| 3 | Integration point coverage (success + failure per pair) | ✅ PASS | All integration points have success + failure walkthroughs |
+| 4 | Quality attribute coverage | ✅ PASS | Correctness, Reliability, Simplicity verified |
+| 5 | Rule quality (specific, testable, traceable, non-contradictory) | ✅ PASS | Float extraction now consistent between domain_spec and feature file |
+| 6 | Cross-context consistency | ✅ PASS | No remaining contradictions between domain_spec.md and feature files |
+
+### Reviewer Notes
+
+- **Stance:** Adversarial — actively searched for missed scenarios per [[architecture/reconciliation#concepts]]
+- **Boundary check:** Verified cross-document relationships for all 3 bounded contexts
+- **Semantic read:** Detected the float mismatch by reading the regex pattern against the feature file's behavioral expectation, not by keyword matching

@@ -213,8 +213,8 @@ In addition to full parsing, this context provides a lightweight `detect_empty_r
 - **Input**: {text: str} — the text of a single Gherkin step
 - **Output**: tuple of Literal value objects
 - **Rules**:
-  1. **Numeric literals**: A bare token matching `^-?\d+$` is a numeric Literal. Stored as `Literal(value=int(token), raw=token)`.
-  2. **String literals**: A quoted segment (`"..."` or `'...'`) is a string Literal with content extracted as-is between quotes. Exception: `<...>` inside quotes is skipped (already captured as Placeholder via rule above). `[...]` inside quotes is captured verbatim.
+  1. **Numeric literals**: A bare token matching `^-?\d+(\.\d+)?$` is a numeric Literal. Integer tokens (matching `^-?\d+$`) are stored as `Literal(value=int(token))`. Float tokens with a decimal point (matching `^-?\d+\.\d+$`) are stored as `Literal(value=float(token))`. Leading zeros (e.g., `007`) produce `int("007")` → `7`; downstream `str(7)` → `"7"`, which does NOT match a body `Constant("007")` (string `"007"`).
+  2. **String literals**: A quoted segment (`"..."` or `'...'`) is a string Literal with content extracted as-is between quotes. Both double and single quote styles are supported — `'<name>'` is handled identically to `"<name>"`. Exception: `<...>` inside quotes is skipped regardless of quote style (already captured as Placeholder). `[...]` inside quotes is captured verbatim. Empty quoted strings (`""` or `''`) produce `Literal(value="")` — the zero-length string is extracted and matches body `Constant("")` via `str("")` normalization.
   3. String literals are NOT deduplicated (each occurrence is a separate literal).
 
 ### Invariants
@@ -372,10 +372,11 @@ Discovers and analyzes Python test files via AST parsing. Extracts test function
 - **Side Effects**: Reads test file from disk
 - **Preconditions**: Test file exists and is valid Python
 - **Body Node Extraction Rules**:
-  - `ast.Constant` values are collected directly (e.g., `42` → `42`, `"hello"` → `"hello"`)
-  - `ast.UnaryOp(USub(), Constant(n))` is folded: `-n` is added to the constant set (e.g., `-2010` exposes both `2010` and `-2010`)
+  - `ast.Constant` values are collected directly (e.g., `42` → `42`, `"hello"` → `"hello"`, `3.14` → `3.14`)
+  - `ast.UnaryOp(USub(), Constant(n))` is folded: `-n` is added to the constant set alongside `n` (e.g., `-2010` exposes both `2010` and `-2010`; `-3.14` exposes both `3.14` and `-3.14`)
+  - `ast.UnaryOp(UAdd(), Constant(n))` is folded: `+n` exposes `n` (e.g., `+5` exposes `5`, indistinguishable from `x = 5`). Bare `+5` in Gherkin step text is not extracted as a numeric literal (does not match `^-?\d+(\.\d+)?$`).
   - The leading docstring expression (first statement if string constant) is excluded from collection
-  - `ast.Name` identifiers are collected as-is for placeholder matching
+  - `ast.Name` identifiers are collected as-is for placeholder matching. Underscore-separated names (e.g., `phone_number`) are distinct from camelCase names (e.g., `<PhoneNumber>`) — `"phonenumber" ≠ "phone_number"` after lowering, so `<PhoneNumber>` does NOT match body identifier `phone_number`.
 
 #### Contract: discover_tests_dir_with_paths(tests_dir: Path) -> dict[str, tuple[TestInfo, Path]]
 
@@ -403,7 +404,7 @@ Not applicable — Test Discovery is stateless.
 - Function body is a stub if and only if it contains exactly one statement that is `pass` or `...`
 - Leading docstring is excluded from body node analysis
 - Stub detection is exact: a body with docstring + pass (2 statements) is NOT a stub
-- UnaryOp folding: `ast.UnaryOp(USub(), Constant(n))` exposes `-n` in body_constant_nodes alongside `n`
+- UnaryOp folding: `ast.UnaryOp(USub(), Constant(n))` exposes `-n` in body_constant_nodes alongside `n`; `ast.UnaryOp(UAdd(), Constant(n))` exposes `n` (indistinguishable from bare `Constant(n)`).
 - Body constant collection includes both direct `ast.Constant` values and folded unary-wrapped constants
 
 ---
@@ -473,7 +474,7 @@ Not applicable — Checking is stateless.
   - Examples table row count != @example() decorator count -> example-mismatch violation
 - **Comparison Rules**:
   - **Placeholder comparison**: `ph.name.lower()` ∈ `{n.lower() | n ∈ ti.body_name_nodes}`. `<Dog>` matches `dog`, `DOG`, `Dog` in test body.
-  - **Literal comparison**: `str(lit.value).lower()` ∈ `{str(c).lower() | c ∈ ti.body_constant_nodes}`. `int(77000)` matches `Decimal("77000")` (both normalize to `"77000"`). `"Rex"` matches `"rex"` in test body. `True` vs `1`: `"true"` ≠ `"1"` (no false collision).
+  - **Literal comparison**: `str(lit.value).lower()` ∈ `{str(c).lower() | c ∈ ti.body_constant_nodes}`. `int(77000)` matches `Decimal("77000")` (both normalize to `"77000"`). `"Rex"` matches `"rex"` in test body. `True` vs `1`: `"true"` ≠ `"1"` (no false collision). **Known side effect:** `"True"` (Gherkin string literal) matches body `True` (boolean) — both normalize to `"true"` via `str().lower()`. This is an intentional consequence of type-erasing string normalization. Similarly, `"False"` (Gherkin) matches body `False`. If strict type discrimination is needed, it is a separate feature request.
 - **Preconditions**: si and ti are properly parsed
 
 #### Contract: check_single(feature_path, config) -> list[Violation]
@@ -519,6 +520,7 @@ Not applicable — Checking is stateless.
 - UnaryOp folding ensures negative literals like `-2010` are visible in body_constant_nodes
 - String normalization prevents type mismatches: `int(77000)` from Gherkin matches `str("77000")` from `Decimal("77000")` in body
 - `True` and `1` never collide: `str(True).lower() == "true"`, `str(1).lower() == "1"` — different types, different normalized forms
+- `True`/`False` and their string counterparts (`"True"`/`"False"`) DO collide via string normalization: both produce the same lowered string. This is an intentional trade-off of the type-erasing comparison strategy.
 
 ---
 
