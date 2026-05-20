@@ -1,7 +1,0 @@
-{
-  "walkthrough": 17,
-  "result": {
-    "validate_all_titles": "raises GherkinError during lightweight AST traversal of broken.feature",
-    "note": "PAIN POINT: validate_all_titles makes a single pass over all .feature files (domain_spec.md line 263). If file 2 of 3 is broken, does the function return violations from file 1 (already scanned) and raise GherkinError? Or does it raise immediately without returning any violations? The contract says GherkinError is 'caught by caller, feature treated as broken'. This implies the caller (check_all or generate_stubs) catches the error and decides what to do. The function itself likely raises immediately on any parse error — zero partial output for title validation. Consistent with Reliability quality attribute: 'Zero partial output on failure'."
-  }
-}

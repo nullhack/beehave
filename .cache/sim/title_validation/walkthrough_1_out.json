@@ -1,8 +1,0 @@
-{
-  "walkthrough": 1,
-  "result": {
-    "validate_all_titles": "returns empty list",
-    "violations": [],
-    "note": "All titles pass charset, word count, and uniqueness checks; zero violations returned"
-  }
-}
