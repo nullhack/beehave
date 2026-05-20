@@ -1,0 +1,19 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 31,
+  "type": "edge-case",
+  "rule": "R6 — Literal Matching Case Insensitive (leading zeros)",
+  "description": "Numeric literal 007 with leading zeros in Gherkin matches body Constant(7)",
+  "input": {
+    "scenario": {
+      "step_text": "Given the code is 007",
+      "placeholders": [],
+      "literals": [{"value": 7, "type": "numeric", "raw": "007"}]
+    },
+    "test": {
+      "body_name_nodes": ["code"],
+      "body_constant_nodes": [7]
+    }
+  },
+  "initial_state": "check_pair() comparing Gherkin literal 007 against body constants"
+}

@@ -1,0 +1,19 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 30,
+  "type": "edge-case",
+  "rule": "R5 — Placeholder Matching Case Insensitive",
+  "description": "Mixed-case placeholder with underscores vs snake_case body name — different when lowered",
+  "input": {
+    "scenario": {
+      "step_text": "Given the <PhoneNumber> is valid",
+      "placeholders": [{"name": "PhoneNumber", "raw": "<PhoneNumber>"}],
+      "literals": []
+    },
+    "test": {
+      "body_name_nodes": ["phone_number", "validate_number"],
+      "body_constant_nodes": []
+    }
+  },
+  "initial_state": "check_pair() comparing <PhoneNumber> against body identifiers"
+}

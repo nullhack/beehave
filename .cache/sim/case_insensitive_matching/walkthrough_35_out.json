@@ -1,0 +1,12 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 35,
+  "expected": {
+    "violations": [],
+    "str_normalized_gherkin": "true",
+    "str_normalized_body": "true",
+    "match_found": true,
+    "note": "Intentional collision — type-erasing string normalization"
+  },
+  "verification": "Gherkin string literal \"True\" → str('True').lower() → 'true'. Body boolean True → str(True).lower() → 'true'. Both normalize to 'true' → match → zero violations. This is an intentional side effect of type-erasing string normalization, documented in domain_spec check_pair contract. Same behavior for \"False\" vs False. If strict type discrimination is needed on boolean vs string literals, it would be a separate feature request."
+}
