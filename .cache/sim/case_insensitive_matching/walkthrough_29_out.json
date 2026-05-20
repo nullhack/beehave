@@ -1,0 +1,10 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 29,
+  "expected": {
+    "violations": [
+      {"error_type": "unmapped-scenario", "message": "no test found for scenario"}
+    ]
+  },
+  "verification": "When TestInfo is None, check_pair returns unmapped-scenario violation immediately. No placeholder/literal checks attempted."
+}

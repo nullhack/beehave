@@ -1,0 +1,9 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 23,
+  "expected": {
+    "violations": [],
+    "match_detail": "str('Rex').lower() = 'rex', str('rex').lower() = 'rex' → match"
+  },
+  "verification": "Case-insensitive: both sides lowered to 'rex' before comparison. Core R6 behavior."
+}

@@ -1,0 +1,10 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 25,
+  "expected_after_fix": {
+    "violations": [],
+    "match_detail": "str(77000).lower() = '77000', {str(c).lower() for c in ['77000']} = {'77000'} → '77000' in {'77000'} → match"
+  },
+  "fix_applied": "Both sides normalized via str().lower() before comparison. int(77000) → '77000', str('77000') → '77000'. Types erased, values matched.",
+  "verification": "No violation. Type mismatch resolved by string normalization."
+}

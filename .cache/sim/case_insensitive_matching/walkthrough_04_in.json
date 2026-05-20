@@ -1,0 +1,13 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 4,
+  "type": "edge-case",
+  "rule": "R1 — Python builtin rejection",
+  "description": "Token that is a Python builtin is NOT extracted as Placeholder",
+  "input": {
+    "step_text": "Given the value is <int>",
+    "known_keywords": ["class", "def"],
+    "known_builtins": ["int", "str", "list", "dict", "float"]
+  },
+  "initial_state": "Builtin token in step text"
+}

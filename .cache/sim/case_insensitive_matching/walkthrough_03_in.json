@@ -1,0 +1,13 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 3,
+  "type": "edge-case",
+  "rule": "R1 — Python keyword rejection",
+  "description": "Token that is a Python keyword is NOT extracted as Placeholder",
+  "input": {
+    "step_text": "Given we use the <class> instance",
+    "known_keywords": ["class", "def", "if", "else", "for", "while"],
+    "known_builtins": ["int", "str"]
+  },
+  "initial_state": "Keyword token in step text"
+}

@@ -1,0 +1,26 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 27,
+  "expected": {
+    "feature_parsing_output": {
+      "placeholders": [{"name": "Dog", "raw": "<Dog>"}],
+      "literals": [
+        {"value": "Rex", "type": "string"},
+        {"value": -2010, "type": "numeric"}
+      ]
+    },
+    "test_discovery_output": {
+      "body_name_nodes": ["dog", "rex", "balance", "Dog"],
+      "body_constant_nodes": ["rex", 2010, -2010]
+    },
+    "consistency_checking_output": {
+      "violations": []
+    },
+    "matches": [
+      "Placeholder <Dog>: 'dog'.lower() in {'dog','rex','balance','dog'} → match",
+      "Literal 'Rex': 'rex' in {'rex'} → match",
+      "Literal -2010: '-2010' in {'2010','-2010'} → match"
+    ],
+    "verification": "All extractions correct, all body nodes correct, all comparisons pass. Zero violations. Full E2E pipeline validates bugs #18, #19, #22 are resolved and R5/R6 work correctly."
+  }
+}

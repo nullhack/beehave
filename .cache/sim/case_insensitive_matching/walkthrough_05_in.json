@@ -1,0 +1,13 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 5,
+  "type": "edge-case",
+  "rule": "R1 — Duplicate placeholder deduplication",
+  "description": "Same <token> twice in one step produces one Placeholder",
+  "input": {
+    "step_text": "Given <name> meets <name>",
+    "known_keywords": ["class", "def"],
+    "known_builtins": ["int", "str"]
+  },
+  "initial_state": "Step with repeated placeholder token"
+}

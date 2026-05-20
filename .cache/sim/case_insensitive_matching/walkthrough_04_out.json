@@ -1,0 +1,9 @@
+{
+  "context": "Feature Parsing",
+  "walkthrough": 4,
+  "expected": {
+    "placeholders": [],
+    "literals": []
+  },
+  "verification": "<int> is a Python builtin → rejected, not a Placeholder"
+}

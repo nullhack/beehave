@@ -1,0 +1,12 @@
+{
+  "context": "Test Discovery",
+  "walkthrough": 13,
+  "type": "happy-path",
+  "rule": "R4 — AST Constant extraction",
+  "description": "Simple ast.Constant values collected from test function body",
+  "input": {
+    "test_function_body": "x = 42\ny = 77000\nname = \"Rex\"",
+    "has_docstring": false
+  },
+  "initial_state": "discover_tests() AST-walking a test function"
+}

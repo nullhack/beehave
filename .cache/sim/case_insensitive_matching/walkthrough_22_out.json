@@ -1,0 +1,9 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 22,
+  "expected": {
+    "violations": [],
+    "match_detail": "str(lit.value).lower() = 'rex', str(const).lower() for each c in body_constant_nodes = {'rex'} → 'rex' in {'rex'} → match"
+  },
+  "verification": "Exact case match via string normalization. Both sides lowered → equality."
+}

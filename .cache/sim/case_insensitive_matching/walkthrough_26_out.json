@@ -1,0 +1,11 @@
+{
+  "context": "Consistency Checking",
+  "walkthrough": 26,
+  "expected": {
+    "violations": [
+      {"error_type": "missing-literal", "message": "literal 1 not found in test body"}
+    ],
+    "match_detail": "str(1).lower() = '1', {str(True).lower()} = {'true'} → '1' not in {'true'} → no match"
+  },
+  "verification": "True and 1 never collide: 'true' ≠ '1'. Different types produce different normalized strings. Correct."
+}
