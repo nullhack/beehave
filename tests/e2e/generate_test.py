@@ -187,3 +187,12 @@ def test_generate_creates_tests_features_dir_if_absent(pytester) -> None:
     assert not (pytester.path / "tests" / "features").exists()
     run_beehave_generate(pytester)
     assert (pytester.path / "tests" / "features").is_dir()
+
+
+def test_outline_scenario_emits_parametrize_in_py(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    run_beehave_generate(pytester)
+    py = read_emitted_py(pytester, "hive_activity_default")
+    assert "@pytest.mark.parametrize(" in py
+    assert "'nectar'" in py and "'honey'" in py
+    assert "('100', '20', '8', '80')," in py

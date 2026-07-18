@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from beehave.gherkin import Rule, parse_feature
 
 if TYPE_CHECKING:
-    from beehave.gherkin import Scenario, Step
+    from beehave.gherkin import Examples, Scenario, Step
 
 
 def _step_block_from_item(
@@ -45,6 +45,46 @@ def _step_blocks(
     return blocks
 
 
+def _parametrize_of(
+    function: ast.FunctionDef,
+) -> tuple[list[str], list[tuple[str, ...]]] | None:
+    for decorator in function.decorator_list:
+        if not isinstance(decorator, ast.Call):
+            continue
+        func = decorator.func
+        if (
+            not isinstance(func, ast.Attribute)
+            or func.attr != "parametrize"
+            or not isinstance(func.value, ast.Attribute)
+            or func.value.attr != "mark"
+            or not isinstance(func.value.value, ast.Name)
+            or func.value.value.id != "pytest"
+        ):
+            continue
+        if len(decorator.args) < 2:
+            continue
+        try:
+            arg_names = ast.literal_eval(decorator.args[0])
+            rows = ast.literal_eval(decorator.args[1])
+        except ValueError, SyntaxError:
+            continue
+        if not isinstance(arg_names, tuple) or not isinstance(rows, list):
+            continue
+        return (list(arg_names), [tuple(r) for r in rows])
+    return None
+
+
+def _examples_rows(
+    scenario: Scenario,
+) -> tuple[list[str], list[tuple[str, ...]]] | None:
+    examples: Examples | None = scenario.examples
+    if examples is None:
+        return None
+    headers = list(examples.headers)
+    rows = [tuple(row[h] for h in headers) for row in examples.rows]
+    return (headers, rows)
+
+
 def _step_matches(
     block: tuple[str, str, set[str]],
     step: Step,
@@ -60,14 +100,23 @@ def _step_matches(
 def _scenario_matches(
     scenario: Scenario,
     blocks_by_function: dict[str, list[tuple[str, str, set[str]]]],
+    parametrize_by_function: dict[str, tuple[list[str], list[tuple[str, ...]]] | None],
 ) -> bool:
-    blocks = blocks_by_function.get(scenario.function_name, [])
+    name = scenario.function_name
+    blocks = blocks_by_function.get(name, [])
     if len(blocks) != len(scenario.steps):
         return False
-    return all(
+    if not all(
         _step_matches(block, step)
         for block, step in zip(blocks, scenario.steps, strict=True)
-    )
+    ):
+        return False
+    expected = _examples_rows(scenario)
+    if expected is not None:
+        actual = parametrize_by_function.get(name)
+        if actual is None or actual != expected:
+            return False
+    return True
 
 
 def check(feature_text: str, test_py_text: str) -> bool:
@@ -76,14 +125,20 @@ def check(feature_text: str, test_py_text: str) -> bool:
         tree = ast.parse(test_py_text)
     except SyntaxError:
         return False
-    blocks_by_function = {
-        node.name: _step_blocks(node)
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef)
-    }
+    blocks_by_function: dict[str, list[tuple[str, str, set[str]]]] = {}
+    parametrize_by_function: dict[
+        str, tuple[list[str], list[tuple[str, ...]]] | None
+    ] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        blocks_by_function[node.name] = _step_blocks(node)
+        parametrize_by_function[node.name] = _parametrize_of(node)
     for child in feature.children:
         scenarios = child.children if isinstance(child, Rule) else [child]
         for scenario in scenarios:
-            if not _scenario_matches(scenario, blocks_by_function):
+            if not _scenario_matches(
+                scenario, blocks_by_function, parametrize_by_function
+            ):
                 return False
     return True

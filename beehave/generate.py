@@ -13,26 +13,6 @@ def _slug_from(title: str) -> str:
     return "_".join(title.split()).lower()
 
 
-def _is_int(value: str) -> bool:
-    try:
-        int(value)
-    except ValueError:
-        return False
-    return True
-
-
-def _is_float(value: str) -> bool:
-    try:
-        float(value)
-    except ValueError:
-        return False
-    return True
-
-
-def _is_bool(value: str) -> bool:
-    return value.lower() in ("true", "false")
-
-
 def _placeholder_names(steps: list[Step]) -> list[str]:
     seen: set[str] = set()
     names: list[str] = []
@@ -44,26 +24,26 @@ def _placeholder_names(steps: list[Step]) -> list[str]:
     return names
 
 
-def _infer_param_type(name: str, examples: Examples | None) -> str:
-    if examples is None:
-        return "str"
-    values = [row[name] for row in examples.rows if name in row]
-    if not values:
-        return "str"
-    if all(_is_int(v) for v in values):
-        return "int"
-    if all(_is_float(v) for v in values):
-        return "float"
-    if all(_is_bool(v) for v in values):
-        return "bool"
-    return "str"
-
-
 def _signature_params(scenario: Scenario) -> str:
-    parts: list[str] = []
-    for name in _placeholder_names(scenario.steps):
-        parts.append(f"{name}: {_infer_param_type(name, scenario.examples)}")
-    return ", ".join(parts)
+    return ", ".join(f"{name}: str" for name in _placeholder_names(scenario.steps))
+
+
+def _parametrize_lines(scenario: Scenario) -> list[str]:
+    examples: Examples | None = scenario.examples
+    if examples is None:
+        return []
+    arg_names = ", ".join(repr(h) for h in examples.headers)
+    lines = [
+        "@pytest.mark.parametrize(",
+        f"    ({arg_names}),",
+        "    [",
+    ]
+    for row in examples.rows:
+        cells = ", ".join(repr(row[h]) for h in examples.headers)
+        lines.append(f"        ({cells}),")
+    lines.append("    ],")
+    lines.append(")")
+    return lines
 
 
 def _render_pyi(scenarios: list[Scenario]) -> str:
@@ -81,10 +61,13 @@ def _step_block(step: Step) -> str:
 
 def _render_py(scenarios: list[Scenario]) -> str:
     lines: list[str] = ["from beehave import step"]
+    if any(s.examples is not None for s in scenarios):
+        lines.append("import pytest")
     for scenario in scenarios:
         params = _signature_params(scenario)
         lines.append("")
         lines.append("")
+        lines.extend(_parametrize_lines(scenario))
         lines.append(f"def {scenario.function_name}({params}) -> None:")
         for step in scenario.steps:
             lines.append(_step_block(step))

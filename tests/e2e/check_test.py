@@ -207,3 +207,14 @@ def test_check_ignores_handwritten_py_outside_tests_features(pytester) -> None:
     handwritten.parent.mkdir(parents=True, exist_ok=True)
     handwritten.write_text("# handwritten")
     assert run_beehave_check(pytester) == 0
+
+
+def test_check_fails_when_parametrize_rows_edited(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    pytester.run("beehave", "generate")
+    py_path = pytester.path / "tests" / "features" / "hive_activity_default_test.py"
+    edited = py_path.read_text().replace(
+        "('100', '20', '8', '80'),", "('999', '20', '8', '80'),"
+    )
+    py_path.write_text(edited)
+    assert run_beehave_check(pytester) != 0
