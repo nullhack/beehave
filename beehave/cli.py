@@ -28,7 +28,18 @@ def _check_all(root: Path) -> int:
     features_dir = root / "docs" / "features"
     if not features_dir.is_dir():
         return 1
-    test_py_text = _read_test_py(root / "tests")
+    tests_features_dir = root / "tests" / "features"
+    if tests_features_dir.is_dir():
+        orphans = [
+            p
+            for p in sorted(tests_features_dir.glob("*_test.py"))
+            if not p.with_suffix(".pyi").exists()
+        ]
+        if orphans:
+            for orphan in orphans:
+                print(f"orphan: {orphan.name}", file=sys.stderr)
+            return 1
+    test_py_text = _read_test_py(tests_features_dir)
     for feature_path in sorted(features_dir.glob("*.feature")):
         if not check(feature_path.read_text(), test_py_text):
             return 1

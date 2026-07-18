@@ -23,9 +23,10 @@ def write_feature_text(pytester, basename: str, text: str) -> str:
 
 
 def write_test_py(pytester, stem: str, body: str) -> str:
-    dst = pytester.path / "tests" / f"{stem}_test.py"
+    dst = pytester.path / "tests" / "features" / f"{stem}_test.py"
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(body)
+    dst.with_suffix(".pyi").write_text("")
     return str(dst)
 
 
@@ -186,4 +187,23 @@ def test_does_not_inspect_body_for_literals_or_placeholders(pytester) -> None:
         "        pass\n"
     )
     write_test_py(pytester, "minimal_default", body_without_literals)
+    assert run_beehave_check(pytester) == 0
+
+
+def test_check_fails_on_orphan_py_in_tests_features(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    pytester.run("beehave", "generate")
+    orphan_path = pytester.path / "tests" / "features" / "orphan_default_test.py"
+    orphan_path.write_text("# orphan")
+    result = pytester.run("beehave", "check")
+    assert result.ret != 0
+    assert "orphan" in "\n".join(result.errlines)
+
+
+def test_check_ignores_handwritten_py_outside_tests_features(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    pytester.run("beehave", "generate")
+    handwritten = pytester.path / "tests" / "handwritten_test.py"
+    handwritten.parent.mkdir(parents=True, exist_ok=True)
+    handwritten.write_text("# handwritten")
     assert run_beehave_check(pytester) == 0

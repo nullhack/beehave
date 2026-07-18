@@ -28,7 +28,7 @@ def emit_test_py_for(feature_text: str) -> str:
         features.mkdir(parents=True)
         (features / "input.feature").write_text(feature_text)
         generate(root)
-        return (root / "tests" / "input_default_test.py").read_text()
+        return (root / "tests" / "features" / "input_default_test.py").read_text()
 
 
 def emit_test_pyi_for(feature_text: str) -> str:
@@ -40,7 +40,7 @@ def emit_test_pyi_for(feature_text: str) -> str:
         features.mkdir(parents=True)
         (features / "input.feature").write_text(feature_text)
         generate(root)
-        return (root / "tests" / "input_default_test.pyi").read_text()
+        return (root / "tests" / "features" / "input_default_test.pyi").read_text()
 
 
 def regenerate_over_body(feature_text: str, existing_py_body: str) -> str:
@@ -51,7 +51,7 @@ def regenerate_over_body(feature_text: str, existing_py_body: str) -> str:
         features = root / "docs" / "features"
         features.mkdir(parents=True)
         (features / "input.feature").write_text(feature_text)
-        tests_dir = root / "tests"
+        tests_dir = root / "tests" / "features"
         tests_dir.mkdir(parents=True)
         py_path = tests_dir / "input_default_test.py"
         py_path.write_text(existing_py_body)

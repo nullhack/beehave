@@ -81,7 +81,7 @@ def emitted_function_signature(feature_text: str, scenario_slug: str) -> str:
         features.mkdir(parents=True)
         (features / "input.feature").write_text(feature_text)
         generate(root)
-        pyi = (root / "tests" / "input_default_test.pyi").read_text()
+        pyi = (root / "tests" / "features" / "input_default_test.pyi").read_text()
     needle = f"def test_{scenario_slug}"
     start = pyi.find(needle)
     if start == -1:

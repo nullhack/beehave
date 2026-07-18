@@ -21,7 +21,7 @@ def emit_test_py_for(feature_text: str) -> str:
         features.mkdir(parents=True)
         (features / "input.feature").write_text(feature_text)
         generate(root)
-        return (root / "tests" / "input_default_test.py").read_text()
+        return (root / "tests" / "features" / "input_default_test.py").read_text()
 
 
 def check_passes_for(feature_text: str, test_py_text: str) -> bool:

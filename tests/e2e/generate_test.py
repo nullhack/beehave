@@ -10,7 +10,7 @@ STATUS_COMMAND_FEATURE = "status_command.feature"
 CASE_INSENSITIVE_MATCHING_FEATURE = "case_insensitive_matching.feature"
 
 DEFAULT_GROUP_SUFFIX = "default"
-EMISSION_DIR = "tests"
+EMISSION_DIR = "tests/features"
 
 
 def copy_feature_into_pytester(pytester, basename: str) -> str:
@@ -171,3 +171,19 @@ def test_step_data_table_does_not_surface_in_emitted_pyi(pytester) -> None:
     run_beehave_generate(pytester)
     pyi = read_emitted_pyi(pytester, "datatable_default")
     assert "unique_col" not in pyi
+
+
+def test_generate_wipes_stale_pyi_in_tests_features(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    stale_path = pytester.path / "tests" / "features" / "stale_default_test.pyi"
+    stale_path.parent.mkdir(parents=True, exist_ok=True)
+    stale_path.write_text("# stale")
+    run_beehave_generate(pytester)
+    assert not stale_path.exists()
+
+
+def test_generate_creates_tests_features_dir_if_absent(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    assert not (pytester.path / "tests" / "features").exists()
+    run_beehave_generate(pytester)
+    assert (pytester.path / "tests" / "features").is_dir()

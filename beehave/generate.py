@@ -109,8 +109,10 @@ def _emit_group(
 
 def generate(root: Path) -> None:
     features_dir = root / "docs" / "features"
-    tests_dir = root / "tests"
+    tests_dir = root / "tests" / "features"
     tests_dir.mkdir(parents=True, exist_ok=True)
+    for stale in tests_dir.glob("*_test.pyi"):
+        stale.unlink()
 
     for feature_path in sorted(features_dir.glob("*.feature")):
         feature = parse_feature(feature_path.read_text())

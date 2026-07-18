@@ -9,7 +9,7 @@ def write_feature_text(pytester, basename: str, text: str) -> str:
 
 
 def write_pyi_stub(pytester, stem: str) -> str:
-    dst = pytester.path / "tests" / f"{stem}_test.pyi"
+    dst = pytester.path / "tests" / "features" / f"{stem}_test.pyi"
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text("")
     return str(dst)
