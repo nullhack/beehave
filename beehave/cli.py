@@ -1,5 +1,3 @@
-"""Command-line entry point dispatching to generate, status, and check."""
-
 from __future__ import annotations
 
 import sys
@@ -12,12 +10,6 @@ from beehave.status import status
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Dispatch the first argument to `generate`, `status`, or `check`.
-
-    `generate` exits 0; `status` exits from status; `check` exits 1 if any
-    feature drifts from its generated test. Returns 2 for a missing or
-    unknown command.
-    """
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
         return 2

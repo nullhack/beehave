@@ -1,5 +1,3 @@
-"""Verify a generated `_test.py` still matches its `.feature` source."""
-
 from __future__ import annotations
 
 import ast
@@ -73,12 +71,6 @@ def _scenario_matches(
 
 
 def check(feature_text: str, test_py_text: str) -> bool:
-    """Return True iff every scenario matches a `def` one-to-one.
-
-    Each scenario in `feature_text` must have a `def` in `test_py_text` whose
-    `with step(...)` blocks line up on keyword, text, and placeholder names.
-    A syntactically invalid test_py_text returns False rather than raising.
-    """
     feature = parse_feature(feature_text)
     try:
         tree = ast.parse(test_py_text)

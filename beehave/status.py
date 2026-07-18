@@ -1,13 +1,7 @@
-"""Report counts of feature files and generated stub files under a project root."""
-
 from pathlib import Path
 
 
 def status(root: Path) -> int:
-    """Print counts of `docs/features/*.feature` files and `tests/*_test.pyi` stubs.
-
-    Returns 2 when the features directory is absent, else 0.
-    """
     features_dir = root / "docs" / "features"
     if not features_dir.is_dir():
         return 2
