@@ -1,3 +1,5 @@
+"""Generate `_test.pyi` / `_test.py` pairs from `.feature` files."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -108,6 +110,12 @@ def _emit_group(
 
 
 def generate(root: Path) -> None:
+    """Read every `docs/features/*.feature` under `root` and emit test pairs.
+
+    Writes a `{stem}_test.pyi` always and a `{stem}_test.py` only when absent,
+    per top-level scenario group and per `Rule:` group. Placeholder types are
+    inferred from each scenario's `Examples` values.
+    """
     features_dir = root / "docs" / "features"
     tests_dir = root / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)

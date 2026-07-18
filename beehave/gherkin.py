@@ -1,3 +1,5 @@
+"""Gherkin parse model — typed tree returned by `parse_feature`."""
+
 from __future__ import annotations
 
 import re
@@ -7,15 +9,21 @@ from gherkin.parser import Parser
 
 
 class Placeholder:
+    """A captured `<name>` placeholder found inside a step's text."""
+
     name: str
 
 
 class DataTable:
+    """Optional table on a step; `headers` is None when header-less."""
+
     headers: list[str] | None
     rows: list[list[str]]
 
 
 class Step:
+    """One Gherkin step: keyword, text, placeholders, optional docstring/table."""
+
     keyword: str
     text: str
     placeholders: list[Placeholder]
@@ -24,15 +32,21 @@ class Step:
 
 
 class Examples:
+    """The `Examples:` block of a Scenario Outline."""
+
     headers: list[str]
     rows: list[dict[str, str]]
 
 
 class Background:
+    """Shared steps prepended to every scenario in the enclosing feature or rule."""
+
     steps: list[Step]
 
 
 class Scenario:
+    """A scenario with merged background + own steps and optional examples."""
+
     title: str
     slug: str
     function_name: str
@@ -43,6 +57,8 @@ class Scenario:
 
 
 class Rule:
+    """A `Rule:` block — name, tags, optional background, and child scenarios."""
+
     name: str
     tags: list[str]
     background: Background | None
@@ -50,6 +66,8 @@ class Rule:
 
 
 class Feature:
+    """The parsed feature — top-level scenarios and rules."""
+
     name: str
     tags: list[str]
     background: Background | None
@@ -303,6 +321,12 @@ def _rule_from(
 
 
 def parse_feature(source: str) -> Feature:
+    """Parse `.feature` source into a `Feature`, enforcing title rules.
+
+    Scenario titles must use Unicode letters/digits/spaces only, span two
+    to six words, and be case-insensitively unique within the feature.
+    Placeholders in any background step are rejected at parse time.
+    """
     doc = cast(dict[str, Any], Parser().parse(source))
     feature_data = cast(dict[str, Any], doc.get("feature") or {})
 
