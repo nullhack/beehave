@@ -3,8 +3,6 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-
 INT_COLUMN_FEATURE = """\
 Feature: Strategy Inference
 Scenario Outline: int column
@@ -94,37 +92,31 @@ def emitted_function_signature(feature_text: str, scenario_slug: str) -> str:
     return pyi[start : end + 3]
 
 
-@pytest.mark.pending
 def test_all_int_column_infers_int_parameter() -> None:
     signature = emitted_function_signature(INT_COLUMN_FEATURE, "int_column")
     assert "amount: int" in signature
 
 
-@pytest.mark.pending
 def test_all_float_column_infers_float_parameter() -> None:
     signature = emitted_function_signature(FLOAT_COLUMN_FEATURE, "float_column")
     assert "amount: float" in signature
 
 
-@pytest.mark.pending
 def test_all_bool_column_infers_bool_parameter() -> None:
     signature = emitted_function_signature(BOOL_COLUMN_FEATURE, "bool_column")
     assert "flag: bool" in signature
 
 
-@pytest.mark.pending
 def test_mixed_type_column_infers_str_parameter() -> None:
     signature = emitted_function_signature(MIXED_COLUMN_FEATURE, "mixed_column")
     assert "amount: str" in signature
 
 
-@pytest.mark.pending
 def test_text_column_infers_str_parameter() -> None:
     signature = emitted_function_signature(TEXT_COLUMN_FEATURE, "text_column")
     assert "name: str" in signature
 
 
-@pytest.mark.pending
 def test_no_examples_table_infers_str_parameter() -> None:
     signature = emitted_function_signature(NO_EXAMPLES_FEATURE, "no_examples")
     assert "name: str" in signature

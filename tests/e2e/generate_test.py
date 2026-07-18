@@ -3,8 +3,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-import pytest
-
 HIVE_ACTIVITY_FEATURE = "hive_activity.feature"
 COMB_CONSTRUCTION_FEATURE = "comb_construction.feature"
 TITLE_VALIDATION_FEATURE = "title_validation.feature"
@@ -16,7 +14,7 @@ EMISSION_DIR = "tests"
 
 
 def copy_feature_into_pytester(pytester, basename: str) -> str:
-    src = Path("docs") / "features" / basename
+    src = Path(__file__).resolve().parents[2] / "docs" / "features" / basename
     dst = pytester.path / "docs" / "features" / basename
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, dst)
@@ -60,7 +58,6 @@ def list_emitted_stems(pytester) -> list[str]:
     return sorted(stems)
 
 
-@pytest.mark.pending
 def test_emits_pyi_for_default_group_and_each_rule(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
@@ -70,7 +67,6 @@ def test_emits_pyi_for_default_group_and_each_rule(pytester) -> None:
     assert "hive_activity_hive_foraging" in stems
 
 
-@pytest.mark.pending
 def test_always_emits_pyi_file_for_every_rule_and_default(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     exit_code = run_beehave_generate(pytester)
@@ -81,7 +77,6 @@ def test_always_emits_pyi_file_for_every_rule_and_default(pytester) -> None:
         assert read_emitted_pyi(pytester, stem) != ""
 
 
-@pytest.mark.pending
 def test_emits_py_skeleton_only_when_py_absent(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
@@ -91,7 +86,6 @@ def test_emits_py_skeleton_only_when_py_absent(pytester) -> None:
     assert first_emission == second_emission
 
 
-@pytest.mark.pending
 def test_scenario_title_emits_test_underscore_slug_function(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
@@ -99,7 +93,6 @@ def test_scenario_title_emits_test_underscore_slug_function(pytester) -> None:
     assert "def test_guard_bee_inspects_visitor" in pyi
 
 
-@pytest.mark.pending
 def test_function_name_carries_no_uppercase_and_collapses_whitespace(pytester) -> None:
     feature_text = (
         "Feature: Whitespace\n"
@@ -112,7 +105,6 @@ def test_function_name_carries_no_uppercase_and_collapses_whitespace(pytester) -
     assert "def test_mixedcase_title_with_spaces" in pyi
 
 
-@pytest.mark.pending
 def test_feature_background_steps_appear_in_every_emitted_scenario(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
@@ -125,7 +117,6 @@ def test_feature_background_steps_appear_in_every_emitted_scenario(pytester) -> 
     assert background_text in foraging_py
 
 
-@pytest.mark.pending
 def test_rule_background_steps_appear_only_in_that_rule_scenarios(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
@@ -138,7 +129,6 @@ def test_rule_background_steps_appear_only_in_that_rule_scenarios(pytester) -> N
     assert rule_background_text not in default_py
 
 
-@pytest.mark.pending
 def test_tags_do_not_surface_in_emitted_pyi_or_step_blocks(pytester) -> None:
     feature_text = (
         "@unique_tag_marker\n"
@@ -154,7 +144,6 @@ def test_tags_do_not_surface_in_emitted_pyi_or_step_blocks(pytester) -> None:
     assert "unique_tag_marker" not in py_text
 
 
-@pytest.mark.pending
 def test_step_docstring_does_not_surface_in_emitted_pyi(pytester) -> None:
     feature_text = (
         "Feature: Docstring\n"
@@ -170,7 +159,6 @@ def test_step_docstring_does_not_surface_in_emitted_pyi(pytester) -> None:
     assert "unique docstring marker text" not in pyi
 
 
-@pytest.mark.pending
 def test_step_data_table_does_not_surface_in_emitted_pyi(pytester) -> None:
     feature_text = (
         "Feature: DataTable\n"

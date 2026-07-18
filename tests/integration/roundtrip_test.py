@@ -3,10 +3,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-
 ROUND_TRIP_FEATURE = """\
-Feature: Round Trip
+Feature: Roundtrip Contract
 Scenario: round trip
 Given first step
 When second step
@@ -32,20 +30,17 @@ def check_passes_for(feature_text: str, test_py_text: str) -> bool:
     return check(feature_text, test_py_text)
 
 
-@pytest.mark.pending
 def test_check_passes_on_freshly_generated_py() -> None:
     py_text = emit_test_py_for(ROUND_TRIP_FEATURE)
     assert check_passes_for(ROUND_TRIP_FEATURE, py_text)
 
 
-@pytest.mark.pending
 def test_check_fails_after_consumer_edits_step_text() -> None:
     py_text = emit_test_py_for(ROUND_TRIP_FEATURE)
     edited = py_text.replace("first step", "edited step text")
     assert not check_passes_for(ROUND_TRIP_FEATURE, edited)
 
 
-@pytest.mark.pending
 def test_check_fails_after_consumer_removes_step_block() -> None:
     shorter_body = (
         "from beehave import step\n"
@@ -57,7 +52,6 @@ def test_check_fails_after_consumer_removes_step_block() -> None:
     assert not check_passes_for(ROUND_TRIP_FEATURE, shorter_body)
 
 
-@pytest.mark.pending
 def test_check_passes_after_consumer_adds_body_content() -> None:
     body_with_extra = (
         "from beehave import step\n"

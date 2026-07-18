@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beehave"
-version = "1.0.0"
+version = "2.0.0"
 description = "A thin layer on Hypothesis for Gherkin-style BDD testing with vocabulary enforcement"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -25,13 +25,14 @@ dev = [
     "beehave",
     "flowr[viz]>=1.1.0",
     "hypothesis>=6.152.7",
+    "mypy>=2.3.0",
     "pytest>=8.0",
-    "pytest-beehave>=0.2.2",
     "ruff>=0.11",
+    "taskipy>=1.14.1",
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+select = ["E", "F", "W", "I", "N", "UP", "B"]
 preview = true
 
 [tool.ruff.lint.per-file-ignores]
@@ -44,3 +45,14 @@ python_functions = ["test_*"]
 
 [tool.uv.sources]
 beehave = { workspace = true }
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+
+[tool.taskipy.tasks]
+test = "pytest"
+test-fast = "pytest -x -q"
+lint = "ruff check ."
+lint-merge = "ruff check --select E,F,W,I,N,UP,B,SIM,RUF --preview . && ruff format --check ."
+stubtest = "python -m mypy.stubtest beehave --allowlist .stubtest_allowlist"

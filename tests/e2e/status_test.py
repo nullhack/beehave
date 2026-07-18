@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 
 def write_feature_text(pytester, basename: str, text: str) -> str:
     dst = pytester.path / "docs" / "features" / basename
@@ -26,13 +24,11 @@ def status_stdout(pytester) -> str:
     return "\n".join(result.outlines)
 
 
-@pytest.mark.pending
 def test_status_exits_zero_when_features_dir_exists(pytester) -> None:
     write_feature_text(pytester, "a.feature", "Feature: A\nScenario: aaaaa\nGiven x\n")
     assert run_beehave_status(pytester) == 0
 
 
-@pytest.mark.pending
 def test_status_reports_feature_file_count(pytester) -> None:
     write_feature_text(pytester, "a.feature", "Feature: A\nScenario: aaaaa\nGiven x\n")
     write_feature_text(pytester, "b.feature", "Feature: B\nScenario: bbbbb\nGiven x\n")
@@ -41,7 +37,6 @@ def test_status_reports_feature_file_count(pytester) -> None:
     assert "feature" in stdout.lower()
 
 
-@pytest.mark.pending
 def test_status_reports_emitted_stub_count(pytester) -> None:
     write_feature_text(pytester, "a.feature", "Feature: A\nScenario: aaaaa\nGiven x\n")
     write_pyi_stub(pytester, "a_default")
@@ -51,6 +46,5 @@ def test_status_reports_emitted_stub_count(pytester) -> None:
     assert "stub" in stdout.lower()
 
 
-@pytest.mark.pending
 def test_status_exits_two_when_features_dir_missing(pytester) -> None:
     assert run_beehave_status(pytester) == 2

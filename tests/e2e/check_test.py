@@ -3,14 +3,12 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-import pytest
-
 HIVE_ACTIVITY_FEATURE = "hive_activity.feature"
 COMB_CONSTRUCTION_FEATURE = "comb_construction.feature"
 
 
 def copy_feature_into_pytester(pytester, basename: str) -> str:
-    src = Path("docs") / "features" / basename
+    src = Path(__file__).resolve().parents[2] / "docs" / "features" / basename
     dst = pytester.path / "docs" / "features" / basename
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, dst)
@@ -35,14 +33,12 @@ def run_beehave_check(pytester, *args: str) -> int:
     return pytester.run("beehave", "check", *args).ret
 
 
-@pytest.mark.pending
 def test_passes_when_blocks_match_steps(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     pytester.run("beehave", "generate")
     assert run_beehave_check(pytester) == 0
 
 
-@pytest.mark.pending
 def test_fails_when_block_count_differs_from_step_count(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -62,7 +58,6 @@ def test_fails_when_block_count_differs_from_step_count(pytester) -> None:
     assert run_beehave_check(pytester) != 0
 
 
-@pytest.mark.pending
 def test_fails_when_step_keyword_structurally_mismatches(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -84,7 +79,6 @@ def test_fails_when_step_keyword_structurally_mismatches(pytester) -> None:
     assert run_beehave_check(pytester) != 0
 
 
-@pytest.mark.pending
 def test_fails_when_step_text_mismatches(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -106,7 +100,6 @@ def test_fails_when_step_text_mismatches(pytester) -> None:
     assert run_beehave_check(pytester) != 0
 
 
-@pytest.mark.pending
 def test_fails_when_placeholder_name_set_mismatches(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -132,7 +125,6 @@ def test_fails_when_placeholder_name_set_mismatches(pytester) -> None:
     assert run_beehave_check(pytester) != 0
 
 
-@pytest.mark.pending
 def test_passes_when_keyword_case_differs(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -154,7 +146,6 @@ def test_passes_when_keyword_case_differs(pytester) -> None:
     assert run_beehave_check(pytester) == 0
 
 
-@pytest.mark.pending
 def test_passes_with_arbitrary_body_content_inside_step_block(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"
@@ -177,7 +168,6 @@ def test_passes_with_arbitrary_body_content_inside_step_block(pytester) -> None:
     assert run_beehave_check(pytester) == 0
 
 
-@pytest.mark.pending
 def test_does_not_inspect_body_for_literals_or_placeholders(pytester) -> None:
     feature_text = (
         "Feature: Minimal\n"

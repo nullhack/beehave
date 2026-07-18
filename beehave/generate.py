@@ -1,297 +1,138 @@
-"""Test stub generator.
-
-Reads a ``.feature`` file and produces corresponding pytest-beehave test stubs,
-complete with Hypothesis strategies inferred from Examples tables and Gherkin
-placeholders.
-"""
-
 from __future__ import annotations
 
-import ast
-import contextlib
-import re
-import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from beehave.config import Config
-from beehave.discover import discover_tests
-from beehave.gherkin import GherkinError, parse_feature, validate_all_titles
-from beehave.models import ExamplesTable, ScenarioInfo, coerce_example_value
+from beehave.gherkin import Rule, parse_feature
 
-
-def _infer_strategy_from_examples(
-    header: str,
-    examples: object,
-) -> str:
-    table: ExamplesTable = examples
-    col_idx = table.headers.index(header)
-    values = [row[col_idx] for row in table.rows]
-
-    types: set[str] = set()
-    for v in values:
-        if re.match(r"^-?\d+$", v):
-            types.add("integers")
-        elif re.match(r"^-?\d+\.\d+$", v):
-            types.add("floats")
-        elif v.lower() in ("true", "false"):
-            types.add("booleans")
-        else:
-            types.add("text")
-
-    if types == {"integers"}:
-        return "st.integers()"
-    if types == {"floats"}:
-        return "st.floats()"
-    if types == {"booleans"}:
-        return "st.booleans()"
-    return "st.text()"
+if TYPE_CHECKING:
+    from beehave.gherkin import Examples, Scenario, Step
 
 
-def _resolve_strategy(
-    placeholder_name: str,
-    scenario: ScenarioInfo,
-    existing_strategies: set[str],
-    config: Config,
-) -> str:
-    if placeholder_name in existing_strategies:
-        return placeholder_name
-
-    if (
-        scenario.is_outline
-        and scenario.examples
-        and placeholder_name in scenario.examples.headers
-    ):
-        return _infer_strategy_from_examples(placeholder_name, scenario.examples)
-
-    return config.default_strategy_expr
+def _slug_from(title: str) -> str:
+    return "_".join(title.split()).lower()
 
 
-def _generate_function(
-    scenario: ScenarioInfo,
-    existing_strategies: set[str],
-    config: Config,
-) -> str:
-    lines: list[str] = []
-
-    has_params = bool(scenario.placeholders)
-
-    if has_params:
-        given_kwargs = []
-        for ph in scenario.placeholders:
-            strategy = _resolve_strategy(ph.name, scenario, existing_strategies, config)
-            given_kwargs.append(f"{ph.name}={strategy}")
-
-        if scenario.is_outline and scenario.examples:
-            for row in scenario.examples.rows:
-                row_parts = []
-                for i, header in enumerate(scenario.examples.headers):
-                    val = coerce_example_value(row[i])
-                    if isinstance(val, str):
-                        row_parts.append(f'{header}="{val}"')
-                    elif isinstance(val, bool):
-                        row_parts.append(f"{header}={val}")
-                    else:
-                        row_parts.append(f"{header}={val}")
-                lines.append(f"@example({', '.join(row_parts)})")
-
-        lines.append(f"@given({', '.join(given_kwargs)})")
-
-        params = ", ".join(ph.name for ph in scenario.placeholders)
-        lines.append(f"def {scenario.function_name}({params}):")
-    else:
-        lines.append(f"def {scenario.function_name}():")
-
-    lines.append("    ...")
-    lines.append("")
-    return "\n".join(lines)
+def _is_int(value: str) -> bool:
+    try:
+        int(value)
+    except ValueError:
+        return False
+    return True
 
 
-def _build_import_block(
-    scenarios: dict[str, ScenarioInfo],
-) -> list[str]:
-    needs_given = any(s.placeholders for s in scenarios.values())
-    needs_example = any(s.is_outline for s in scenarios.values())
-    needs_st = needs_given
+def _is_float(value: str) -> bool:
+    try:
+        float(value)
+    except ValueError:
+        return False
+    return True
 
+
+def _is_bool(value: str) -> bool:
+    return value.lower() in ("true", "false")
+
+
+def _placeholder_names(steps: list[Step]) -> list[str]:
+    seen: set[str] = set()
+    names: list[str] = []
+    for step in steps:
+        for placeholder in step.placeholders:
+            if placeholder.name not in seen:
+                seen.add(placeholder.name)
+                names.append(placeholder.name)
+    return names
+
+
+def _infer_param_type(name: str, examples: Examples | None) -> str:
+    if examples is None:
+        return "str"
+    values = [row[name] for row in examples.rows if name in row]
+    if not values:
+        return "str"
+    if all(_is_int(v) for v in values):
+        return "int"
+    if all(_is_float(v) for v in values):
+        return "float"
+    if all(_is_bool(v) for v in values):
+        return "bool"
+    return "str"
+
+
+def _signature_params(scenario: Scenario) -> str:
     parts: list[str] = []
-    if needs_given:
-        parts.append("given")
-    if needs_example:
-        parts.append("example")
-    if needs_st:
-        parts.append("strategies as st")
+    for name in _placeholder_names(scenario.steps):
+        parts.append(f"{name}: {_infer_param_type(name, scenario.examples)}")
+    return ", ".join(parts)
 
-    if not parts:
-        return []
 
+def _render_pyi(scenarios: list[Scenario]) -> str:
     lines: list[str] = []
-    lines.append(f"from hypothesis import {', '.join(parts)}")
-    lines.append("")
-    return lines
+    for scenario in scenarios:
+        params = _signature_params(scenario)
+        lines.append(f"def {scenario.function_name}({params}) -> None: ...")
+    return "\n".join(lines) + "\n"
 
 
-def _parse_existing_imports(source: str) -> set[str]:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return set()
-
-    imported: set[str] = set()
-    for node in tree.body:
-        if (
-            isinstance(node, ast.ImportFrom)
-            and node.module
-            and "hypothesis" in node.module
-        ):
-            for alias in node.names:
-                imported.add(alias.asname or alias.name)
-    return imported
+def _step_block(step: Step) -> str:
+    kwargs = "".join(f", {p.name}={p.name}" for p in step.placeholders)
+    return f"    with step({step.keyword!r}, {step.text!r}{kwargs}):"
 
 
-def _update_import_line(
-    source: str,
-    needed: set[str],
-) -> str:
-    lines = source.split("\n")
-    for i, line in enumerate(lines):
-        if not line.startswith("from hypothesis import"):
-            continue
-
-        current = line.replace("from hypothesis import", "").strip()
-        current_set = {p.strip() for p in current.split(",")}
-        current_set.update(needed)
-
-        ordered: list[str] = []
-        for name in ["given", "example", "settings"]:
-            if name in current_set:
-                ordered.append(name)
-        if "strategies as st" in current_set:
-            ordered.append("strategies as st")
-
-        lines[i] = f"from hypothesis import {', '.join(ordered)}"
-        break
-
-    return "\n".join(lines)
+def _render_py(scenarios: list[Scenario]) -> str:
+    lines: list[str] = ["from beehave import step"]
+    for scenario in scenarios:
+        params = _signature_params(scenario)
+        lines.append("")
+        lines.append("")
+        lines.append(f"def {scenario.function_name}({params}) -> None:")
+        for step in scenario.steps:
+            lines.append(_step_block(step))
+            lines.append("        pass")
+        if not scenario.steps:
+            lines.append("    pass")
+    return "\n".join(lines) + "\n"
 
 
-def _write_file(
-    test_file: Path,
-    scenarios: dict[str, ScenarioInfo],
-    config: Config,
+def _emit_group(
+    *,
+    tests_dir: Path,
+    stem: str,
+    scenarios: list[Scenario],
 ) -> None:
-    test_file.parent.mkdir(parents=True, exist_ok=True)
-    init_file = test_file.parent / "__init__.py"
-    if not init_file.exists():
-        init_file.touch()
+    pyi_path = tests_dir / f"{stem}_test.pyi"
+    py_path = tests_dir / f"{stem}_test.py"
+    pyi_path.write_text(_render_pyi(scenarios))
+    if not py_path.exists():
+        py_path.write_text(_render_py(scenarios))
 
-    existing_functions: set[str] = set()
-    existing_strategies: set[str] = set()
-    existing_imports: set[str] = set()
 
-    if test_file.exists():
-        with contextlib.suppress(Exception):
-            existing_functions = set(discover_tests(test_file).keys())
+def generate(root: Path) -> None:
+    features_dir = root / "docs" / "features"
+    tests_dir = root / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            source = test_file.read_text(encoding="utf-8")
-            existing_imports = _parse_existing_imports(source)
-            tree = ast.parse(source)
-            for node in tree.body:
-                if (
-                    isinstance(node, ast.Assign)
-                    and len(node.targets) == 1
-                    and isinstance(node.targets[0], ast.Name)
-                ):
-                    existing_strategies.add(node.targets[0].id)
-        except SyntaxError:
-            pass
+    for feature_path in sorted(features_dir.glob("*.feature")):
+        feature = parse_feature(feature_path.read_text())
+        feature_slug = _slug_from(feature_path.stem)
 
-    new_functions: list[str] = []
-    for fn, scenario in scenarios.items():
-        if fn not in existing_functions:
-            new_functions.append(
-                _generate_function(scenario, existing_strategies, config)
+        default_scenarios: list[Scenario] = []
+        rules: list[Rule] = []
+        for child in feature.children:
+            if isinstance(child, Rule):
+                rules.append(child)
+            else:
+                default_scenarios.append(child)
+
+        if default_scenarios:
+            _emit_group(
+                tests_dir=tests_dir,
+                stem=f"{feature_slug}_default",
+                scenarios=default_scenarios,
             )
-
-    if not new_functions:
-        return
-
-    needed: set[str] = set()
-    if any(s.placeholders for s in scenarios.values()):
-        needed.add("given")
-        needed.add("strategies as st")
-    if any(s.is_outline for s in scenarios.values()):
-        needed.add("example")
-
-    if test_file.exists():
-        source = test_file.read_text(encoding="utf-8")
-        missing = needed - existing_imports
-        if missing:
-            source = _update_import_line(source, missing)
-
-        with open(test_file, "w", encoding="utf-8") as f:
-            f.write(source.rstrip("\n") + "\n\n")
-            for func in new_functions:
-                f.write(func + "\n")
-    else:
-        import_block = _build_import_block(scenarios)
-        with open(test_file, "w", encoding="utf-8") as f:
-            for line in import_block:
-                f.write(line + "\n")
-            for func in new_functions:
-                f.write(func + "\n")
-
-
-def generate_stubs(
-    feature_path: str,
-    config: Config,
-) -> None:
-    """Generate test stubs for a feature file.
-
-    Runs ``validate_all_titles`` as a pre-flight gate: if any title in the
-    project is invalid or duplicated, generation is refused.  Then parses the
-    requested feature, builds import blocks, infers Hypothesis strategies from
-    Examples tables and Gherkin placeholders, and writes the test stubs to
-    ``tests/features/<feature_path>/``.
-
-    Args:
-        feature_path: The feature file stem (e.g. ``"hive_activity"``).
-        config: The project configuration.
-
-    Raises:
-        SystemExit: When pre-flight title validation fails or the feature file
-            does not exist.
-
-    """
-    violations = validate_all_titles(config)
-    if violations:
-        for v in violations:
-            print(str(v), file=sys.stderr)
-        raise SystemExit(1)
-
-    fpath = Path(config.features_dir) / f"{feature_path}.feature"
-    if not fpath.exists():
-        print(f"Error: Feature file not found: {fpath}", file=sys.stderr)
-        raise SystemExit(1) from None
-
-    try:
-        scenarios = parse_feature(fpath, config)
-    except GherkinError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        raise SystemExit(1) from None
-
-    if not scenarios:
-        return
-
-    feature_dir = next(iter(scenarios.values())).feature_path
-
-    rule_groups: dict[str, dict[str, ScenarioInfo]] = {}
-    for fn, si in scenarios.items():
-        rp = si.rule_path
-        if rp not in rule_groups:
-            rule_groups[rp] = {}
-        rule_groups[rp][fn] = si
-
-    for rp, group in rule_groups.items():
-        test_file = Path(config.tests_dir) / feature_dir / f"{rp}.py"
-        _write_file(test_file, group, config)
+        for rule in rules:
+            _emit_group(
+                tests_dir=tests_dir,
+                stem=f"{feature_slug}_{_slug_from(rule.name)}",
+                scenarios=rule.children,
+            )

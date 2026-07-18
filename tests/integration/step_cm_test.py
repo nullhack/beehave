@@ -5,7 +5,6 @@ import pytest
 NOTE_FORMAT = "{keyword} {text}"
 
 
-@pytest.mark.pending
 def test_block_body_executes_when_entered() -> None:
     from beehave import step
 
@@ -15,7 +14,6 @@ def test_block_body_executes_when_entered() -> None:
     assert side_effect == ["entered"]
 
 
-@pytest.mark.pending
 def test_assertion_inside_then_step_propagates_failure() -> None:
     from beehave import step
 
@@ -23,7 +21,6 @@ def test_assertion_inside_then_step_propagates_failure() -> None:
         raise AssertionError
 
 
-@pytest.mark.pending
 def test_assertion_inside_then_step_passes_when_truthy() -> None:
     from beehave import step
 
@@ -31,7 +28,6 @@ def test_assertion_inside_then_step_passes_when_truthy() -> None:
         assert True
 
 
-@pytest.mark.pending
 def test_exception_attributed_to_step_via_add_note() -> None:
     from beehave import step
 
@@ -44,7 +40,6 @@ def test_exception_attributed_to_step_via_add_note() -> None:
     ]
 
 
-@pytest.mark.pending
 def test_clean_exit_does_not_add_attribution_note() -> None:
     from beehave import step
 
@@ -52,15 +47,13 @@ def test_clean_exit_does_not_add_attribution_note() -> None:
         pass
 
 
-@pytest.mark.pending
 def test_keyword_and_text_are_positional_only() -> None:
     from beehave import step
 
     with pytest.raises(TypeError):
-        step(keyword="Then", text="the hive has honey")
+        step(keyword="Then", text="the hive has honey")  # type: ignore[call-arg]
 
 
-@pytest.mark.pending
 def test_placeholders_accepted_as_keyword_arguments() -> None:
     from beehave import step
 
@@ -68,7 +61,6 @@ def test_placeholders_accepted_as_keyword_arguments() -> None:
         pass
 
 
-@pytest.mark.pending
 def test_all_gherkin_step_keywords_accepted() -> None:
     from beehave import step
 
@@ -78,7 +70,6 @@ def test_all_gherkin_step_keywords_accepted() -> None:
             pass
 
 
-@pytest.mark.pending
 def test_localized_keyword_accepted() -> None:
     from beehave import step
 
