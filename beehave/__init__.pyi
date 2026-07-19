@@ -1,10 +1,11 @@
-# Public package surface for beehave v2.
+# Public package surface for beehave v2.3.
 #
-# - `step` is the executable `with`-block CM (re-exported; lives in
-#   `beehave.step`).
-# - `__version__` is the single source of truth (interview L1 Constraint 3;
-#   the `== "2.0.0"` assertion is deferred to deliver — only the
-#   declaration lives here).
+# - `step` is the Mode B executable `with`-block CM (lives in `beehave.step`).
+# - `StepError` is raised on step/parametrize verification failure.
+# - `NoActiveScenarioError` is raised when `step()` runs outside a known scenario.
+# - `__version__` is the single source of truth.
+from beehave._index import NoActiveScenarioError as NoActiveScenarioError
+from beehave.step import StepError as StepError
 from beehave.step import step as step
 
 __version__: str

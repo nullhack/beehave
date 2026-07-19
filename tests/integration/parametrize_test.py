@@ -23,6 +23,45 @@ Given a step
 Then anything
 """
 
+PLAIN_FEATURE_WITH_ANGLE = """\
+Feature: Parametrize Emission
+Scenario: plain angles
+Given a step with <not_a_param> in text
+Then anything
+"""
+
+MULTI_TABLE_FEATURE = """\
+Feature: Parametrize Emission
+Scenario Outline: honey from nectar
+Given the hive has <nectar> grams
+Then the hive produces <honey> grams
+
+Examples:
+  | nectar | honey |
+  | 100    | 80    |
+
+Examples:
+  | nectar | honey |
+  | 200    | 150   |
+"""
+
+DIFFERENT_TAG_TABLES_FEATURE = """\
+Feature: Parametrize Emission
+Scenario Outline: honey from nectar
+Given the hive has <nectar> grams
+Then the hive produces <honey> grams
+
+@slow
+Examples:
+  | nectar | honey |
+  | 1000   | 800   |
+
+@fast
+Examples:
+  | nectar | honey |
+  | 10     | 8     |
+"""
+
 
 def _emit(root: Path, feature_text: str) -> tuple[str, str]:
     from beehave.generate import generate
@@ -48,12 +87,6 @@ def _emitted_pyi(feature_text: str) -> str:
     return pyi
 
 
-def _check_result(feature_text: str, test_py_text: str) -> bool:
-    from beehave.check import check
-
-    return check(feature_text, test_py_text)
-
-
 def test_examples_scenario_emits_parametrize_decorator() -> None:
     py = _emitted_py(OUTLINE_FEATURE)
     assert "@pytest.mark.parametrize(" in py
@@ -76,7 +109,25 @@ def test_parametrize_rows_match_examples_rows() -> None:
 def test_no_examples_scenario_emits_no_parametrize() -> None:
     py = _emitted_py(PLAIN_FEATURE)
     assert "parametrize" not in py
-    assert "import pytest" not in py
+
+
+def test_plain_scenario_treats_angle_as_literal_text() -> None:
+    py = _emitted_py(PLAIN_FEATURE_WITH_ANGLE)
+    assert "<not_a_param>" in py
+    pyi = _emitted_pyi(PLAIN_FEATURE_WITH_ANGLE)
+    assert "def test_plain_angles() -> None:" in pyi
+
+
+def test_multiple_examples_tables_are_merged() -> None:
+    py = _emitted_py(MULTI_TABLE_FEATURE)
+    assert "('100', '80')," in py
+    assert "('200', '150')," in py
+
+
+def test_different_tagged_tables_emit_pytest_param() -> None:
+    py = _emitted_py(DIFFERENT_TAG_TABLES_FEATURE)
+    assert "pytest.param('1000', '800', marks=pytest.mark.slow)" in py
+    assert "pytest.param('10', '8', marks=pytest.mark.fast)" in py
 
 
 def test_pyi_signature_carries_str_params_for_outline() -> None:
@@ -87,35 +138,8 @@ def test_pyi_signature_carries_str_params_for_outline() -> None:
     )
 
 
-def test_check_passes_when_parametrize_matches_examples() -> None:
-    py = _emitted_py(OUTLINE_FEATURE)
-    assert _check_result(OUTLINE_FEATURE, py)
+def test_check_passes_on_freshly_generated_pyi() -> None:
+    from beehave.check import check
 
-
-def test_check_fails_when_examples_present_but_no_parametrize() -> None:
-    body_without_parametrize = (
-        "from beehave import step\n"
-        "\n"
-        "def test_honey_from_nectar(nectar: str, hours: str, honey: str) -> None:\n"
-        '    with step("Given", "the hive has <nectar> grams", nectar=nectar):\n'
-        "        pass\n"
-        '    with step("When", "the bees fan for <hours> hours", hours=hours):\n'
-        "        pass\n"
-        '    with step("Then", "the hive produces <honey> grams", honey=honey):\n'
-        "        pass\n"
-    )
-    assert not _check_result(OUTLINE_FEATURE, body_without_parametrize)
-
-
-def test_check_fails_when_parametrize_rows_differ() -> None:
-    py = _emitted_py(OUTLINE_FEATURE)
-    edited = py.replace("('100', '8', '80'),", "('999', '8', '80'),")
-    assert edited != py
-    assert not _check_result(OUTLINE_FEATURE, edited)
-
-
-def test_check_fails_when_parametrize_arg_names_differ() -> None:
-    py = _emitted_py(OUTLINE_FEATURE)
-    edited = py.replace("'nectar'", "'renamed'", 1)
-    assert edited != py
-    assert not _check_result(OUTLINE_FEATURE, edited)
+    pyi = _emitted_pyi(OUTLINE_FEATURE)
+    assert check(OUTLINE_FEATURE, pyi)

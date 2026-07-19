@@ -129,7 +129,7 @@ def test_rule_background_steps_appear_only_in_that_rule_scenarios(pytester) -> N
     assert rule_background_text not in default_py
 
 
-def test_tags_do_not_surface_in_emitted_pyi_or_step_blocks(pytester) -> None:
+def test_feature_tags_surface_as_pytestmark_in_py_not_pyi(pytester) -> None:
     feature_text = (
         "@unique_tag_marker\n"
         "Feature: Tagged\n"
@@ -140,13 +140,23 @@ def test_tags_do_not_surface_in_emitted_pyi_or_step_blocks(pytester) -> None:
     run_beehave_generate(pytester)
     pyi = read_emitted_pyi(pytester, "tagged_default")
     py_text = read_emitted_py(pytester, "tagged_default")
+    assert "pytestmark = [pytest.mark.unique_tag_marker]" in py_text
     assert "unique_tag_marker" not in pyi
-    assert "unique_tag_marker" not in py_text
 
 
-def test_step_docstring_does_not_surface_in_emitted_pyi(pytester) -> None:
+def test_scenario_tags_surface_as_decorator_marks(pytester) -> None:
     feature_text = (
-        "Feature: Docstring\n"
+        "Feature: Scenario Tags\n@fast\nScenario: tagged scenario\nGiven anything\n"
+    )
+    write_feature_text(pytester, "sctags.feature", feature_text)
+    run_beehave_generate(pytester)
+    py_text = read_emitted_py(pytester, "sctags_default")
+    assert "@pytest.mark.fast" in py_text
+
+
+def test_step_docstring_surfaces_as_body_local_var(pytester) -> None:
+    feature_text = (
+        "Feature: Docstring Surfacing\n"
         "Scenario: scenario with docstring\n"
         "Given anything\n"
         '"""\n'
@@ -156,12 +166,14 @@ def test_step_docstring_does_not_surface_in_emitted_pyi(pytester) -> None:
     write_feature_text(pytester, "docstring.feature", feature_text)
     run_beehave_generate(pytester)
     pyi = read_emitted_pyi(pytester, "docstring_default")
+    py_text = read_emitted_py(pytester, "docstring_default")
+    assert "docstring = 'unique docstring marker text'" in py_text
     assert "unique docstring marker text" not in pyi
 
 
-def test_step_data_table_does_not_surface_in_emitted_pyi(pytester) -> None:
+def test_step_data_table_surfaces_as_body_local_var(pytester) -> None:
     feature_text = (
-        "Feature: DataTable\n"
+        "Feature: DataTable Surfacing\n"
         "Scenario: scenario with data table\n"
         "Given anything\n"
         "  | unique_col | value |\n"
@@ -170,6 +182,9 @@ def test_step_data_table_does_not_surface_in_emitted_pyi(pytester) -> None:
     write_feature_text(pytester, "datatable.feature", feature_text)
     run_beehave_generate(pytester)
     pyi = read_emitted_pyi(pytester, "datatable_default")
+    py_text = read_emitted_py(pytester, "datatable_default")
+    assert "'unique_col': 'marker'" in py_text
+    assert "data_table = " in py_text
     assert "unique_col" not in pyi
 
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from beehave.gherkin import Rule, parse_feature
 
 if TYPE_CHECKING:
-    from beehave.gherkin import Examples, Scenario, Step
+    from beehave.gherkin import DataTable, Examples, Scenario, Step
 
 
 def _slug_from(title: str) -> str:
@@ -33,14 +33,20 @@ def _parametrize_lines(scenario: Scenario) -> list[str]:
     if examples is None:
         return []
     arg_names = ", ".join(repr(h) for h in examples.headers)
+    distinct_tags = {tuple(tags) for tags in examples.row_tags}
+    use_param = len(distinct_tags) > 1
     lines = [
         "@pytest.mark.parametrize(",
         f"    ({arg_names}),",
         "    [",
     ]
-    for row in examples.rows:
+    for row, tags in zip(examples.rows, examples.row_tags, strict=False):
         cells = ", ".join(repr(row[h]) for h in examples.headers)
-        lines.append(f"        ({cells}),")
+        if use_param and tags:
+            marks = ", ".join(f"pytest.mark.{t}" for t in tags)
+            lines.append(f"        pytest.param({cells}, marks={marks}),")
+        else:
+            lines.append(f"        ({cells}),")
     lines.append("    ],")
     lines.append(")")
     return lines
@@ -59,19 +65,45 @@ def _step_block(step: Step) -> str:
     return f"    with step({step.keyword!r}, {step.text!r}{kwargs}):"
 
 
-def _render_py(scenarios: list[Scenario]) -> str:
-    lines: list[str] = ["from beehave import step"]
-    if any(s.examples is not None for s in scenarios):
-        lines.append("import pytest")
+def _data_table_repr(dt: DataTable) -> str:
+    if dt.headers is None:
+        return repr(dt.rows)
+    items: list[str] = []
+    for row in dt.rows:
+        pairs = ", ".join(
+            f"{h!r}: {v!r}" for h, v in zip(dt.headers, row, strict=False)
+        )
+        items.append("{" + pairs + "}")
+    return "[" + ", ".join(items) + "]"
+
+
+def _step_body_lines(step: Step) -> list[str]:
+    lines: list[str] = []
+    if step.docstring is not None:
+        lines.append(f"        docstring = {step.docstring!r}")
+    if step.data_table is not None:
+        lines.append(f"        data_table = {_data_table_repr(step.data_table)}")
+    if not lines:
+        lines.append("        pass")
+    return lines
+
+
+def _render_py(scenarios: list[Scenario], module_tags: list[str]) -> str:
+    lines: list[str] = ["from beehave import step", "import pytest"]
+    if module_tags:
+        marks = ", ".join(f"pytest.mark.{t}" for t in module_tags)
+        lines.append(f"pytestmark = [{marks}]")
     for scenario in scenarios:
         params = _signature_params(scenario)
         lines.append("")
         lines.append("")
+        for tag in scenario.tags:
+            lines.append(f"@pytest.mark.{tag}")
         lines.extend(_parametrize_lines(scenario))
         lines.append(f"def {scenario.function_name}({params}) -> None:")
         for step in scenario.steps:
             lines.append(_step_block(step))
-            lines.append("        pass")
+            lines.extend(_step_body_lines(step))
         if not scenario.steps:
             lines.append("    pass")
     return "\n".join(lines) + "\n"
@@ -82,12 +114,13 @@ def _emit_group(
     tests_dir: Path,
     stem: str,
     scenarios: list[Scenario],
+    module_tags: list[str],
 ) -> None:
     pyi_path = tests_dir / f"{stem}_test.pyi"
     py_path = tests_dir / f"{stem}_test.py"
     pyi_path.write_text(_render_pyi(scenarios))
     if not py_path.exists():
-        py_path.write_text(_render_py(scenarios))
+        py_path.write_text(_render_py(scenarios, module_tags))
 
 
 def generate(root: Path) -> None:
@@ -114,10 +147,12 @@ def generate(root: Path) -> None:
                 tests_dir=tests_dir,
                 stem=f"{feature_slug}_default",
                 scenarios=default_scenarios,
+                module_tags=feature.tags,
             )
         for rule in rules:
             _emit_group(
                 tests_dir=tests_dir,
                 stem=f"{feature_slug}_{_slug_from(rule.name)}",
                 scenarios=rule.children,
+                module_tags=[*feature.tags, *rule.tags],
             )

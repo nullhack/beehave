@@ -26,6 +26,7 @@ class Step:
 class Examples:
     headers: list[str]
     rows: list[dict[str, str]]
+    row_tags: list[list[str]]
 
 
 class Background:
@@ -93,10 +94,15 @@ def _make_step(
     return s
 
 
-def _make_examples(headers: list[str], rows: list[dict[str, str]]) -> Examples:
+def _make_examples(
+    headers: list[str],
+    rows: list[dict[str, str]],
+    row_tags: list[list[str]],
+) -> Examples:
     e = Examples()
     e.headers = headers
     e.rows = rows
+    e.row_tags = row_tags
     return e
 
 
@@ -157,12 +163,21 @@ def _make_feature(
     return f
 
 
-def _placeholders_from(text: str) -> list[Placeholder]:
+def _tag_names_from(data: dict[str, Any]) -> list[str]:
+    return [t["name"].lstrip("@") for t in data.get("tags", [])]
+
+
+def _placeholders_from(
+    text: str,
+    valid_names: set[str] | None = None,
+) -> list[Placeholder]:
     seen: set[str] = set()
     result: list[Placeholder] = []
     for match in _PLACEHOLDER_RE.finditer(text):
         name = match.group(1)
         if name in seen:
+            continue
+        if valid_names is not None and name not in valid_names:
             continue
         seen.add(name)
         result.append(_make_placeholder(name))
@@ -177,14 +192,17 @@ def _data_table_from(data: dict[str, Any]) -> DataTable:
     return _make_data_table(headers=cells[0], rows=cells[1:])
 
 
-def _step_from(data: dict[str, Any]) -> Step:
+def _step_from(
+    data: dict[str, Any],
+    valid_names: set[str] | None = None,
+) -> Step:
     text = data["text"]
     dt = data.get("dataTable")
     doc_string = data.get("docString")
     return _make_step(
         keyword=data["keyword"].strip(),
         text=text,
-        placeholders=_placeholders_from(text),
+        placeholders=_placeholders_from(text, valid_names),
         docstring=doc_string.get("content") if doc_string else None,
         data_table=_data_table_from(dt) if dt else None,
     )
@@ -197,14 +215,20 @@ def _background_from(data: dict[str, Any]) -> Background:
 def _examples_from(ex_list: list[dict[str, Any]]) -> Examples | None:
     if not ex_list:
         return None
-    ex = ex_list[0]
-    header_row = ex.get("tableHeader") or {}
-    headers = [c["value"] for c in header_row.get("cells", [])]
+    headers: list[str] = []
     rows: list[dict[str, str]] = []
-    for row in ex.get("tableBody", []):
-        cells = [c["value"] for c in row.get("cells", [])]
-        rows.append(dict(zip(headers, cells, strict=False)))
-    return _make_examples(headers=headers, rows=rows)
+    row_tags: list[list[str]] = []
+    for ex in ex_list:
+        header_row = ex.get("tableHeader") or {}
+        table_headers = [c["value"] for c in header_row.get("cells", [])]
+        if not headers:
+            headers = table_headers
+        tags = _tag_names_from(ex)
+        for row in ex.get("tableBody", []):
+            cells = [c["value"] for c in row.get("cells", [])]
+            rows.append(dict(zip(headers, cells, strict=False)))
+            row_tags.append(tags)
+    return _make_examples(headers=headers, rows=rows, row_tags=row_tags)
 
 
 def _slug_from(title: str) -> str:
@@ -229,9 +253,9 @@ def _validate_single_title(title: str, kind: str) -> None:
 
 
 def _reject_duplicate(title: str, kind: str, seen: set[str]) -> None:
-    key = title.strip().lower()
+    key = _slug_from(title)
     if key in seen:
-        raise ValueError(f"Duplicate {kind} title {title!r} (case-insensitive match)")
+        raise ValueError(f"Duplicate {kind} title {title!r} (slug match)")
     seen.add(key)
 
 
@@ -263,15 +287,17 @@ def _scenario_from(
     _validate_single_title(title, "scenario")
     _reject_duplicate(title, "scenario", seen)
     slug = _slug_from(title)
-    own_steps = [_step_from(s) for s in data.get("steps", [])]
+    examples = _examples_from(data.get("examples", []))
+    valid_names: set[str] = set(examples.headers) if examples else set()
+    own_steps = [_step_from(s, valid_names) for s in data.get("steps", [])]
     return _make_scenario(
         title=title,
         slug=slug,
         function_name=f"test_{slug}",
-        tags=[t["name"] for t in data.get("tags", [])],
+        tags=_tag_names_from(data),
         keyword=data["keyword"],
         steps=[*merged_steps, *own_steps],
-        examples=_examples_from(data.get("examples", [])),
+        examples=examples,
     )
 
 
@@ -296,7 +322,7 @@ def _rule_from(
             )
     return _make_rule(
         name=name,
-        tags=[t["name"] for t in data.get("tags", [])],
+        tags=_tag_names_from(data),
         background=rule_bg,
         children=children,
     )
@@ -318,7 +344,7 @@ def parse_feature(source: str) -> Feature:
     seen: set[str] = set()
     feature_name = feature_data.get("name", "")
     if feature_name:
-        seen.add(feature_name.strip().lower())
+        seen.add(_slug_from(feature_name))
 
     children: list[Rule | Scenario] = []
     for child in feature_data.get("children", []):
@@ -329,7 +355,7 @@ def parse_feature(source: str) -> Feature:
 
     return _make_feature(
         name=feature_name,
-        tags=[t["name"] for t in feature_data.get("tags", [])],
+        tags=_tag_names_from(feature_data),
         background=background,
         children=children,
     )

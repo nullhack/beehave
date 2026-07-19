@@ -1,11 +1,8 @@
-# Structural binding check (L2 *Validation (`check`)*): the
-# `with step(...)` blocks in `test_py_text` are matched one-to-one against
-# the steps parsed from `feature_text` on the triple
-# (keyword-case-insensitively, text, placeholder-name-set). Returns True if
-# every block matches its step; False on any count, keyword, text, or
-# placeholder-name-set mismatch. Does NOT inspect the body for literals or
-# placeholder AST nodes (v2 drops that layer entirely — Q5). For Scenario
-# Outlines, additionally requires a `@pytest.mark.parametrize(...)` decorator
-# whose arg-names and rows round-trip the feature's Examples table; missing or
-# mismatched parametrize returns False.
-def check(feature_text: str, test_py_text: str) -> bool: ...
+# v2.3 signature check: regenerates expected `def test_<slug>(...) -> None: ...`
+# lines from the feature source and verifies each appears in `stub_text`
+# (the concatenated content of `tests/features/*_test.pyi`). Returns True iff
+# every scenario signature is present; False on any missing signature (stale
+# `.pyi`). Does NOT inspect the `.py` body — step/parametrize verification is
+# the runtime `step()` CM's job (Mode B). The CLI additionally runs
+# `mypy.stubtest` on the consumer test modules for `.py` ↔ `.pyi` drift.
+def check(feature_text: str, stub_text: str) -> bool: ...

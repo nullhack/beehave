@@ -21,6 +21,7 @@ class Step:
 class Examples:
     headers: list[str]
     rows: list[dict[str, str]]
+    row_tags: list[list[str]]
 
 class Background:
     steps: list[Step]

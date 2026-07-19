@@ -1,14 +1,19 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-# The v2 runtime core: `step(keyword, text, /, **placeholders)` is the
-# executable `with` block that replaces v1's step-definition registry.
-# `keyword` is data (covers all Gherkin keywords incl. localized); `assert`
-# inside a `Then` block propagates; on exception the CM appends
-# `f"{keyword} {text}"` via `add_note` so `__notes__ == ["<keyword> <text>"]`;
-# no note on clean exit. `keyword`/`text` are positional-only; placeholder
-# values are consumer-supplied scalars (strategy-inferred int/float/bool/str
-# in emitted tests), so the kwarg type is `object`.
+# v2.3 Mode B runtime enforcement: `step(keyword, text, /, **placeholders)`
+# is the executable `with`-block CM. On entry it resolves the calling function
+# (`sys._getframe(1).f_code.co_name` → `test_<slug>`) to a scenario in the
+# cached feature index, tracks position via a frame-keyed counter, and verifies
+# the block matches `scenario.steps[position]` on
+# (keyword-case-insensitively, text, placeholder-name-set). On the first step
+# of a scenario it also verifies any `@pytest.mark.parametrize(...)` decorator
+# against the feature's Examples. On exception the CM appends
+# `f"{keyword} {text}"` via PEP 678 `add_note` so failures attribute to their
+# step. `keyword`/`text` are positional-only; placeholder values are
+# consumer-supplied scalars, hence `object`.
+class StepError(Exception): ...
+
 @contextmanager
 def step(
     keyword: str,
