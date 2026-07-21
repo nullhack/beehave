@@ -63,28 +63,16 @@ Examples:
 """
 
 
-def _emit(root: Path, feature_text: str) -> tuple[str, str]:
+def _emitted_py(feature_text: str) -> str:
     from beehave.generate import generate
 
-    features = root / "docs" / "features"
-    features.mkdir(parents=True)
-    (features / "input.feature").write_text(feature_text)
-    generate(root)
-    py = (root / "tests" / "features" / "input_default_test.py").read_text()
-    pyi = (root / "tests" / "features" / "input_default_test.pyi").read_text()
-    return py, pyi
-
-
-def _emitted_py(feature_text: str) -> str:
     with tempfile.TemporaryDirectory() as tmp:
-        py, _pyi = _emit(Path(tmp), feature_text)
-    return py
-
-
-def _emitted_pyi(feature_text: str) -> str:
-    with tempfile.TemporaryDirectory() as tmp:
-        _py, pyi = _emit(Path(tmp), feature_text)
-    return pyi
+        root = Path(tmp)
+        features = root / "docs" / "features"
+        features.mkdir(parents=True)
+        (features / "input.feature").write_text(feature_text)
+        generate(root)
+        return (root / "tests" / "features" / "input_default_test.py").read_text()
 
 
 def test_examples_scenario_emits_parametrize_decorator() -> None:
@@ -114,8 +102,7 @@ def test_no_examples_scenario_emits_no_parametrize() -> None:
 def test_plain_scenario_treats_angle_as_literal_text() -> None:
     py = _emitted_py(PLAIN_FEATURE_WITH_ANGLE)
     assert "<not_a_param>" in py
-    pyi = _emitted_pyi(PLAIN_FEATURE_WITH_ANGLE)
-    assert "def test_plain_angles() -> None:" in pyi
+    assert "def test_plain_angles() -> None:" in py
 
 
 def test_multiple_examples_tables_are_merged() -> None:
@@ -130,16 +117,8 @@ def test_different_tagged_tables_emit_pytest_param() -> None:
     assert "pytest.param('10', '8', marks=pytest.mark.fast)" in py
 
 
-def test_pyi_signature_carries_str_params_for_outline() -> None:
-    pyi = _emitted_pyi(OUTLINE_FEATURE)
-    assert (
-        "def test_honey_from_nectar(nectar: str, hours: str, honey: str) -> None:"
-        in pyi
-    )
-
-
-def test_check_passes_on_freshly_generated_pyi() -> None:
+def test_check_passes_on_freshly_generated_py() -> None:
     from beehave.check import check
 
-    pyi = _emitted_pyi(OUTLINE_FEATURE)
-    assert check(OUTLINE_FEATURE, pyi)
+    py = _emitted_py(OUTLINE_FEATURE)
+    assert check(OUTLINE_FEATURE, py)

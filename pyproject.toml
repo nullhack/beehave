@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beehave"
-version = "2.3.1"
+version = "3.0.0"
 description = "A thin layer on Hypothesis for Gherkin-style BDD testing with vocabulary enforcement"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -14,7 +14,6 @@ authors = [
 ]
 dependencies = [
     "gherkin-official>=39.0",
-    "mypy>=2.3.0",
 ]
 
 [project.scripts]

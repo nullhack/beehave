@@ -8,8 +8,8 @@ def write_feature_text(pytester, basename: str, text: str) -> str:
     return str(dst)
 
 
-def write_pyi_stub(pytester, stem: str) -> str:
-    dst = pytester.path / "tests" / "features" / f"{stem}_test.pyi"
+def write_py_stub(pytester, stem: str) -> str:
+    dst = pytester.path / "tests" / "features" / f"{stem}_test.py"
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text("")
     return str(dst)
@@ -37,13 +37,13 @@ def test_status_reports_feature_file_count(pytester) -> None:
     assert "feature" in stdout.lower()
 
 
-def test_status_reports_emitted_stub_count(pytester) -> None:
+def test_status_reports_emitted_skeleton_count(pytester) -> None:
     write_feature_text(pytester, "a.feature", "Feature: A\nScenario: aaaaa\nGiven x\n")
-    write_pyi_stub(pytester, "a_default")
-    write_pyi_stub(pytester, "a_other")
+    write_py_stub(pytester, "a_default")
+    write_py_stub(pytester, "a_other")
     stdout = status_stdout(pytester)
     assert "2" in stdout
-    assert "stub" in stdout.lower()
+    assert "skeleton" in stdout.lower()
 
 
 def test_status_exits_two_when_features_dir_missing(pytester) -> None:

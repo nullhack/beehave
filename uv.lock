@@ -91,11 +91,10 @@ wheels = [
 
 [[package]]
 name = "beehave"
-version = "2.3.1"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "gherkin-official" },
-    { name = "mypy" },
 ]
 
 [package.dev-dependencies]
@@ -111,10 +110,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "gherkin-official", specifier = ">=39.0" },
-    { name = "mypy", specifier = ">=2.3.0" },
-]
+requires-dist = [{ name = "gherkin-official", specifier = ">=39.0" }]
 
 [package.metadata.requires-dev]
 dev = [

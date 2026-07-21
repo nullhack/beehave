@@ -31,18 +31,6 @@ def emit_test_py_for(feature_text: str) -> str:
         return (root / "tests" / "features" / "input_default_test.py").read_text()
 
 
-def emit_test_pyi_for(feature_text: str) -> str:
-    from beehave.generate import generate
-
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        features = root / "docs" / "features"
-        features.mkdir(parents=True)
-        (features / "input.feature").write_text(feature_text)
-        generate(root)
-        return (root / "tests" / "features" / "input_default_test.pyi").read_text()
-
-
 def regenerate_over_body(feature_text: str, existing_py_body: str) -> str:
     from beehave.generate import generate
 
@@ -77,6 +65,7 @@ def test_regenerate_does_not_emit_py_when_py_present() -> None:
     assert regenerated == consumer_body
 
 
-def test_regenerate_rewrites_pyi_when_feature_gains_scenario() -> None:
-    pyi = emit_test_pyi_for(EXTENDED_FEATURE)
-    assert "test_second_scenario" in pyi
+def test_regenerate_is_noop_when_feature_gains_scenario() -> None:
+    baseline = emit_test_py_for(BASE_FEATURE)
+    regenerated = regenerate_over_body(EXTENDED_FEATURE, baseline)
+    assert regenerated == baseline

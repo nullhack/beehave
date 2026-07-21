@@ -52,14 +52,6 @@ def _parametrize_lines(scenario: Scenario) -> list[str]:
     return lines
 
 
-def _render_pyi(scenarios: list[Scenario]) -> str:
-    lines: list[str] = []
-    for scenario in scenarios:
-        params = _signature_params(scenario)
-        lines.append(f"def {scenario.function_name}({params}) -> None: ...")
-    return "\n".join(lines) + "\n"
-
-
 def _step_block(step: Step) -> str:
     kwargs = "".join(f", {p.name}={p.name}" for p in step.placeholders)
     return f"    with step({step.keyword!r}, {step.text!r}{kwargs}):"
@@ -116,9 +108,7 @@ def _emit_group(
     scenarios: list[Scenario],
     module_tags: list[str],
 ) -> None:
-    pyi_path = tests_dir / f"{stem}_test.pyi"
     py_path = tests_dir / f"{stem}_test.py"
-    pyi_path.write_text(_render_pyi(scenarios))
     if not py_path.exists():
         py_path.write_text(_render_py(scenarios, module_tags))
 
@@ -127,8 +117,6 @@ def generate(root: Path) -> None:
     features_dir = root / "docs" / "features"
     tests_dir = root / "tests" / "features"
     tests_dir.mkdir(parents=True, exist_ok=True)
-    for stale in tests_dir.glob("*_test.pyi"):
-        stale.unlink()
 
     for feature_path in sorted(features_dir.glob("*.feature")):
         feature = parse_feature(feature_path.read_text())

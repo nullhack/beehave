@@ -32,13 +32,6 @@ def run_beehave_generate(pytester, *args: str) -> int:
     return pytester.run("beehave", "generate", *args).ret
 
 
-def read_emitted_pyi(pytester, stem: str) -> str:
-    path = pytester.path / EMISSION_DIR / f"{stem}_test.pyi"
-    if not path.exists():
-        return ""
-    return path.read_text()
-
-
 def read_emitted_py(pytester, stem: str) -> str:
     path = pytester.path / EMISSION_DIR / f"{stem}_test.py"
     if not path.exists():
@@ -51,14 +44,14 @@ def list_emitted_stems(pytester) -> list[str]:
     if not emission.exists():
         return []
     stems: list[str] = []
-    for path in emission.glob("*_test.pyi"):
+    for path in emission.glob("*_test.py"):
         name = path.name
-        if name.endswith("_test.pyi"):
-            stems.append(name[: -len("_test.pyi")])
+        if name.endswith("_test.py"):
+            stems.append(name[: -len("_test.py")])
     return sorted(stems)
 
 
-def test_emits_pyi_for_default_group_and_each_rule(pytester) -> None:
+def test_emits_py_for_default_group_and_each_rule(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
     stems = list_emitted_stems(pytester)
@@ -67,14 +60,14 @@ def test_emits_pyi_for_default_group_and_each_rule(pytester) -> None:
     assert "hive_activity_hive_foraging" in stems
 
 
-def test_always_emits_pyi_file_for_every_rule_and_default(pytester) -> None:
+def test_always_emits_py_file_for_every_rule_and_default(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     exit_code = run_beehave_generate(pytester)
     assert exit_code == 0
     stems = list_emitted_stems(pytester)
     assert len(stems) >= 3
     for stem in stems:
-        assert read_emitted_pyi(pytester, stem) != ""
+        assert read_emitted_py(pytester, stem) != ""
 
 
 def test_emits_py_skeleton_only_when_py_absent(pytester) -> None:
@@ -89,8 +82,8 @@ def test_emits_py_skeleton_only_when_py_absent(pytester) -> None:
 def test_scenario_title_emits_test_underscore_slug_function(pytester) -> None:
     copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
     run_beehave_generate(pytester)
-    pyi = read_emitted_pyi(pytester, "hive_activity_hive_defense")
-    assert "def test_guard_bee_inspects_visitor" in pyi
+    py = read_emitted_py(pytester, "hive_activity_hive_defense")
+    assert "def test_guard_bee_inspects_visitor" in py
 
 
 def test_function_name_carries_no_uppercase_and_collapses_whitespace(pytester) -> None:
@@ -101,8 +94,8 @@ def test_function_name_carries_no_uppercase_and_collapses_whitespace(pytester) -
     )
     write_feature_text(pytester, "whitespace.feature", feature_text)
     run_beehave_generate(pytester)
-    pyi = read_emitted_pyi(pytester, "whitespace_default")
-    assert "def test_mixedcase_title_with_spaces" in pyi
+    py = read_emitted_py(pytester, "whitespace_default")
+    assert "def test_mixedcase_title_with_spaces" in py
 
 
 def test_feature_background_steps_appear_in_every_emitted_scenario(pytester) -> None:
@@ -129,7 +122,7 @@ def test_rule_background_steps_appear_only_in_that_rule_scenarios(pytester) -> N
     assert rule_background_text not in default_py
 
 
-def test_feature_tags_surface_as_pytestmark_in_py_not_pyi(pytester) -> None:
+def test_feature_tags_surface_as_pytestmark_in_py(pytester) -> None:
     feature_text = (
         "@unique_tag_marker\n"
         "Feature: Tagged\n"
@@ -138,10 +131,8 @@ def test_feature_tags_surface_as_pytestmark_in_py_not_pyi(pytester) -> None:
     )
     write_feature_text(pytester, "tagged.feature", feature_text)
     run_beehave_generate(pytester)
-    pyi = read_emitted_pyi(pytester, "tagged_default")
     py_text = read_emitted_py(pytester, "tagged_default")
     assert "pytestmark = [pytest.mark.unique_tag_marker]" in py_text
-    assert "unique_tag_marker" not in pyi
 
 
 def test_scenario_tags_surface_as_decorator_marks(pytester) -> None:
@@ -165,10 +156,8 @@ def test_step_docstring_surfaces_as_body_local_var(pytester) -> None:
     )
     write_feature_text(pytester, "docstring.feature", feature_text)
     run_beehave_generate(pytester)
-    pyi = read_emitted_pyi(pytester, "docstring_default")
     py_text = read_emitted_py(pytester, "docstring_default")
     assert "docstring = 'unique docstring marker text'" in py_text
-    assert "unique docstring marker text" not in pyi
 
 
 def test_step_data_table_surfaces_as_body_local_var(pytester) -> None:
@@ -181,20 +170,9 @@ def test_step_data_table_surfaces_as_body_local_var(pytester) -> None:
     )
     write_feature_text(pytester, "datatable.feature", feature_text)
     run_beehave_generate(pytester)
-    pyi = read_emitted_pyi(pytester, "datatable_default")
     py_text = read_emitted_py(pytester, "datatable_default")
     assert "'unique_col': 'marker'" in py_text
     assert "data_table = " in py_text
-    assert "unique_col" not in pyi
-
-
-def test_generate_wipes_stale_pyi_in_tests_features(pytester) -> None:
-    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
-    stale_path = pytester.path / "tests" / "features" / "stale_default_test.pyi"
-    stale_path.parent.mkdir(parents=True, exist_ok=True)
-    stale_path.write_text("# stale")
-    run_beehave_generate(pytester)
-    assert not stale_path.exists()
 
 
 def test_generate_creates_tests_features_dir_if_absent(pytester) -> None:
@@ -211,3 +189,10 @@ def test_outline_scenario_emits_parametrize_in_py(pytester) -> None:
     assert "@pytest.mark.parametrize(" in py
     assert "'nectar'" in py and "'honey'" in py
     assert "('100', '20', '8', '80')," in py
+
+
+def test_generate_does_not_emit_pyi_files(pytester) -> None:
+    copy_feature_into_pytester(pytester, HIVE_ACTIVITY_FEATURE)
+    run_beehave_generate(pytester)
+    pyi_files = list((pytester.path / EMISSION_DIR).glob("*_test.pyi"))
+    assert pyi_files == []
