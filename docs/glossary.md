@@ -1,126 +1,153 @@
 # Glossary: beehave
 
 > The ubiquitous language for this project — terms shared across conversation,
-> code, and documentation (Evans, 2003). Curated from the interview for the
-> IMPORTANT domain concepts, not every code symbol. Grouped by bounded context,
-> where each term has one meaning. The tests are the source of truth for
-> behaviour; this glossary is the source of truth for names. Extend or revise
-> entries as understanding shifts.
+> code, and documentation (Evans, 2003). Curated for the IMPORTANT domain
+> concepts, not every code symbol. Grouped by bounded context, where each term
+> has one meaning. The tests are the source of truth for behaviour; this
+> glossary is the source of truth for names.
 
 ## Context: Design-time (the CLI tool)
 
 ### `.feature`
-A source artifact that holds Gherkin-syntax feature definitions and is the single source of truth for generation.
-*Aliases: feature file · Source: interview 2026-07-18*
+A source artifact that holds Gherkin-syntax feature definitions and is the single source of truth for generation + check.
+*Aliases: feature file*
 
 ### Feature
 A Gherkin structural element that is the top-level container in a `.feature` file.
-*Aliases: none · Source: interview 2026-07-18*
+*Aliases: none*
 
 ### Rule
-A Gherkin structural element that groups scenarios within a Feature and is the unit of per-rule test-file generation.
-*Aliases: none · Source: interview 2026-07-18*
+A Gherkin structural element that groups scenarios within a Feature and is the unit of per-rule test-file generation (`<feature_slug>_<rule_slug>_test.py`).
+*Aliases: none*
 
 ### Background
 A Gherkin structural element whose steps are merged into every scenario's step list and may not contain placeholders.
-*Aliases: none · Source: interview 2026-07-18*
+*Aliases: none*
 
 ### Scenario
 A Gherkin structural element that maps one-to-one to a generated `test_<slug>` function whose name is its identity.
-*Aliases: none · Source: interview 2026-07-18*
+*Aliases: none*
+
+### Scenario Outline
+A Scenario parameterised by an Examples table; emitted with `@pytest.mark.parametrize` over the test function (one row per Examples row, all params typed `str`).
+*Aliases: none*
 
 ### Examples
-A tabular value source whose columns drive Hypothesis `@given` strategy inference and whose rows drive `@example`.
-*Aliases: Examples table · Source: interview 2026-07-18*
+A tabular value source whose columns become `@parametrize` arg-names and whose rows become string-tuple parametrize rows. Multiple Examples tables in one Scenario Outline are merged; per-row tags tracked.
+*Aliases: Examples table*
 
 ### step
-A Gherkin structural element that is the unit matched one-to-one (`block[i]`↔`step[i]`) against `with step(...)` blocks in the test body.
-*Aliases: Gherkin step · Source: interview 2026-07-18*
+A Gherkin structural element that is the unit matched one-to-one (`step[i]` at position N) against `with step(...)` blocks in the test body when Mode B runtime is active.
+*Aliases: Gherkin step*
 
 ### placeholder
-A parameterisation token of the form `<name>` that binds Examples-table columns to step-text positions and whose name-set is one of the three structural-binding fields.
-*Aliases: none · Source: interview 2026-07-18*
+A parameterisation token of the form `<name>` that binds Examples-table columns to step-text positions and becomes a Python function parameter (typed `str`). Only recognised in Scenario Outline steps whose name appears in the Examples headers; `<foo>` in a plain Scenario or non-header position is literal text.
+*Aliases: none*
 
 ### title
-An identifier that derives the `test_<slug>` function name and is constrained by uniqueness (case-insensitive), a 2–6 word-count bound, and a Unicode-letters/digits/spaces charset.
-*Aliases: none · Source: interview 2026-07-18*
+An identifier that derives the `test_<slug>` function name and is constrained by uniqueness (case-insensitive, slug-keyed), a 2–6 word-count bound, and a Unicode-letters/digits/spaces charset.
+*Aliases: none*
 
 ### slug
-A normalised identifier that is the lowercased, whitespace-collapsed form of a title and becomes the suffix of the `test_<slug>` function name.
-*Aliases: none · Source: interview 2026-07-18*
+A normalised identifier that is the lowercased, whitespace-collapsed form of a title. Slugs are the uniqueness key (titles differing only in whitespace runs collide) and the suffix of the `test_<slug>` function name + module filename.
+*Aliases: none*
 
 ### Full Gherkin
-A grammar-coverage claim meaning v2 parses everything `gherkin-official` emits, including `@tags`, docstrings, and data-tables.
-*Aliases: none · Source: interview 2026-07-18*
+A grammar-coverage claim meaning beehave parses everything `gherkin-official` emits, including `@tags`, docstrings, and data-tables. Tags surface as `pytestmark` / `@pytest.mark.<tag>`; docstrings and data-tables surface as body-local variables.
+*Aliases: none*
 
 ### noise loophole
-A spec-value-fidelity failure in which a placeholder or literal "appears" in a test body as an AST node while testing nothing about the step's actual behaviour — the v1 incident that motivates v2.
-*Aliases: none · Source: interview 2026-07-18 (CIT)*
+A spec-value-fidelity failure in which a placeholder or literal "appears" in a test body as an AST node while testing nothing about the step's actual behaviour — the v1 incident that motivates the v2 rewrite. Closed in v2 by removing appearance enforcement, and again in v3 by making `check` signature-only (body content is the consumer's responsibility).
+*Aliases: none*
 
 ### `generate`
-A CLI command that emits the `.pyi` typed-stub contract always and the `*_test.py` skeleton only if the `.py` is absent (idempotent — never clobbers existing bodies).
-*Aliases: none · Source: interview 2026-07-18*
+A CLI command that emits the `*_test.py` skeleton into `tests/features/` only if the file is absent (idempotent — never clobbers consumer bodies). One `<feature_slug>_default_test.py` for non-Rule scenarios + one `<feature_slug>_<rule_slug>_test.py` per Rule.
+*Aliases: none*
 
 ### `check`
-A CLI command that validates the `with step(...)` structural binding against the `.feature` and enforces title rules.
-*Aliases: none · Source: interview 2026-07-18*
+A CLI command that verifies the `.feature` ↔ `.py` contract 1-1: every scenario's expected `def test_<slug>(params) -> None` line must exactly equal some non-private top-level function signature in the corresponding `.py` module(s), and vice versa. Private `_*` functions are exempt (superset). Full sweep also runs orphan-module detection by filename stem; scoped invocation (`check <path>...`) skips it.
+*Aliases: none*
 
 ### `status`
-A CLI command that reports generation/check progress (detailed behaviour deferred to plan).
-*Aliases: none · Source: interview 2026-07-18*
+A CLI command that prints the `.feature` count under `docs/features/` and the `*_test.py` count under `tests/features/`; exit 0 if features dir exists, 2 if missing.
+*Aliases: none*
+
+### superset model
+The v3.0.0 contract model: `.feature` is the sole source of truth; the `.py` non-private function surface must match it 1-1; private `_*` functions are an unconstrained superset (consumer helpers, fixture wrappers, etc.). Replaces v2's `.pyi`-driven stubtest gate.
+*Aliases: none*
+
+### orphan module
+A `*_test.py` file in `tests/features/` whose stem does not correspond to any feature's expected module stems (derived from feature + rule slugs). Detected on full-sweep `beehave check`; reported to stderr; exit 1.
+*Aliases: none*
+
+### scoped check
+`beehave check <path>...` — verifies only the named `.feature` paths. Skips orphan-module detection (which would require parsing every feature). Consumers wire incremental scope via git-diff.
+*Aliases: none*
 
 ### parse model
-The in-memory typed shapes (`Feature` / `Rule` / `Scenario` / `Step` / `Placeholder` / `Examples` / `Background` / `DataTable`) carried by `beehave/models.py` as the shared kernel between `gherkin.py`, `generate.py`, and `check.py`. Distinguished from *persistence model* — v2 has none (the parse model is the binding data contract).
-*Aliases: none · Source: data-model 2026-07-18*
-
-### shared kernel
-A bounded-context pattern (Evans, 2003) applied to `beehave/models.py`: a small explicitly-shared vocabulary consumed by `gherkin.py`, `generate.py`, and `check.py`. The seam is justified by the three-consumer access pattern; whether it stays its own module or collapses into `gherkin.py` is an internal source-structure choice, not a data-model concern.
-*Aliases: none · Source: interview 2026-07-18 (L3) + data-model 2026-07-18*
-
-### structural binding
-The `block[i]`↔`step[i]` match on exactly `(keyword, text, placeholder-name-set)` — with `keyword` compared case-insensitively — that `beehave check` enforces by walking the test body's `with step(...)` blocks in source order. Body fidelity is deferred to the review gate; this is the structural-only check that replaces v1's appearance enforcement (the noise loophole).
-*Aliases: none · Source: interview 2026-07-18 (L1 Success) + plan design decision 2026-07-18 (keyword case)*
+The in-memory typed shapes (`Feature` / `Rule` / `Scenario` / `Step` / `Placeholder` / `Examples` / `Background` / `DataTable`) carried by `beehave/gherkin.py` as the shared vocabulary between `generate` and `check`. Distinguished from *persistence model* — beehave has none.
+*Aliases: none*
 
 ### default group
-The emission group for scenarios NOT under a Rule; emitted to `<feature_slug>_default_test.py{i,}` alongside one `<feature_slug>_<rule_slug>_test.py{i,}` per Rule.
-*Aliases: none · Source: plan design decision 2026-07-18*
+The emission group for scenarios NOT under a Rule; emitted to `<feature_slug>_default_test.py` alongside one `<feature_slug>_<rule_slug>_test.py` per Rule.
+*Aliases: none*
 
 ### skeleton
-The `*_test.py` body emitted by `beehave generate` ONLY IF the `.py` is absent; a scaffold of `with step(...)` blocks the consumer fills. Re-running `generate` never clobbers an existing skeleton (idempotent) — only the `.pyi` is rewritten.
-*Aliases: test skeleton · Source: interview 2026-07-18 (Constraint 1)*
+The `*_test.py` body emitted by `beehave generate` ONLY IF the `.py` is absent; a scaffold of `with step(...)` blocks (with `@parametrize` for Outlines, `pytestmark` for tags) the consumer fills. Re-running `generate` never clobbers an existing skeleton (idempotent).
+*Aliases: test skeleton*
 
 ## Context: Runtime (beehave-the-import)
 
+### Mode A — signature-only
+The default usage mode: the consumer's `.py` non-private function signatures match the feature-derived signatures 1-1 (enforced by `beehave check`). The `from beehave import step` import + `with step(...)` blocks may be present or removed; check does not inspect them.
+*Aliases: none*
+
+### Mode B — step-enforced
+The opt-in runtime mode: the consumer keeps the generated `with step(...)` blocks. At pytest time each block verifies against the scenario's step N (`keyword.lower()`, `text`, placeholder-name-set) and the `@parametrize` rows verify against `Examples`. Mismatches raise `StepError`; failures attribute via `add_note`.
+*Aliases: none*
+
 ### `step`
-A context manager imported `from beehave import step` that wraps a step's executable test code as `with step(keyword, text, **placeholders)` and attributes failures to its step via `add_note`.
-*Aliases: step context manager · Source: interview 2026-07-18*
+A context manager imported `from beehave import step` that wraps a step's executable test code as `with step(keyword, text, **placeholders)`. Looks up the calling `test_*` frame, finds the scenario in the lazy index, advances a frame-keyed step counter, verifies the step N triple, and on exception attributes via `add_note(f"{keyword} {text}")`.
+*Aliases: step context manager*
 
 ### keyword
-A positional argument to the `step` context manager that is a STRING (data, not a method name) so it covers all Gherkin step keywords including localized variants without reserved-word clashes.
-*Aliases: none · Source: interview 2026-07-18*
+A positional-only argument to the `step` context manager that is a STRING (data, not a method name) so it covers all Gherkin step keywords including localized variants without reserved-word clashes.
+*Aliases: none*
 
 ### `Then`-asserts
 A runtime contract that the `Then` step block is where the outcome assertion executes — the step block RUNS code, it does not merely declare it.
-*Aliases: none · Source: interview 2026-07-18*
+*Aliases: none*
 
 ### `add_note`
-A pytest mechanism that the `step` context manager uses to attribute a failure to its specific step by name.
-*Aliases: none · Source: interview 2026-07-18*
+A PEP 678 mechanism that the `step` context manager uses to attribute a failure to its specific step by name (`f"{keyword} {text}"`), preserving the original traceback.
+*Aliases: none*
+
+### `StepError`
+The exception raised by the `step` CM at runtime when a `with step(...)` block's `(keyword, text, placeholder-name-set)` triple does not match the feature scenario's step N — Mode B runtime enforcement.
+*Aliases: none*
+
+### `NoActiveScenarioError`
+The exception raised by `beehave._index.get(function_name)` when the calling function name does not match any scenario in any feature under `docs/features/` — strict Mode B invariant.
+*Aliases: none*
+
+### scenario index
+The lazy module-level `dict[function_name, Scenario]` in `beehave/_index.py`, built once per process on first `step(...)` call by scanning `Path.cwd()/docs/features/*.feature`. Subsequent lookups are O(1); `_reset()` is the test hook.
+*Aliases: _index*
 
 ## Context: Typing contract
 
 ### `.pyi`
-A type-stub file that is the typed contract surface `generate` always emits and that consumer type-checkers read in preference to the `.py`.
-*Aliases: stub · Source: interview 2026-07-18*
+A type-stub file shipped with the **beehave package** (`beehave/*.pyi`) for consumer-side type-checkers. Consumer tests in `tests/features/` do NOT have `.pyi` siblings in v3.0.0 (dropped — the superset model derives the contract directly from `.feature`).
+*Aliases: stub*
 
 ### `py.typed`
-A PEP 561 package-marker file (empty) that signals to type-checkers that the package ships typed stubs, on which the consumer-side mypy gate depends.
-*Aliases: none · Source: interview 2026-07-18*
-
-### drift
-A contract violation in which a generated `*_test.py` body diverges from its `.pyi`.
-*Aliases: stub drift · Source: interview 2026-07-18*
+A PEP 561 package-marker file (empty) that signals to type-checkers that the beehave package ships typed stubs.
+*Aliases: none*
 
 ### `mypy.stubtest`
-A tool that is the SOLE `.py`↔`.pyi` drift detector in v2's gate (pyright/mypy read only the `.pyi`).
-*Aliases: stubtest · Source: interview 2026-07-18*
+A dev-only tool that verifies `.py` ↔ `.pyi` drift for the **beehave package itself** (`task stubtest` runs `python -m mypy.stubtest beehave --allowlist .stubtest_allowlist`). NOT used on consumer tests in v3.0.0.
+*Aliases: stubtest*
+
+### `.stubtest_allowlist`
+A repo-root file listing stubtest false positives (regex matched against object paths). Carries one entry `beehave.step.step` (mypy `@contextmanager` positional-only param-name erasure false positive).
+*Aliases: none*

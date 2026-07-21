@@ -4,44 +4,35 @@
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.14-blue?style=for-the-badge)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/beehave?style=for-the-badge)](https://pypi.org/project/beehave/)
 
-**Keep your living documentation and test code in sync — without step definitions.**
+**BDD without step definitions. The `.feature` is the sole source of truth.**
 
 </div>
 
 ---
 
-**beehave** is a simpler alternative to **behave** and **pytest-bdd**. Instead of writing step definitions that match Gherkin step text to Python functions with `@given`/`@when`/`@then` decorators, beehave links scenarios to tests by **function name** alone. It generates pure [Hypothesis](https://hypothesis.readthedocs.io/) property-based test stubs from your `.feature` files and checks that your test code stays consistent with your spec. Your tests never import beehave — they just use hypothesis.
+**beehave** is a thinner alternative to **behave** and **pytest-bdd**. Instead
+of authoring step definitions that match Gherkin step text to Python functions
+via `@given`/`@when`/`@then` decorators, beehave links each `Scenario` to a
+test function by **function name** alone, generates a `pytest`-native skeleton
+(`@pytest.mark.parametrize` rows + `with step(...)` blocks), and statically
+verifies that the consumer's `.py` matches the `.feature` contract 1-1.
+
+## Install
+
+beehave is not yet on PyPI. Install from source:
 
 ```bash
-pip install beehave
+git clone https://github.com/nullhack/beehave
+cd beehave
+uv sync
 ```
 
----
+Requires Python ≥ 3.14.
 
-## How it differs from standard Gherkin tools
+## Quick start
 
-Traditional BDD frameworks (behave, pytest-bdd) require **step definitions** — separate Python functions decorated with `@given`/`@when`/`@then` whose text must match the Gherkin step text exactly. This creates fragile coupling and framework lock-in. beehave eliminates all of that:
-
-- **No step definitions.** The function name **is** the link. `Scenario: guard bee inspects visitor` → `test_guard_bee_inspects_visitor`.
-- **No runtime imports.** Your tests import only `hypothesis`. beehave is a dev-time CLI.
-- **Property-based by default.** Hypothesis `@given()` strategies are inferred from Examples table types. behave and pytest-bdd are example-only.
-
-To make this work, beehave applies a few constraints beyond standard Gherkin:
-
-| Constraint | Why |
-|-----------|-----|
-| Titles contain only **letters, digits, and spaces** | They become Python identifiers (`test_...`) and file paths |
-| `"quoted strings"` or `'single-quoted strings'` and bare numbers in step text are **enforced literals** | `check` verifies they appear as `Constant` nodes in the function body (case-insensitive) |
-| `<placeholder>` names must be valid Python identifiers, not keywords or builtins | They become function parameters (case-insensitive matching) |
-| Scenario titles are **globally unique** across all features | One function name = one scenario, everywhere |
-
----
-
-## Usage
-
-### Write a feature
+### 1. Write a feature
 
 ```gherkin
 # docs/features/hive_activity.feature
@@ -60,195 +51,128 @@ Feature: Hive Activity
       | nectar | rate | hours | honey |
       | 100    | 20   | 8     | 80    |
       | 200    | 25   | 12    | 150   |
-      | 50     | 30   | 6     | 35    |
 
   Rule: Hive defense
-
-    Background:
-      Given the entrance has 2 guards
-
     Scenario: guard bee inspects visitor
       Given a visitor bee with <scent> colony odor
-      When the guard inspects the visitor for "floral" scent
+      When the guard inspects the visitor
       Then the visitor is <outcome>
-
-  Rule: Foraging
-
-    Scenario: forager returns with nectar
-      Given a forager bee named <name>
-      When the forager returns with <volume> milliliters of nectar
-      Then the hive stores <volume> milliliters of nectar
 ```
 
-### Generate stubs
+### 2. Generate the test skeleton
 
 ```bash
-beehave generate hive_activity
+beehave generate
 ```
 
 ```
-tests/features/hive_activity/
-├── default_test.py        # top-level scenarios (honey production outline)
-├── hive_defense_test.py   # Rule: Hive defense (guard bee)
-└── foraging_test.py       # Rule: Foraging (forager returns)
+tests/features/
+├── hive_activity_default_test.py       # top-level scenarios (the outline)
+└── hive_activity_hive_defense_test.py  # Rule: Hive defense
 ```
 
 ```python
-# tests/features/hive_activity/default_test.py
-from hypothesis import given, example, strategies as st
+# tests/features/hive_activity_default_test.py
+from beehave import step
+import pytest
 
-@example(nectar=100, rate=20, hours=8, honey=80)
-@example(nectar=200, rate=25, hours=12, honey=150)
-@example(nectar=50, rate=30, hours=6, honey=35)
-@given(nectar=st.integers(), rate=st.integers(), hours=st.integers(), honey=st.integers())
-def test_honey_production_from_nectar(nectar, rate, hours, honey):
-    ...
+
+@pytest.mark.parametrize(
+    ('nectar', 'rate', 'hours', 'honey'),
+    [
+        ('100', '20', '8', '80'),
+        ('200', '25', '12', '150'),
+    ],
+)
+def test_honey_production_from_nectar(nectar: str, rate: str, hours: str, honey: str) -> None:
+    with step('Given', 'the hive is active'):
+        pass
+    with step('Given', 'the hive has <nectar> grams of nectar', nectar=nectar):
+        pass
+    with step('And', 'the evaporation rate is <rate> percent', rate=rate):
+        pass
+    with step('When', 'the bees fan their wings for <hours> hours', hours=hours):
+        pass
+    with step('Then', 'the hive produces <honey> grams of honey', honey=honey):
+        pass
 ```
+
+The skeleton is emitted **only when the `.py` is absent**. Re-running
+`generate` never clobbers consumer bodies (idempotent).
+
+### 3. Fill in the bodies
+
+Replace the `pass` inside each `with step(...)` block with real code.
+The `Then` block is where the outcome assertion lives.
 
 ```python
-# tests/features/hive_activity/hive_defense_test.py
-from hypothesis import given, strategies as st
-
-@given(scent=st.text(), outcome=st.text())
-def test_guard_bee_inspects_visitor(scent, outcome):
-    ...
+def test_honey_production_from_nectar(nectar: str, rate: str, hours: str, honey: str) -> None:
+    with step('Given', 'the hive is active'):
+        activate_hive()
+    with step('Given', 'the hive has <nectar> grams of nectar', nectar=nectar):
+        store_nectar(int(nectar))
+    with step('And', 'the evaporation rate is <rate> percent', rate=rate):
+        set_evaporation(int(rate))
+    with step('When', 'the bees fan their wings for <hours> hours', hours=hours):
+        fan_wings(int(hours))
+    with step('Then', 'the hive produces <honey> grams of honey', honey=honey):
+        assert hive_honey() == int(honey)
 ```
 
-Note what beehave extracted automatically:
-
-- **`<nectar>`, `<rate>` …** → `@given()` parameters. Strategies inferred from Examples table types (all integers → `st.integers()`).
-- **`100`, `20` …** → `@example()` rows from the Examples table.
-- **`"floral"`** → enforced literal from step text. `check` verifies it appears in the function body.
-- **`2`** (from Rule Background `2 guards`) → enforced literal, inherited by all scenarios in that Rule.
-- **`<scent>`, `<outcome>`** → `@given()` parameters. No Examples table, so strategy falls back to `st.text()`.
-
-### Check consistency
-
-You implement the guard test:
-
-```python
-@given(scent=st.text(), outcome=st.text())
-def test_guard_bee_inspects_visitor(scent, outcome):
-    assert "floral" in known_scents()
-    assert 2 == guard_count()
-    assert scent in ("floral", "citrus")
-    assert outcome in ("admitted", "rejected")
-```
+### 4. Check + run
 
 ```bash
-beehave check hive_activity    # check one feature
-beehave check                  # check all features
+beehave check          # verify .py ↔ .feature 1-1 contract
+pytest                 # run the tests (the step CM attributes failures)
 ```
 
-Remove the `"floral"` assertion and `check` catches it:
+## Two enforcement modes
 
-```
-tests/features/hive_activity/hive_defense_test.py:4: missing-literal: literal '"floral"' not found in function body
-```
+| Mode | What `beehave check` verifies | Runtime step verification |
+|---|---|---|
+| **A — signature-only** | `.py` non-private function signatures match feature-derived signatures exactly (1-1) | None. Bodies are free-form. |
+| **B — step-enforced** | Same as A. | `with step(...)` blocks verify `(keyword, text, placeholder-name-set)` at position N against the feature scenario. Failures attribute via `add_note`. |
 
-Remove `<scent>` from the body but keep it as a `@given()` parameter? Still caught — beehave checks the **body only**:
+The generated skeleton imports `step` already; Mode B activates the moment
+the consumer keeps the `with step(...)` blocks. Removing the import + blocks
+downgrades to Mode A (signature-only).
 
-```
-tests/features/hive_activity/hive_defense_test.py:4: missing-placeholder: 'scent' not found in function body
-```
+## CLI reference
 
-Rename the scenario? Both sides are reported:
+| Command | Purpose |
+|---|---|
+| `beehave generate` | Emit `*_test.py` skeletons into `tests/features/` (only if absent). |
+| `beehave check` | Full sweep: every feature's signatures vs. `.py` 1-1 + orphan-module detection. |
+| `beehave check <path>...` | Scoped: only the named `.feature` paths. Skips orphan detection. |
+| `beehave status` | Print `.feature` count + emitted `*_test.py` count. Exit 2 if `docs/features/` missing. |
 
-```
-docs/features/hive_activity.feature:22: unmapped-scenario: scenario 'guard checks visitor' has no test function
-tests/features/hive_activity/hive_defense_test.py:4: unmapped-test: 'test_guard_bee_inspects_visitor' has no matching scenario
-```
+`beehave check` exits non-zero on any contract violation (missing function,
+extra non-private function, signature drift, orphan module on full sweep).
+Private functions (leading `_`) are exempt — consumer helpers, fixtures, etc.
 
-### Clean up stale functions
+For incremental workflows, scope the check to changed features:
 
 ```bash
-beehave clean hive_activity           # remove unmapped stubs only (safe)
-beehave clean hive_activity --force   # remove any unmapped function
+beehave check $(git diff --name-only HEAD~1 HEAD -- 'docs/features/*.feature')
 ```
 
-### List features
+## How the `.feature` maps onto the `.py`
 
-```bash
-beehave list          # paths and titles
-beehave list -v       # include scenario counts, rules, stub status
-```
+- **Scenario title → function name:** `Honey Production From Nectar` → `test_honey_production_from_nectar` (lowered, whitespace collapsed). Globally unique across all features.
+- **Rule → module:** Top-level scenarios go to `<feature_slug>_default_test.py`. Scenarios inside a Rule go to `<feature_slug>_<rule_slug>_test.py`.
+- **Background:** Feature Background prepended to every scenario's step list. Rule Background prepended only to that Rule's scenarios. Background steps may not contain `<placeholders>`.
+- **Examples → `@pytest.mark.parametrize`:** All params typed `str`. Row cells are string tuples. Examples-table tags emit `pytest.param(..., marks=pytest.mark.<tag>)` only when tags differ across tables.
+- **Tags:** `@tag` on Feature or Rule → module-level `pytestmark = [pytest.mark.<tag>, ...]`. `@tag` on Scenario → `@pytest.mark.<tag>` decorator.
+- **Step docstrings + data tables:** Parsed (Full Gherkin) and surfaced as body-local variables (`docstring = '...'`, `data_table = [{'col': 'val'}, ...]`) inside the `with step(...)` block. Not passed to the `step()` call.
 
-### Show development status
+## Title rules (enforced at parse time)
 
-```bash
-beehave status                    # all features with stage and tree output
-beehave status --json             # machine-readable JSON
-beehave status --include-unmapped # include unmapped test directories
-```
+- **Charset:** Unicode letters, digits, and spaces only (no hyphens, punctuation, or symbols).
+- **Word count:** 2–6 words.
+- **Uniqueness:** Case-insensitive, across Feature / Rule / Scenario titles, keyed on the slug (whitespace-collapsed, lowercased).
 
-Output example:
-
-```
-hive_activity (Hive Activity)  needs fixes
-├── guard bee inspects visitor                1 error
-└── forager returns with nectar              ok
-
-comb_construction (Comb Construction)  ok
-
-dance_language (Waggle Dance Communication)  needs bodies
-├── round dance                              no body
-└── waggle dance                             no body
-```
-
----
-
-## What `check` enforces
-
-| Check | Severity | What it catches |
-|-------|----------|-----------------|
-| `unmapped-scenario` | error | Scenario has no matching test function |
-| `unmapped-test` | error | Test function has no matching scenario |
-| `missing-placeholder` | error | `<placeholder>` not referenced in function body |
-| `missing-literal` | error | `"string"` or numeric literal not in function body |
-| `example-mismatch` | error | Examples row has no matching `@example()` or vice versa |
-| `misplaced-test` | warning | Function in wrong file (e.g., after Rule removal) |
-| `invalid-feature-title` | error | Feature title fails charset or word count rules |
-| `invalid-rule-title` | error | Rule title fails charset or word count rules |
-| `invalid-scenario-title` | error | Scenario title fails charset or word count rules |
-| `duplicate-feature-title` | error | Duplicate Feature title (case-insensitive, global) |
-| `duplicate-rule-title` | error | Duplicate Rule title or Rule-Feature collision |
-| `duplicate-scenario-title` | error | Duplicate Scenario title or Scenario-title collision |
-
-`beehave check` also validates feature, rule, and scenario titles: 2–6 words, `[\w\s]+` charset (letters, digits, spaces, underscores), case-insensitive global uniqueness across all title types.
-
----
-
-## How it maps
-
-- **Scenario title → function name:** `Honey Production From Nectar` → `test_honey_production_from_nectar`. Lowercased. Globally unique across all features.
-- **Rule → test file:** Top-level scenarios go to `default_test.py`. Scenarios inside a Rule go to `<rule>_test.py`.
-- **Feature title → directory:** `Hive Activity` → `tests/features/hive_activity/`.
-- **Strategy inference:** Examples table column values are typed — all integers → `st.integers()`, all floats → `st.floats()`, all booleans → `st.booleans()`, else → `st.text()`.
-- **Background merging:** Feature Background applies to all scenarios. Rule Background applies to that Rule's scenarios only. Background steps cannot contain `<placeholders>`.
-- **Literal extraction:** `"quoted strings"` and `'single-quoted strings'` and numeric tokens in step text are enforced as `Constant` AST nodes in the function body. Matching is case-insensitive: `"Rex"` in Gherkin matches `"rex"` in test body. Both single and double quote styles are supported. `[...]` bracket notation inside quotes is preserved verbatim.
-
----
-
-## Configuration
-
-```toml
-# pyproject.toml
-[tool.beehave]
-features_dir = "docs/features"
-tests_dir = "tests/features"
-default_strategy = "text"
-background_check_numeric = true
-background_check_string = true
-```
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features_dir` | `docs/features` | Where `.feature` files live |
-| `tests_dir` | `tests/features` | Where generated tests go |
-| `default_strategy` | `text` | Fallback strategy for unknown placeholders |
-| `background_check_numeric` | `true` | Enforce numeric literals from Background steps |
-| `background_check_string` | `true` | Enforce string literals from Background steps |
+Violations raise at `parse_feature` time and prevent generation.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
