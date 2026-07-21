@@ -1,9 +1,0 @@
-{
-  "context": "Consistency Checking",
-  "walkthrough": 20,
-  "expected": {
-    "violations": [],
-    "match_detail": "ph.name.lower() = 'dog', body_name_nodes lowered = {'dog', 'owner'} → 'dog' in set → match"
-  },
-  "verification": "Case-insensitive: 'Dog'.lower()='dog' matches 'DOG'.lower()='dog'. This is the core R5 behavior."
-}

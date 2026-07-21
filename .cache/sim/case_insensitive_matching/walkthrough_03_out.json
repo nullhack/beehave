@@ -1,9 +1,0 @@
-{
-  "context": "Feature Parsing",
-  "walkthrough": 3,
-  "expected": {
-    "placeholders": [],
-    "literals": []
-  },
-  "verification": "<class> is a Python keyword → rejected, not a Placeholder"
-}

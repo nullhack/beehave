@@ -1,0 +1,13 @@
+# stubtest allowlist — documented false positives.
+# Each line is a regex matched against the error's object path.
+#
+# beehave.step.step — mypy 2.3.0's @contextmanager inference erases
+# positional-only parameter names to None; stubtest then synthesizes
+# __arg0/__arg1, which fail to match the runtime-preserved keyword/text.
+# The .pyi and .py are faithful (both declare positional-only keyword, text);
+# this is a tool quirk, not contract drift. Tracked in
+# .cache/beehave-v2/journal.md (build cycle 1 green). Backstopped by the 9
+# tests in tests/integration/step_cm_test.py (behavioral coverage) and
+# `mypy --strict beehave` (.pyi-internal consistency). Re-verify manually if
+# step's signature changes.
+beehave.step.step

@@ -1,0 +1,36 @@
+# Integration contract for the v2.3 `step` context manager (Mode B runtime).
+#
+# `step()` resolves the calling function (`sys._getframe(1).f_code.co_name`)
+# against the lazy feature index (`beehave._index`), tracks step position via a
+# frame-keyed counter, and verifies each block against
+# `scenario.steps[position]` on (keyword-case-insensitively, text,
+# placeholder-name-set). On the first step it also verifies any
+# `@pytest.mark.parametrize(...)` against the scenario's Examples. On
+# exception the CM appends `f"{keyword} {text}"` via PEP 678 `add_note`.
+#
+# The `step_project` fixture seeds a temp project with STEP_RUNTIME_FEATURE,
+# chdirs into it, and resets the index cache so each test rebuilds from the
+# temp cwd. Test function names match scenario slugs so `step()` finds them.
+
+import pytest
+
+STEP_RUNTIME_FEATURE: str
+
+@pytest.fixture
+def step_project(tmp_path: str, monkeypatch: pytest.MonkeyPatch) -> None: ...
+def test_block_executes(step_project: None) -> None: ...
+def test_attribution_note_added(step_project: None) -> None: ...
+def test_wrong_keyword_fails(step_project: None) -> None: ...
+def test_wrong_text_fails(step_project: None) -> None: ...
+def test_wrong_placeholders_fail(step_project: None) -> None: ...
+def test_too_many_steps_fail(step_project: None) -> None: ...
+def test_unknown_function_raises_no_active_scenario(step_project: None) -> None: ...
+@pytest.mark.parametrize(
+    ("amount", "duration", "honey"), [("100", "8", "80"), ("200", "12", "150")]
+)
+def test_parametrize_verifies_ok(
+    step_project: None, amount: str, duration: str, honey: str
+) -> None: ...
+@pytest.mark.parametrize(("amount",), [("999",)])
+def test_parametrize_mismatch_fails(step_project: None, amount: str) -> None: ...
+def test_keyword_and_text_are_positional_only() -> None: ...

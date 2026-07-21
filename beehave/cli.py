@@ -1,187 +1,90 @@
 from __future__ import annotations
 
-import argparse
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
-from beehave.check import check_all, check_single
-from beehave.clean import clean_unmapped
-from beehave.config import load_config
-from beehave.discover import discover_tests
-from beehave.generate import generate_stubs
-from beehave.gherkin import GherkinError, parse_feature
-from beehave.status import compute_status
+from beehave.check import check
+from beehave.generate import _slug_from, generate
+from beehave.gherkin import Rule, parse_feature
+from beehave.status import status
 
 
-def cmd_generate(args: argparse.Namespace) -> None:
-    config = load_config()
-    generate_stubs(args.feature, config)
+def main(argv: Sequence[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        return 2
+    cmd = args[0]
+    if cmd == "generate":
+        generate(Path.cwd())
+        return 0
+    if cmd == "status":
+        return status(Path.cwd())
+    if cmd == "check":
+        return _check_all(Path.cwd(), args[1:])
+    return 2
 
 
-def cmd_check(args: argparse.Namespace) -> None:
-    config = load_config()
-    if args.feature:
-        fpath = Path(config.features_dir) / f"{args.feature}.feature"
-        violations = check_single(fpath, config)
+def _feature_module_stems(feature_path: Path) -> list[str]:
+    feature = parse_feature(feature_path.read_text())
+    feature_slug = _slug_from(feature_path.stem)
+    stems: list[str] = []
+    has_default = any(not isinstance(c, Rule) for c in feature.children)
+    if has_default:
+        stems.append(f"{feature_slug}_default")
+    for child in feature.children:
+        if isinstance(child, Rule):
+            stems.append(f"{feature_slug}_{_slug_from(child.name)}")
+    return stems
+
+
+def _resolve_feature_arg(root: Path, arg: str) -> Path | None:
+    p = Path(arg)
+    if not p.is_absolute():
+        p = root / p
+    if p.suffix != ".feature" or not p.exists():
+        return None
+    return p
+
+
+def _check_all(root: Path, feature_args: list[str] | None = None) -> int:
+    features_dir = root / "docs" / "features"
+    if not features_dir.is_dir():
+        return 1
+    tests_features_dir = root / "tests" / "features"
+
+    if feature_args:
+        feature_paths: list[Path] = []
+        for arg in feature_args:
+            resolved = _resolve_feature_arg(root, arg)
+            if resolved is None:
+                print(f"not a feature file: {arg}", file=sys.stderr)
+                return 1
+            feature_paths.append(resolved)
     else:
-        violations = check_all(config)
+        feature_paths = sorted(features_dir.glob("*.feature"))
+        if tests_features_dir.is_dir():
+            expected_stems: set[str] = set()
+            for feature_path in feature_paths:
+                expected_stems.update(_feature_module_stems(feature_path))
+            actual_stems = {
+                p.name.removesuffix("_test.py")
+                for p in tests_features_dir.glob("*_test.py")
+            }
+            orphan_stems = sorted(actual_stems - expected_stems)
+            if orphan_stems:
+                for stem in orphan_stems:
+                    print(f"orphan: {stem}_test.py", file=sys.stderr)
+                return 1
 
-    for v in violations:
-        print(v)
-
-    if any(not v.is_warning for v in violations):
-        raise SystemExit(1)
-
-
-def cmd_clean(args: argparse.Namespace) -> None:
-    config = load_config()
-    clean_unmapped(args.feature, config, force=args.force)
-
-
-def cmd_list(args: argparse.Namespace) -> None:
-    config = load_config()
-    features_dir = Path(config.features_dir)
-    if not features_dir.exists():
-        return
-
-    for feature_file in sorted(features_dir.rglob("*.feature")):
-        try:
-            scenarios = parse_feature(feature_file, config)
-        except GherkinError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            continue
-
-        if not scenarios:
-            continue
-
-        feature_path = str(feature_file.relative_to(features_dir).with_suffix(""))
-        title = next(iter(scenarios.values())).feature_title
-        print(f"{feature_path}: {title}")
-
-        if not args.verbose:
-            continue
-
-        print(f"  path: {feature_file}")
-        print(f"  scenarios: {len(scenarios)}")
-
-        rule_groups: dict[str, list[str]] = {}
-        top_level: list[str] = []
-        for fn, si in scenarios.items():
-            if si.rule_path == "default_test":
-                top_level.append(fn)
-            else:
-                rule_name = si.rule_path.removesuffix("_test")
-                rule_groups.setdefault(rule_name, []).append(fn)
-
-        if top_level:
-            print(f"  top-level: {len(top_level)}")
-        for rule_name, fns in rule_groups.items():
-            print(f"  rules: {rule_name} ({len(fns)})")
-
-        test_dir = Path(config.tests_dir) / next(iter(scenarios.values())).feature_path
-        stub_count = 0
-        impl_count = 0
-        for si in scenarios.values():
-            tf = test_dir / f"{si.rule_path}.py"
-            tests = discover_tests(tf)
-            ti = tests.get(si.function_name)
-            if ti is not None and not ti.is_stub:
-                impl_count += 1
-            else:
-                stub_count += 1
-        total = stub_count + impl_count
-        if impl_count == 0:
-            print(f"  stubs: {total}/{total} (all stubs)")
-        elif stub_count == 0:
-            print(f"  stubs: 0/{total} (all implemented)")
-        else:
-            print(f"  stubs: {stub_count}/{total} ({impl_count} implemented)")
-
-
-def cmd_status(args: argparse.Namespace) -> None:
-    config = load_config()
-    compute_status(
-        config,
-        json_output=args.json,
-        include_unmapped=args.include_unmapped,
-    )
-
-
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        prog="beehave",
-        description="BDD living documentation in sync",
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    gen = subparsers.add_parser(
-        "generate",
-        help="Generate test stubs from a feature file",
-    )
-    gen.add_argument(
-        "feature",
-        help=("Feature path without extension, relative to features_dir"),
-    )
-    gen.set_defaults(func=cmd_generate)
-
-    chk = subparsers.add_parser(
-        "check",
-        help="Check consistency between features and tests",
-    )
-    chk.add_argument(
-        "feature",
-        nargs="?",
-        default=None,
-        help=("Feature path (optional; checks all if omitted)"),
-    )
-    chk.set_defaults(func=cmd_check)
-
-    cln = subparsers.add_parser(
-        "clean",
-        help="Remove unmapped test functions",
-    )
-    cln.add_argument(
-        "feature",
-        help="Feature path without extension",
-    )
-    cln.add_argument(
-        "--force",
-        action="store_true",
-        help="Remove non-stub functions without warning",
-    )
-    cln.set_defaults(func=cmd_clean)
-
-    lst = subparsers.add_parser(
-        "list",
-        help="List all features with their paths",
-    )
-    lst.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Show scenario counts, rules, and stub status",
-    )
-    lst.set_defaults(func=cmd_list)
-
-    sts = subparsers.add_parser(
-        "status",
-        help="Show development status of all features",
-    )
-    sts.add_argument(
-        "--json",
-        action="store_true",
-        help="Output status report as JSON",
-    )
-    sts.add_argument(
-        "--include-unmapped",
-        action="store_true",
-        help="Report test directories with no matching feature file",
-    )
-    sts.set_defaults(func=cmd_status)
-
-    args = parser.parse_args(argv)
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()
+    for feature_path in feature_paths:
+        stems = _feature_module_stems(feature_path)
+        py_text = "\n".join(
+            (tests_features_dir / f"{stem}_test.py").read_text()
+            for stem in stems
+            if tests_features_dir.is_dir()
+            and (tests_features_dir / f"{stem}_test.py").exists()
+        )
+        if not check(feature_path.read_text(), py_text):
+            return 1
+    return 0
